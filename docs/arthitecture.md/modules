@@ -1,0 +1,110 @@
+# Corvus Corax Architecture
+
+## Overview
+Corvus Corax is a modular reconnaissance and analysis framework designed for extensibility, clarity, and structured intelligence gathering.
+
+The system is built around a dynamic module loader that automatically detects and registers modules at runtime.
+
+---
+
+## Core Design Philosophy
+Corvus Corax follows three principles:
+
+1. Modularity — each capability exists as an independent module
+2. Transparency — outputs are structured and readable
+3. Extensibility — new modules can be added without modifying core logic
+
+---
+
+## Architecture Layers
+
+### 1. Core Layer
+Responsible for:
+- module loading
+- command parsing
+- execution routing
+
+Core does NOT contain intelligence logic.  
+It only manages system orchestration.
+
+---
+
+### 2. Module Layer
+Modules are stored inside:
+Each module must define:
+name = "command_name"
+def run(args)...
+The loader scans the folder and auto-registers modules.
+
+---
+
+### 3. Command Flow
+
+User input → Parser → Loader → Module → Output
+
+Execution pipeline:
+
+1. User enters command
+2. Core parses input
+3. Loader finds matching module
+4. Module executes
+5. Output returned to user
+
+---
+
+### 4. Loader System
+
+The loader dynamically imports modules:
+
+- scans directory
+- imports python files
+- validates module structure
+- registers command name
+
+This ensures:
+
+- zero hardcoding
+- plug-and-play modules
+- scalable architecture
+
+---
+
+### 5. Output Philosophy
+
+Corvus outputs are designed to be:
+
+- structured
+- readable
+- actionable
+
+Future versions will standardize output format across all modules.
+
+---
+
+### 6. Planned Evolution
+
+Future engine: *Nexus Correlation Engine*
+
+Goal:
+Combine outputs from multiple modules and generate:
+
+- risk scores
+- intelligence links
+- probability analysis
+- structured reports
+
+Nexus will transform Corvus from a toolkit into an intelligence system.
+
+---
+
+## Architectural Vision
+
+Corvus Corax is not designed as a tool.
+
+It is designed as a system.
+
+A system that observes.
+A system that correlates.
+A system that reveals.
+
+> See the unseen.
