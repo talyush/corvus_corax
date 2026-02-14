@@ -61,3 +61,7 @@ Independent student developer focused on cybersecurity, analysis systems, and in
 
 This project is created for educational and ethical security research purposes only.
 Do not use against systems without permission.
+
+## Project History
+Corvus Corax is the advanced evolution of my previous project *CrowWatch*.  
+CrowWatch focused on reconnaissance modules, while Corvus expands into a modular cybersecurity framework.
