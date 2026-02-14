@@ -65,3 +65,5 @@ Do not use against systems without permission.
 ## Project History
 Corvus Corax is the advanced evolution of my previous project *CrowWatch*.  
 CrowWatch focused on reconnaissance modules, while Corvus expands into a modular cybersecurity framework.
+## Documentation
+See docs/architecture.md for system design details.
