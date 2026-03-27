@@ -1,4 +1,4 @@
-"Im working on v0.2 and trying to overcome some project end time difficulties."
+"Im working on v0.2 and trying to overcome some project and time difficulties."
 
 [21:56, 14.02.2026] Talha Bağcı: 
 🐦‍⬛ Corvus Corax
