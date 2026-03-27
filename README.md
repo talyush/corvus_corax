@@ -1,5 +1,6 @@
-[21:56, 14.02.2026] Talha Bağcı: 
+"Im working on v0.2 and trying to overcome some project end time difficulties."
 
+[21:56, 14.02.2026] Talha Bağcı: 
 🐦‍⬛ Corvus Corax
 
 Corvus Corax is a modular reconnaissance and analysis toolkit designed for cybersecurity learners and researchers.
