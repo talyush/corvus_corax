@@ -23,6 +23,6 @@ def show_banner():
        /'\_   _/`\
        \_)=(_/
 
-        v0.1  |  Modular Recon Framework
+        v0.2  |  Modular Recon Framework
     """
     print(banner)

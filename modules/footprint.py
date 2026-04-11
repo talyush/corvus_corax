@@ -1,21 +1,35 @@
 import socket
+from core.module_base import BaseModule
 
-name = "footprint"
+class FootprintModule(BaseModule):
+    name = "footprint"
+    
+    def execute(self):
+        args = self.target
+        if not args:
+            print("usage: footprint <domain>")
+            return {"module": self.name, "status": "error", "error": "eksik argüman"}
 
-def run(args):
+        target = args[0]
 
-    if not args:
-        print("usage: footprint <domain>")
-        return
+        try:
+            ip = socket.gethostbyname(target)
+            print(f"[+] IP Address : {ip}")
+            
+            # Context'e ekle
+            if self.context:
+                self.context.add_domain_mapping(target, ip)
 
-    target = args[0]
+            try:
+                host = socket.gethostbyaddr(ip)
+                print(f"[+] Hostname   : {host[0]}")
+                if self.context:
+                    self.context.add_domain_mapping(host[0], ip)
+            except:
+                pass
 
-    try:
-        ip = socket.gethostbyname(target)
-        print(f"[+] IP Address : {ip}")
+        except Exception as e:
+            print("Error:", e)
+            return {"module": self.name, "status": "error", "error": str(e)}
 
-        host = socket.gethostbyaddr(ip)
-        print(f"[+] Hostname   : {host[0]}")
-
-    except Exception as e:
-        print("Error:", e)
+        return {"module": self.name, "status": "completed"}
