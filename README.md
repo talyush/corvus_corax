@@ -41,6 +41,7 @@ See the unseen.
 ---
 
 🧠 Philosophy
+
 Corvus Corax is designed as an evolving system rather than a static tool.
 The goal is to move from:
 data collection
@@ -50,6 +51,7 @@ and eventually
 automated analysis
 
 🛣 Roadmap
+
 v0.3 / v1.0
 Nexus Correlation Engine
 Risk scoring system
@@ -58,20 +60,25 @@ Cross-module data linking
 Improved output visualization
 
 🎯 Goal
+
 To build a system that not only collects reconnaissance data, but can interpret and connect it.
 
 👤 Developer
+
 Independent student developer focused on cybersecurity, system design, and analysis tooling.
 
 ⚠️ Disclaimer
+
 This project is for educational and ethical security research purposes only. Unauthorized use is prohibited.
 
 📜 Project History
+
 Corvus Corax is the evolution of CrowWatch.
 CrowWatch focused on individual reconnaissance modules.
 Corvus expands this into a modular and extensible framework.
 
 📚 Documentation
+
 See docs/architecture.md for detailed system design
 
 ## 🚀 Usage
