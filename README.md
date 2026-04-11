@@ -1,70 +1,87 @@
-"Im working on v0.2 and trying to overcome some project and time difficulties."
+[15:26, 11.04.2026] Talha Bağcı: # 🐦⬛ Corvus Corax
 
-[21:56, 14.02.2026] Talha Bağcı: 
-🐦‍⬛ Corvus Corax
-
-Corvus Corax is a modular reconnaissance and analysis toolkit designed for cybersecurity learners and researchers.
-It focuses on visibility, intelligence gathering, and structured output — built step-by-step as a growing system.
+Corvus Corax is a modular reconnaissance and analysis toolkit designed for cybersecurity learners and researchers. It focuses on structured intelligence gathering and building a scalable analysis system.
 
 See the unseen.
 
-⚙️ Current Version
+## ⚙️ Current Version
 
-v0.1 — Initial Public Release
+*v0.2 — Framework Stabilization & Context Foundation*
 
-📦 Modules
+### What's new in v0.2
 
-ModuleDescriptionscanPing + port scanningfootprintTarget information gatheringgeoipIP geolocation lookupnetscanNetwork discoveryhelpCommand listversionVersion info 
+- *Object-Oriented Architecture*
+  The framework has been refactored from a procedural structure into a modular OOP-based system. All modules now follow a unified interface.
 
-🚀 Usage
+- *ContextManager (Foundation for Nexus)*
+  Instead of only printing results, the system now stores and correlates collected data (IPs, domains, ports, geolocation) into a structured context layer.
 
-scan <ip> scan <ip> range <start-end> geoip <ip> netscan footprint <target> help 
+- *context Command*
+  Displays the current collected intelligence as a structured JSON tree.
+
+- *Core Stability Improvements*
+  Fixes encoding issues, output inconsistencies, and module execution flow.
+
+> v0.2 focuses on building a stable and extensible framework for future intelligence processing.
+
+---
+
+## 📦 Modules
+
+| Module | Description |
+| :--- | :--- |
+| *scan* | Basic ping and port scanning |
+| *footprint* | Target information gathering |
+| *geoip* | IP geolocation lookup |
+| *netscan* | Network discovery |
+| *context* | View collected intelligence |
+| *help* | Command list |
+| *version* | Version info |
+
+---
 
 🧠 Philosophy
-
-Corvus Corax is not just a tool — it is an evolving intelligence system.
-Future versions aim to:
-
-correlate data between modules
-
-generate risk scores
-
-produce analytical reports
+Corvus Corax is designed as an evolving system rather than a static tool.
+The goal is to move from:
+data collection
+to
+data correlation
+and eventually
+automated analysis
 
 🛣 Roadmap
-
-v0.2
-
-performance improvements
-
-smarter scanning logic
-
-result structuring
-
-v1.0
-
+v0.3 / v1.0
 Nexus Correlation Engine
-
-probability analysis
-
-full reporting system
+Risk scoring system
+Analytical report generation
+Cross-module data linking
+Improved output visualization
 
 🎯 Goal
-
-Build a system that doesn’t just collect data —
-but understands it.
+To build a system that not only collects reconnaissance data, but can interpret and connect it.
 
 👤 Developer
-
-Independent student developer focused on cybersecurity, analysis systems, and intelligent tooling.
+Independent student developer focused on cybersecurity, system design, and analysis tooling.
 
 ⚠️ Disclaimer
+This project is for educational and ethical security research purposes only. Unauthorized use is prohibited.
 
-This project is created for educational and ethical security research purposes only.
-Do not use against systems without permission.
+📜 Project History
+Corvus Corax is the evolution of CrowWatch.
+CrowWatch focused on individual reconnaissance modules.
+Corvus expands this into a modular and extensible framework.
 
-## Project History
-Corvus Corax is the advanced evolution of my previous project *CrowWatch*.  
-CrowWatch focused on reconnaissance modules, while Corvus expands into a modular cybersecurity framework.
-## Documentation
-See docs/architecture.md for system design details.
+📚 Documentation
+See docs/architecture.md for detailed system design
+
+## 🚀 Usage
+
+```bash
+corvus > scan <ip>
+corvus > geoip <ip>
+corvus > netscan <ip/network>
+corvus > footprint <domain>
+corvus > context
+corvus > help
+
+
