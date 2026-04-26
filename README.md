@@ -1,4 +1,4 @@
-[15:26, 11.04.2026] Talha Bağcı: # 🐦⬛ Corvus Corax
+🐦⬛ Corvus Corax
 
 Corvus Corax is a modular reconnaissance and analysis toolkit designed for cybersecurity learners and researchers. It focuses on structured intelligence gathering and building a scalable analysis system.
 
