@@ -41,5 +41,35 @@ class ContextManager:
         self.data["ips"][ip]["hostname"] = domain
 
     def get_summary(self):
-        """O ana kadar elde edilen tüm benzersiz verileri döner."""
-        return json.dumps(self.data, indent=4)
+        """O ana kadar elde edilen verileri temizleyip döner."""
+        return json.dumps(self.get_clean_data(), indent=4, ensure_ascii=False)
+
+    def get_clean_data(self):
+        """
+        Nexus uyumluluğu için veri şemasını korur,
+        sadece boş/noise alanları temizler.
+        """
+        clean_ips = {}
+        for ip, ip_data in self.data["ips"].items():
+            ports = ip_data.get("ports", [])
+            geo = {k: v for k, v in ip_data.get("geo", {}).items() if v not in (None, "", [])}
+            hostname = ip_data.get("hostname")
+            clean_ips[ip] = {
+                "ports": ports,
+                "geo": geo,
+                "hostname": hostname if hostname else None,
+            }
+
+        clean_domains = {}
+        for domain, domain_data in self.data["domains"].items():
+            ips = domain_data.get("ips", [])
+            if ips:
+                clean_domains[domain] = {"ips": ips}
+
+        clean_notes = [n for n in self.data["notes"] if n]
+
+        return {
+            "ips": clean_ips,
+            "domains": clean_domains,
+            "notes": clean_notes,
+        }

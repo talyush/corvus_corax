@@ -8,8 +8,7 @@ class GeoipModule(BaseModule):
     def execute(self):
         args = self.target
         if not args:
-            print("usage: geoip <ip>")
-            return {"module": self.name, "status": "error", "error": "eksik argüman"}
+            return self.error("usage: geoip <ip>")
 
         ip = args[0]
 
@@ -19,32 +18,33 @@ class GeoipModule(BaseModule):
             data = json.loads(response.read().decode())
 
             if data["status"] != "success":
-                print("Lookup failed.")
-                return {"module": self.name, "status": "error", "error": "lookup failed"}
+                return self.error("lookup failed", target=ip)
 
-            print(f"[+] IP       : {data['query']}")
-            print(f"[+] Country  : {data['country']}")
-            print(f"[+] Region   : {data['regionName']}")
-            print(f"[+] City     : {data['city']}")
-            print(f"[+] ISP      : {data['isp']}")
-            print(f"[+] Org      : {data['org']}")
-            print(f"[+] Lat/Lon  : {data['lat']}, {data['lon']}")
+            result_data = {
+                "ip": data.get("query"),
+                "country": data.get("country"),
+                "region": data.get("regionName"),
+                "city": data.get("city"),
+                "isp": data.get("isp"),
+                "org": data.get("org"),
+                "lat": data.get("lat"),
+                "lon": data.get("lon"),
+            }
 
             # Hedef veriyi ContextManager'a (Zihin) aktaralım
             if self.context:
                 geo_info = {
-                    "country": data.get("country"),
-                    "region": data.get("regionName"),
-                    "city": data.get("city"),
-                    "isp": data.get("isp"),
-                    "org": data.get("org"),
-                    "latitude": data.get("lat"),
-                    "longitude": data.get("lon")
+                    "country": result_data["country"],
+                    "region": result_data["region"],
+                    "city": result_data["city"],
+                    "isp": result_data["isp"],
+                    "org": result_data["org"],
+                    "latitude": result_data["lat"],
+                    "longitude": result_data["lon"]
                 }
-                self.context.add_geo(data['query'], geo_info)
+                self.context.add_geo(result_data["ip"], geo_info)
 
         except Exception as e:
-            print("Error:", e)
-            return {"module": self.name, "status": "error", "error": str(e)}
+            return self.error(e, target=ip)
 
-        return {"module": self.name, "status": "completed"}
+        return self.success(target=ip, data=result_data)

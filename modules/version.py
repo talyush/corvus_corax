@@ -4,6 +4,11 @@ class VersionModule(BaseModule):
     name = "version"
     
     def execute(self):
-        print("Corvus Corax v0.2")
-        print('"Seeing the unseen systems."')
-        return {"module": self.name, "status": "completed"}
+        return self.success(
+            target="local",
+            data={
+                "name": "Corvus Corax",
+                "version": "v0.3",
+                "motto": "Seeing the unseen systems.",
+            },
+        )

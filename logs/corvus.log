@@ -150,3 +150,83 @@
 2026-04-11 15:16:57,674 | INFO | {'module': 'scan', 'status': 'completed'}
 2026-04-11 15:17:29,340 | INFO | {'module': 'scan', 'status': 'completed'}
 2026-04-11 15:18:14,150 | INFO | {'module': 'version', 'status': 'completed'}
+2026-04-18 20:09:25,789 | INFO | Log level from config: INFO
+2026-04-18 20:09:25,840 | INFO | Module loaded: footprint
+2026-04-18 20:09:26,052 | INFO | Module loaded: geoip
+2026-04-18 20:09:26,057 | INFO | Module loaded: help
+2026-04-18 20:09:26,063 | INFO | Module loaded: netscan
+2026-04-18 20:09:26,073 | INFO | Module loaded: scan
+2026-04-18 20:09:26,079 | INFO | Module loaded: version
+2026-04-18 21:05:45,944 | INFO | Log level from config: INFO
+2026-04-18 21:05:46,020 | INFO | Module loaded: footprint
+2026-04-18 21:05:46,369 | INFO | Module loaded: geoip
+2026-04-18 21:05:46,379 | INFO | Module loaded: help
+2026-04-18 21:05:46,382 | INFO | Module loaded: netscan
+2026-04-18 21:05:46,396 | INFO | Module loaded: scan
+2026-04-18 21:05:46,398 | INFO | Module loaded: version
+2026-04-18 21:20:26,659 | INFO | {'module': 'help', 'target': 'local', 'status': 'success', 'data': '\nAvailable Commands:\n\nscan <ip>            -> ping + port scan\nhelp                 -> show commands\nversion              -> show tool version\nfootprint <domain>   -> get IP and hostname\ngeoip <ip>           -> get geolocation info\nnetscan <ip/network> -> scan network\n'}
+2026-04-18 21:20:35,647 | INFO | {'module': 'scan', 'status': 'error', 'error': 'eksik parametre'}
+2026-04-18 21:20:51,300 | INFO | {'module': 'scan', 'status': 'completed'}
+2026-04-19 22:44:29,531 | INFO | Log level from config: INFO
+2026-04-19 22:44:29,616 | INFO | Module loaded: footprint
+2026-04-19 22:44:29,928 | INFO | Module loaded: geoip
+2026-04-19 22:44:29,937 | INFO | Module loaded: help
+2026-04-19 22:44:29,953 | INFO | Module loaded: netscan
+2026-04-19 22:44:29,967 | INFO | Module loaded: scan
+2026-04-19 22:44:29,976 | INFO | Module loaded: version
+2026-04-19 22:44:34,403 | INFO | {'module': 'help', 'target': 'local', 'status': 'success', 'data': '\nAvailable Commands:\n\nscan <ip>            -> ping + port scan\nhelp                 -> show commands\nversion              -> show tool version\nfootprint <domain>   -> get IP and hostname\ngeoip <ip>           -> get geolocation info\nnetscan <ip/network> -> scan network\n'}
+2026-04-19 22:44:58,201 | INFO | {'module': 'geoip', 'status': 'completed'}
+2026-04-19 22:45:43,410 | INFO | {'module': 'geoip', 'status': 'completed'}
+2026-04-19 22:45:57,644 | INFO | {'module': 'geoip', 'status': 'completed'}
+2026-04-19 22:46:10,311 | INFO | {'module': 'geoip', 'status': 'completed'}
+2026-04-19 22:46:26,645 | INFO | {'module': 'scan', 'status': 'error', 'error': 'unknown mode'}
+2026-04-24 23:02:28,244 | INFO | Log level from config: INFO
+2026-04-24 23:02:28,325 | INFO | Module loaded: footprint
+2026-04-24 23:02:28,645 | INFO | Module loaded: geoip
+2026-04-24 23:02:28,647 | INFO | Module loaded: help
+2026-04-24 23:02:28,648 | INFO | Module loaded: netscan
+2026-04-24 23:02:28,649 | INFO | Module loaded: scan
+2026-04-24 23:02:28,650 | INFO | Module loaded: version
+2026-04-24 23:02:54,989 | INFO | {'module': 'help', 'target': 'local', 'status': 'success', 'data': '\nAvailable Commands:\n\nscan <ip>            -> ping + port scan\nhelp                 -> show commands\nversion              -> show tool version\nfootprint <domain>   -> get IP and hostname\ngeoip <ip>           -> get geolocation info\nnetscan <ip/network> -> scan network\n'}
+2026-04-24 23:03:14,518 | INFO | {'module': 'scan', 'status': 'completed'}
+2026-04-24 23:03:38,233 | INFO | {'module': 'netscan', 'status': 'completed'}
+2026-04-24 23:04:24,059 | INFO | {'module': 'footprint', 'status': 'completed'}
+2026-04-24 23:04:52,932 | INFO | {'module': 'footprint', 'status': 'completed'}
+2026-04-24 23:05:40,574 | INFO | {'module': 'scan', 'status': 'completed'}
+2026-04-24 23:06:16,774 | INFO | {'module': 'geoip', 'status': 'completed'}
+2026-05-01 13:26:14,320 | INFO | Log level from config: INFO
+2026-05-01 13:26:14,399 | INFO | Module loaded: footprint
+2026-05-01 13:26:14,698 | INFO | Module loaded: geoip
+2026-05-01 13:26:14,708 | INFO | Module loaded: help
+2026-05-01 13:26:14,720 | INFO | Module loaded: netscan
+2026-05-01 13:26:14,737 | INFO | Module loaded: scan
+2026-05-01 13:26:14,739 | INFO | Module loaded: version
+2026-05-01 13:26:23,720 | INFO | {'module': 'help', 'target': 'local', 'status': 'success', 'data': '\nAvailable Commands:\n\nscan <ip>            -> ping + port scan\nhelp                 -> show commands\nversion              -> show tool version\nfootprint <domain>   -> get IP and hostname\ngeoip <ip>           -> get geolocation info\nnetscan <ip/network> -> scan network\n'}
+2026-05-01 13:27:49,947 | INFO | {'module': 'scan', 'status': 'completed'}
+2026-05-01 20:09:07,731 | INFO | Module loaded: footprint
+2026-05-01 20:09:07,838 | INFO | Module loaded: geoip
+2026-05-01 20:09:07,840 | INFO | Module loaded: help
+2026-05-01 20:09:07,842 | INFO | Module loaded: netscan
+2026-05-01 20:09:07,845 | INFO | Module loaded: scan
+2026-05-01 20:09:07,847 | INFO | Module loaded: version
+2026-05-01 20:09:07,847 | INFO | Corvus started.
+2026-05-01 20:09:14,637 | ERROR | CLI error: 'OutputManager' object has no attribute 'clear'
+2026-05-01 20:09:26,131 | ERROR | CLI error: 'OutputManager' object has no attribute 'clear'
+2026-05-01 20:09:31,334 | ERROR | CLI error: 'OutputManager' object has no attribute 'clear'
+2026-05-01 20:10:20,742 | ERROR | CLI error: 'OutputManager' object has no attribute 'clear'
+2026-05-01 20:10:39,243 | ERROR | CLI error: 'OutputManager' object has no attribute 'clear'
+2026-05-01 20:11:02,632 | ERROR | CLI error: 'OutputManager' object has no attribute 'clear'
+2026-05-01 20:30:09,300 | INFO | Module loaded: footprint
+2026-05-01 20:30:09,470 | INFO | Module loaded: geoip
+2026-05-01 20:30:09,475 | INFO | Module loaded: help
+2026-05-01 20:30:09,481 | INFO | Module loaded: netscan
+2026-05-01 20:30:09,496 | INFO | Module loaded: scan
+2026-05-01 20:30:09,501 | INFO | Module loaded: version
+2026-05-01 20:30:09,502 | INFO | Corvus started.
+2026-05-01 20:30:14,929 | INFO | {"module": "help", "target": "local", "status": "success", "data": "\nAvailable Commands:\n\nscan <ip> <mode> ... -> normal/slow/banner/subnet scan\nhelp                 -> show commands\nversion              -> show tool version\nfootprint <domain>   -> get IP and hostname\ngeoip <ip>           -> get geolocation info\nnetscan <ip/network> -> scan network\ncontext              -> show clean context summary\n"}
+2026-05-01 20:30:35,740 | INFO | {"module": "version", "target": "local", "status": "success", "data": {"name": "Corvus Corax", "version": "v0.3", "motto": "Seeing the unseen systems."}}
+2026-05-01 20:31:19,660 | INFO | {"module": "footprint", "target": "google.com", "status": "success", "data": {"domain": "google.com", "ip": "192.178.24.14", "hostname": "lcsofa-au-in-f14.1e100.net"}}
+2026-05-01 20:31:41,208 | INFO | {"module": "geoip", "target": "8.8.8.8", "status": "success", "data": {"ip": "8.8.8.8", "country": "United States", "region": "Virginia", "city": "Ashburn", "isp": "Google LLC", "org": "Google Public DNS", "lat": 39.03, "lon": -77.5}}
+2026-05-01 20:32:08,738 | INFO | {"module": "netscan", "target": "192.168.1.0/24", "status": "success", "data": {"network": "192.168.1.0/24", "live_hosts": [], "count": 0}}
+2026-05-01 20:34:17,068 | INFO | {"module": "scan", "target": "127.0.0.1", "status": "success", "data": {"mode": "normal", "range": [1, 100], "open_ports": []}}
+2026-05-01 20:38:41,509 | INFO | {"module": "scan", "target": "8.8.8.8", "status": "success", "data": {"mode": "normal", "range": [53, 53], "open_ports": [{"port": 53, "service": "DNS"}]}}

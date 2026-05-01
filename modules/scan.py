@@ -41,62 +41,67 @@ class ScanModule(BaseModule):
 
             s.send(b"HEAD / HTTP/1.0\r\n\r\n")
             banner = s.recv(1024).decode(errors="ignore")
-
-            print(f"[BANNER {port}] {banner.strip()}\n")
             s.close()
+            return banner.strip()
         except:
-            print(f"[BANNER {port}] alınamadı")
+            return None
 
     def normal_scan(self, ip, start, end):
-        print("Normal scan başlatıldı\n")
-        self.context.add_ip(ip)
+        if self.context:
+            self.context.add_ip(ip)
+        open_ports = []
 
         for port in range(start, end+1):
             if self.scan_port(ip, port):
                 service = self.detect_service(port)
-                print(f"[OPEN] {port} ({service})")
-                self.context.add_port(ip, port, service)
+                open_ports.append({"port": port, "service": service})
+                if self.context:
+                    self.context.add_port(ip, port, service)
+        return open_ports
 
     def slow_scan(self, ip, start, end):
-        print("Slow scan başlatıldı\n")
-        self.context.add_ip(ip)
+        if self.context:
+            self.context.add_ip(ip)
+        open_ports = []
 
         for port in range(start, end+1):
             if self.scan_port(ip, port):
                 service = self.detect_service(port)
-                print(f"[OPEN] {port} ({service})")
-                self.context.add_port(ip, port, service)
+                open_ports.append({"port": port, "service": service})
+                if self.context:
+                    self.context.add_port(ip, port, service)
             time.sleep(0.3)
+        return open_ports
 
     def banner_mode(self, ip, port):
-        print("Banner grabbing...\n")
-        self.context.add_ip(ip)
+        if self.context:
+            self.context.add_ip(ip)
         
         if self.scan_port(ip, port):
-            self.banner_grab(ip, port)
-            self.context.add_port(ip, port, self.detect_service(port))
+            banner = self.banner_grab(ip, port)
+            service = self.detect_service(port)
+            if self.context:
+                self.context.add_port(ip, port, service)
+            return {"port": port, "service": service, "banner": banner}
         else:
-            print("Port kapalı.")
+            return {"port": port, "state": "closed"}
 
     def subnet_scan(self, base_ip):
-        print("Subnet scan başlatıldı...\n")
         base = ".".join(base_ip.split(".")[:-1])
+        active_hosts = []
 
         for i in range(1, 255):
             ip = f"{base}.{i}"
             if self.scan_port(ip, 80, 0.3) or self.scan_port(ip, 22, 0.3):
-                print(f"[AKTİF] {ip}")
-                self.context.add_ip(ip)
+                active_hosts.append(ip)
+                if self.context:
+                    self.context.add_ip(ip)
+        return active_hosts
 
     def execute(self):
-        args = self.target
+        args = self.target or []
         if len(args) < 2:
-            print("Kullanım:")
-            print("scan <ip> normal <start> <end>")
-            print("scan <ip> slow <start> <end>")
-            print("scan <ip> banner <port>")
-            print("scan <ip> subnet")
-            return {"module": self.name, "status": "error", "error": "eksik parametre"}
+            return self.error("usage: scan <ip> <normal|slow|banner|subnet> ...")
 
         ip = args[0]
         mode = args[1]
@@ -105,25 +110,40 @@ class ScanModule(BaseModule):
             if mode == "normal":
                 start = int(args[2])
                 end = int(args[3])
-                self.normal_scan(ip, start, end)
+                data = {
+                    "mode": mode,
+                    "range": [start, end],
+                    "open_ports": self.normal_scan(ip, start, end),
+                }
 
             elif mode == "slow":
                 start = int(args[2])
                 end = int(args[3])
-                self.slow_scan(ip, start, end)
+                data = {
+                    "mode": mode,
+                    "range": [start, end],
+                    "open_ports": self.slow_scan(ip, start, end),
+                }
 
             elif mode == "banner":
                 port = int(args[2])
-                self.banner_mode(ip, port)
+                data = {
+                    "mode": mode,
+                    "result": self.banner_mode(ip, port),
+                }
 
             elif mode == "subnet":
-                self.subnet_scan(ip)
+                active_hosts = self.subnet_scan(ip)
+                data = {
+                    "mode": mode,
+                    "active_hosts": active_hosts,
+                    "count": len(active_hosts),
+                }
 
             else:
-                print("Unknown mode.")
-                return {"module": self.name, "status": "error", "error": "unknown mode"}
+                return self.error("unknown mode", target=ip)
                 
         except Exception as e:
-            return {"module": self.name, "status": "error", "error": str(e)}
+            return self.error(e, target=ip)
 
-        return {"module": self.name, "status": "completed"}
+        return self.success(target=ip, data=data)

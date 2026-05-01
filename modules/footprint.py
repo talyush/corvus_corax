@@ -7,14 +7,13 @@ class FootprintModule(BaseModule):
     def execute(self):
         args = self.target
         if not args:
-            print("usage: footprint <domain>")
-            return {"module": self.name, "status": "error", "error": "eksik argüman"}
+            return self.error("usage: footprint <domain>")
 
         target = args[0]
 
         try:
             ip = socket.gethostbyname(target)
-            print(f"[+] IP Address : {ip}")
+            hostname = None
             
             # Context'e ekle
             if self.context:
@@ -22,14 +21,20 @@ class FootprintModule(BaseModule):
 
             try:
                 host = socket.gethostbyaddr(ip)
-                print(f"[+] Hostname   : {host[0]}")
+                hostname = host[0]
                 if self.context:
-                    self.context.add_domain_mapping(host[0], ip)
-            except:
+                    self.context.add_domain_mapping(hostname, ip)
+            except Exception:
                 pass
 
         except Exception as e:
-            print("Error:", e)
-            return {"module": self.name, "status": "error", "error": str(e)}
+            return self.error(e, target=target)
 
-        return {"module": self.name, "status": "completed"}
+        return self.success(
+            target=target,
+            data={
+                "domain": target,
+                "ip": ip,
+                "hostname": hostname,
+            },
+        )

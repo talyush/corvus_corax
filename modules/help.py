@@ -7,17 +7,12 @@ class HelpModule(BaseModule):
         data = """
 Available Commands:
 
-scan <ip>            -> ping + port scan
+scan <ip> <mode> ... -> normal/slow/banner/subnet scan
 help                 -> show commands
 version              -> show tool version
 footprint <domain>   -> get IP and hostname
 geoip <ip>           -> get geolocation info
 netscan <ip/network> -> scan network
+context              -> show clean context summary
 """
-
-        return {
-            "module": self.name,
-            "target": "local",
-            "status": "success",
-            "data": data
-        }
+        return self.success(target="local", data=data)
