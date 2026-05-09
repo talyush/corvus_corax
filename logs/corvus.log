@@ -370,3 +370,14 @@
 2026-05-09 18:06:43 | INFO     | corvus | Module loaded: whois
 2026-05-09 18:06:43 | INFO     | corvus | Corvus started.
 2026-05-09 18:06:48 | INFO     | corvus | {"module": "help", "target": "local", "status": "success", "data": "\n================================================================================\n  AVAILABLE COMMANDS\n================================================================================\n  Command     | Arguments            | Description\n--------------------------------------------------------------------------------\n  help        |                      | Show commands\n  version     |                      | Show tool version\n  context     |                      | Show clean context summary\n  scan        | <ip> <mode> ...      | normal/slow/banner/subnet scan\n  netscan     | <ip/network>         | Scan network\n  footprint   | <domain>             | Get IP and hostname\n  geoip       | <ip>                 | Get geolocation info\n  whois       | <domain|ip>          | Run whois lookup\n  subdomain   | <domain> [wordlist]  | Passive subdomain enum (crt.sh+wordlist)\n  tech        | <url_or_host>        | Detect server, x-powered-by & framework\n  crawl       | <url_or_host>        | Get title, links, forms and status code\n================================================================================\n"}
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: footprint
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: geoip
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: help
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: netscan
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: scan
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: crawl
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: tech
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: version
+2026-05-09 18:34:17 | INFO     | corvus | Module loaded: whois
+2026-05-09 18:34:17 | INFO     | corvus | Corvus started.

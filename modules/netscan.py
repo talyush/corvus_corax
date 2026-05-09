@@ -28,66 +28,44 @@ class NetscanModule(BaseModule):
         ceiling = int(self._scan_defaults().get("max_threads", 200))
         return max(1, min(configured_threads, max(1, ceiling)))
 
-    def scan_host(self, ip, live_hosts, lock, port=80):
+    def scan_host(self, ip, port=80):
         try:
             s = socket.socket()
-            s.settimeout(self._connect_timeout())
+            s.settimeout(0.5)
             s.connect((str(ip), port))
-            with lock:
-                live_hosts.append(str(ip))
-            if self.context:
-                self.context.add_ip(str(ip))
-                self.context.add_port(str(ip), port, "HTTP/Open")
             s.close()
-        except Exception:
+
+            with self.lock:
+                self.alive_hosts.append({
+                    "ip": str(ip),
+                    "port": port
+                })
+
+        except:
             pass
 
-    def execute(self):
+    def run(self):
         args = self.target
+
         if not args:
-            return self.error("usage: netscan <network>")
+            raise ValueError("Usage: netscan <network>")
 
         network = args[0]
-        try:
-            net = ipaddress.ip_network(network, strict=False)
-        except Exception:
-            return self.error("invalid network format", target=network)
 
-        live_hosts = []
-        lock = threading.Lock()
+        net = ipaddress.ip_network(network, strict=False)
+
         threads = []
-        port = self._scan_port()
-        max_threads = self._max_threads()
-        sem = threading.Semaphore(max_threads)
-
-        def worker(host):
-            with sem:
-                self.scan_host(host, live_hosts, lock, port=port)
 
         for ip in net.hosts():
-            t = threading.Thread(target=worker, args=(ip,))
+            t = threading.Thread(target=self.scan_host, args=(ip,))
             t.start()
             threads.append(t)
 
         for t in threads:
             t.join()
 
-        if self.context:
-            self.context.add_note(
-                text=f"netscan completed for {network} with {len(live_hosts)} live hosts",
-                source="netscan",
-                severity="info",
-            )
-            for host in live_hosts:
-                self.context.add_relation(
-                    "network", str(net), "contains_live_host", "ip", host, "netscan"
-                )
-
-        return self.success(
-            target=network,
-            data={
-                "network": str(net),
-                "live_hosts": sorted(live_hosts),
-                "count": len(live_hosts),
-            },
-        )
+        return {
+            "network": network,
+            "alive_hosts": self.alive_hosts,
+            "count": len(self.alive_hosts)
+        }

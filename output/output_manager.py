@@ -14,26 +14,52 @@ class OutputManager:
     def clear(self):
         self.results.clear()
 
+    # -------------------------
+    # CLI FRIENDLY TEXT OUTPUT
+    # -------------------------
     def to_text(self):
-        if not self.results:
-            return ""
-        if self.mode == "json":
-            return json.dumps(self.results, ensure_ascii=False)
-            
-        output_str = ""
-        for res in self.results:
-            if isinstance(res, dict) and "data" in res:
-                data = res["data"]
-                if isinstance(data, str):
-                    output_str += data + "\n"
-                else:
-                    output_str += json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-            else:
-                output_str += json.dumps(res, indent=2, ensure_ascii=False) + "\n"
-        return output_str.strip()
+        lines = []
 
+        for r in self.results:
+            status = r.get("status", "unknown").upper()
+            module = r.get("module", "unknown")
+            target = r.get("target", "N/A")
+
+            lines.append(f"[{module.upper()}] {status}")
+            lines.append(f"Target: {target}")
+
+            if status == "SUCCESS":
+                data = r.get("data", "")
+                lines.append("Result:")
+                lines.append(str(data))
+
+            else:
+                lines.append("Error:")
+                lines.append(r.get("error", "Unknown error"))
+
+            lines.append("-" * 35)
+
+        return "\n".join(lines)
+
+    # -------------------------
+    # JSON OUTPUT
+    # -------------------------
+    def to_json(self):
+        return json.dumps(self.results, indent=4)
+
+    # -------------------------
+    # LOG OUTPUT
+    # -------------------------
     def to_log(self):
         if not self.logger:
             return
+
         for r in self.results:
-            self.logger.info(json.dumps(r, ensure_ascii=False))
+            self.logger.info(json.dumps(r))
+
+    # -------------------------
+    # FUTURE REPORT EXPORT
+    # -------------------------
+    def export_json(self, filename="report.json"):
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(self.results, f, indent=4)
