@@ -1,5 +1,22 @@
 {
     "log_level": "INFO",
-    "threads": 5,
-    "timeout": 10
+    "threads": 20,
+    "timeout": 3.0,
+    "user_agent": "CorvusCorax/0.3 (+https://github.com/corvus-corax/project)",
+    "output_mode": "text",
+    "scan_defaults": {
+        "connect_timeout": 1.0,
+        "banner_timeout": 2.0,
+        "host_probe_ports": [
+            80,
+            22
+        ],
+        "host_probe_timeout": 0.3,
+        "slow_scan_delay": 0.3,
+        "normal_port_range": [
+            1,
+            1024
+        ],
+        "max_threads": 200
+    }
 }

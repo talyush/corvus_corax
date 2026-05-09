@@ -14,7 +14,7 @@ config = load_config()
 logger = get_logger()
 modules = load_modules()
 context = ContextManager()
-output = OutputManager(logger)
+output = OutputManager(logger, mode=config.get("output_mode", "text"))
 
 show_banner()
 logger.info("Corvus started.")

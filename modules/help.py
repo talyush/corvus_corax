@@ -5,14 +5,22 @@ class HelpModule(BaseModule):
 
     def execute(self):
         data = """
-Available Commands:
-
-scan <ip> <mode> ... -> normal/slow/banner/subnet scan
-help                 -> show commands
-version              -> show tool version
-footprint <domain>   -> get IP and hostname
-geoip <ip>           -> get geolocation info
-netscan <ip/network> -> scan network
-context              -> show clean context summary
+================================================================================
+  AVAILABLE COMMANDS
+================================================================================
+  Command     | Arguments            | Description
+--------------------------------------------------------------------------------
+  help        |                      | Show commands
+  version     |                      | Show tool version
+  context     |                      | Show clean context summary
+  scan        | <ip> <mode> ...      | normal/slow/banner/subnet scan
+  netscan     | <ip/network>         | Scan network
+  footprint   | <domain>             | Get IP and hostname
+  geoip       | <ip>                 | Get geolocation info
+  whois       | <domain|ip>          | Run whois lookup
+  subdomain   | <domain> [wordlist]  | Passive subdomain enum (crt.sh+wordlist)
+  tech        | <url_or_host>        | Detect server, x-powered-by & framework
+  crawl       | <url_or_host>        | Get title, links, forms and status code
+================================================================================
 """
         return self.success(target="local", data=data)

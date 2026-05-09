@@ -8,7 +8,7 @@ class VersionModule(BaseModule):
             target="local",
             data={
                 "name": "Corvus Corax",
-                "version": "v0.3",
+                "version": "v0.4",
                 "motto": "Seeing the unseen systems.",
             },
         )

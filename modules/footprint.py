@@ -18,12 +18,33 @@ class FootprintModule(BaseModule):
             # Context'e ekle
             if self.context:
                 self.context.add_domain_mapping(target, ip)
+                self.context.add_note(
+                    text=f"footprint resolved {target} -> {ip}",
+                    source="footprint",
+                    severity="info",
+                )
+                self.context.add_relation(
+                    "domain",
+                    target,
+                    "resolves_to",
+                    "ip",
+                    ip,
+                    "footprint",
+                )
 
             try:
                 host = socket.gethostbyaddr(ip)
                 hostname = host[0]
                 if self.context:
                     self.context.add_domain_mapping(hostname, ip)
+                    self.context.add_relation(
+                        "ip",
+                        ip,
+                        "reverse_resolves_to",
+                        "domain",
+                        hostname,
+                        "footprint reverse dns",
+                    )
             except Exception:
                 pass
 

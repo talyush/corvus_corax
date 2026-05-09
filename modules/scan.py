@@ -19,7 +19,59 @@ COMMON_PORTS = {
 class ScanModule(BaseModule):
     name = "scan"
 
-    def scan_port(self, ip, port, timeout=1):
+    def _scan_defaults(self):
+        cfg = self.config or {}
+        return cfg.get("scan_defaults", {}) if isinstance(cfg.get("scan_defaults", {}), dict) else {}
+
+    def _connect_timeout(self):
+        defaults = self._scan_defaults()
+        global_timeout = (self.config or {}).get("timeout", 1.0)
+        return float(defaults.get("connect_timeout", global_timeout))
+
+    def _banner_timeout(self):
+        defaults = self._scan_defaults()
+        global_timeout = (self.config or {}).get("timeout", 2.0)
+        return float(defaults.get("banner_timeout", global_timeout))
+
+    def _host_probe_timeout(self):
+        defaults = self._scan_defaults()
+        return float(defaults.get("host_probe_timeout", 0.3))
+
+    def _host_probe_ports(self):
+        defaults = self._scan_defaults()
+        ports = defaults.get("host_probe_ports", [80, 22])
+        if isinstance(ports, list) and ports:
+            cleaned = []
+            for p in ports:
+                try:
+                    val = int(p)
+                    if 1 <= val <= 65535:
+                        cleaned.append(val)
+                except Exception:
+                    continue
+            if cleaned:
+                return cleaned
+        return [80, 22]
+
+    def _slow_delay(self):
+        defaults = self._scan_defaults()
+        return float(defaults.get("slow_scan_delay", 0.3))
+
+    def _normal_range(self):
+        defaults = self._scan_defaults()
+        port_range = defaults.get("normal_port_range", [1, 1024])
+        if isinstance(port_range, list) and len(port_range) == 2:
+            try:
+                start = int(port_range[0])
+                end = int(port_range[1])
+                if 1 <= start <= 65535 and 1 <= end <= 65535 and start <= end:
+                    return [start, end]
+            except Exception:
+                pass
+        return [1, 1024]
+
+    def scan_port(self, ip, port, timeout=None):
+        timeout = self._connect_timeout() if timeout is None else timeout
         s = socket.socket()
         s.settimeout(timeout)
         try:
@@ -36,7 +88,7 @@ class ScanModule(BaseModule):
     def banner_grab(self, ip, port):
         try:
             s = socket.socket()
-            s.settimeout(2)
+            s.settimeout(self._banner_timeout())
             s.connect((ip, port))
 
             s.send(b"HEAD / HTTP/1.0\r\n\r\n")
@@ -49,6 +101,11 @@ class ScanModule(BaseModule):
     def normal_scan(self, ip, start, end):
         if self.context:
             self.context.add_ip(ip)
+            self.context.add_note(
+                text=f"scan normal started for {ip} ports {start}-{end}",
+                source="scan",
+                severity="info",
+            )
         open_ports = []
 
         for port in range(start, end+1):
@@ -57,11 +114,19 @@ class ScanModule(BaseModule):
                 open_ports.append({"port": port, "service": service})
                 if self.context:
                     self.context.add_port(ip, port, service)
+                    self.context.add_relation(
+                        "ip", ip, "has_open_port", "port", f"{port}/{service}", "scan normal"
+                    )
         return open_ports
 
     def slow_scan(self, ip, start, end):
         if self.context:
             self.context.add_ip(ip)
+            self.context.add_note(
+                text=f"scan slow started for {ip} ports {start}-{end}",
+                source="scan",
+                severity="info",
+            )
         open_ports = []
 
         for port in range(start, end+1):
@@ -70,7 +135,10 @@ class ScanModule(BaseModule):
                 open_ports.append({"port": port, "service": service})
                 if self.context:
                     self.context.add_port(ip, port, service)
-            time.sleep(0.3)
+                    self.context.add_relation(
+                        "ip", ip, "has_open_port", "port", f"{port}/{service}", "scan slow"
+                    )
+            time.sleep(self._slow_delay())
         return open_ports
 
     def banner_mode(self, ip, port):
@@ -82,6 +150,14 @@ class ScanModule(BaseModule):
             service = self.detect_service(port)
             if self.context:
                 self.context.add_port(ip, port, service)
+                self.context.add_relation(
+                    "ip", ip, "has_open_port", "port", f"{port}/{service}", "scan banner"
+                )
+                self.context.add_note(
+                    text=f"scan banner checked {ip}:{port}",
+                    source="scan",
+                    severity="info",
+                )
             return {"port": port, "service": service, "banner": banner}
         else:
             return {"port": port, "state": "closed"}
@@ -92,10 +168,16 @@ class ScanModule(BaseModule):
 
         for i in range(1, 255):
             ip = f"{base}.{i}"
-            if self.scan_port(ip, 80, 0.3) or self.scan_port(ip, 22, 0.3):
+            probe_timeout = self._host_probe_timeout()
+            if any(self.scan_port(ip, port, probe_timeout) for port in self._host_probe_ports()):
                 active_hosts.append(ip)
                 if self.context:
                     self.context.add_ip(ip)
+                    self.context.add_note(
+                        text=f"scan subnet host discovered: {ip}",
+                        source="scan",
+                        severity="info",
+                    )
         return active_hosts
 
     def execute(self):
@@ -108,8 +190,11 @@ class ScanModule(BaseModule):
 
         try:
             if mode == "normal":
-                start = int(args[2])
-                end = int(args[3])
+                if len(args) >= 4:
+                    start = int(args[2])
+                    end = int(args[3])
+                else:
+                    start, end = self._normal_range()
                 data = {
                     "mode": mode,
                     "range": [start, end],
@@ -117,8 +202,11 @@ class ScanModule(BaseModule):
                 }
 
             elif mode == "slow":
-                start = int(args[2])
-                end = int(args[3])
+                if len(args) >= 4:
+                    start = int(args[2])
+                    end = int(args[3])
+                else:
+                    start, end = self._normal_range()
                 data = {
                     "mode": mode,
                     "range": [start, end],

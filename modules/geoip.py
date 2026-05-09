@@ -11,10 +11,13 @@ class GeoipModule(BaseModule):
             return self.error("usage: geoip <ip>")
 
         ip = args[0]
+        timeout = float((self.config or {}).get("timeout", 5))
+        user_agent = (self.config or {}).get("user_agent", "CorvusCorax/0.3")
 
         try:
             url = f"http://ip-api.com/json/{ip}"
-            response = urllib.request.urlopen(url, timeout=5)
+            request = urllib.request.Request(url, headers={"User-Agent": user_agent})
+            response = urllib.request.urlopen(request, timeout=timeout)
             data = json.loads(response.read().decode())
 
             if data["status"] != "success":
@@ -43,6 +46,20 @@ class GeoipModule(BaseModule):
                     "longitude": result_data["lon"]
                 }
                 self.context.add_geo(result_data["ip"], geo_info)
+                self.context.add_note(
+                    text=f"geoip lookup completed for {result_data['ip']}",
+                    source="geoip",
+                    severity="info",
+                )
+                if result_data.get("country"):
+                    self.context.add_relation(
+                        "ip",
+                        result_data["ip"],
+                        "located_in",
+                        "country",
+                        result_data["country"],
+                        "geoip",
+                    )
 
         except Exception as e:
             return self.error(e, target=ip)

@@ -230,3 +230,143 @@
 2026-05-01 20:32:08,738 | INFO | {"module": "netscan", "target": "192.168.1.0/24", "status": "success", "data": {"network": "192.168.1.0/24", "live_hosts": [], "count": 0}}
 2026-05-01 20:34:17,068 | INFO | {"module": "scan", "target": "127.0.0.1", "status": "success", "data": {"mode": "normal", "range": [1, 100], "open_ports": []}}
 2026-05-01 20:38:41,509 | INFO | {"module": "scan", "target": "8.8.8.8", "status": "success", "data": {"mode": "normal", "range": [53, 53], "open_ports": [{"port": 53, "service": "DNS"}]}}
+2026-05-09 17:28:56 | INFO     | corvus | Module loaded: footprint
+2026-05-09 17:28:57 | INFO     | corvus | Module loaded: geoip
+2026-05-09 17:28:57 | INFO     | corvus | Module loaded: help
+2026-05-09 17:28:57 | INFO     | corvus | Module loaded: netscan
+2026-05-09 17:28:57 | INFO     | corvus | Module loaded: scan
+2026-05-09 17:28:57 | INFO     | corvus | Module loaded: crawl
+2026-05-09 17:28:57 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 17:28:57 | INFO     | corvus | Module loaded: tech
+2026-05-09 17:28:57 | INFO     | corvus | Module loaded: version
+2026-05-09 17:28:57 | INFO     | corvus | Module loaded: whois
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: footprint
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: geoip
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: help
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: netscan
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: scan
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: crawl
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: tech
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: version
+2026-05-09 17:29:19 | INFO     | corvus | Module loaded: whois
+2026-05-09 17:29:19 | INFO     | corvus | Corvus started.
+2026-05-09 17:29:19 | INFO     | corvus | {"module": "help", "target": "local", "status": "success", "data": "\nAvailable Commands:\n\nscan <ip> <mode> ... -> normal/slow/banner/subnet scan\nhelp                 -> show commands\nversion              -> show tool version\nfootprint <domain>   -> get IP and hostname\ngeoip <ip>           -> get geolocation info\nnetscan <ip/network> -> scan network\nwhois <domain|ip>    -> run whois lookup\nsubdomain <domain> [wordlist_path] -> passive subdomain enum (crt.sh + wordlist)\ntech <url_or_host>   -> detect server, x-powered-by and framework hints\ncrawl <url_or_host>  -> get title, links, forms and status code\ncontext              -> show clean context summary\n"}
+2026-05-09 17:29:29 | INFO     | corvus | {"module": "scan", "target": "127.0.0.1", "status": "success", "data": {"mode": "normal", "range": [1, 10], "open_ports": []}}
+2026-05-09 17:29:30 | INFO     | corvus | {"module": "whois", "target": "example.com", "status": "success", "data": {"query": "example.com", "iana_server": "whois.iana.org", "referral_server": null, "server_used": "whois.iana.org", "raw": "% IANA WHOIS server\n% for more information on IANA, visit http://www.iana.org\n% This query returned 1 object\n\ndomain:       EXAMPLE.COM\n\norganisation: Internet Assigned Numbers Authority\n\ncreated:      1992-01-01\nsource:       IANA"}}
+2026-05-09 17:29:34 | INFO     | corvus | {"module": "subdomain", "target": "example.com", "status": "error", "error": "The read operation timed out"}
+2026-05-09 17:29:34 | INFO     | corvus | {"module": "tech", "target": "example.com", "status": "success", "data": {"url": "http://example.com", "server": "cloudflare", "x_powered_by": null, "frameworks": []}}
+2026-05-09 17:29:34 | INFO     | corvus | {"module": "crawl", "target": "example.com", "status": "success", "data": {"url": "http://example.com", "status_code": 200, "title": "Example Domain", "links": ["https://iana.org/domains/example"], "forms": []}}
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: footprint
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: geoip
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: help
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: netscan
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: scan
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: crawl
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: tech
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: version
+2026-05-09 17:29:42 | INFO     | corvus | Module loaded: whois
+2026-05-09 17:29:42 | INFO     | corvus | Corvus started.
+2026-05-09 17:29:44 | INFO     | corvus | {"module": "whois", "target": "example.com", "status": "success", "data": {"query": "example.com", "iana_server": "whois.iana.org", "referral_server": null, "server_used": "whois.iana.org", "raw": "% IANA WHOIS server\n% for more information on IANA, visit http://www.iana.org\n% This query returned 1 object\n\ndomain:       EXAMPLE.COM\n\norganisation: Internet Assigned Numbers Authority\n\ncreated:      1992-01-01\nsource:       IANA"}}
+2026-05-09 17:29:44 | INFO     | corvus | {"module": "tech", "target": "example.com", "status": "success", "data": {"url": "http://example.com", "server": "cloudflare", "x_powered_by": null, "frameworks": []}}
+2026-05-09 17:29:44 | INFO     | corvus | {"module": "crawl", "target": "example.com", "status": "success", "data": {"url": "http://example.com", "status_code": 200, "title": "Example Domain", "links": ["https://iana.org/domains/example"], "forms": []}}
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: footprint
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: geoip
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: help
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: netscan
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: scan
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: crawl
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: tech
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: version
+2026-05-09 17:33:21 | INFO     | corvus | Module loaded: whois
+2026-05-09 17:33:21 | INFO     | corvus | Corvus started.
+2026-05-09 17:33:23 | INFO     | corvus | {"module": "whois", "target": "example.com", "status": "success", "data": {"query": "example.com", "iana_server": "whois.iana.org", "referral_server": null, "server_used": "whois.iana.org", "raw": "% IANA WHOIS server\n% for more information on IANA, visit http://www.iana.org\n% This query returned 1 object\n\ndomain:       EXAMPLE.COM\n\norganisation: Internet Assigned Numbers Authority\n\ncreated:      1992-01-01\nsource:       IANA"}}
+2026-05-09 17:33:23 | INFO     | corvus | {"module": "tech", "target": "example.com", "status": "success", "data": {"url": "http://example.com", "server": "cloudflare", "x_powered_by": null, "frameworks": []}}
+2026-05-09 17:33:24 | INFO     | corvus | {"module": "crawl", "target": "example.com", "status": "success", "data": {"url": "http://example.com", "status_code": 200, "title": "Example Domain", "links": ["https://iana.org/domains/example"], "forms": []}}
+2026-05-09 17:38:02 | INFO     | corvus | Module loaded: footprint
+2026-05-09 17:38:02 | INFO     | corvus | Module loaded: geoip
+2026-05-09 17:38:02 | INFO     | corvus | Module loaded: help
+2026-05-09 17:38:02 | INFO     | corvus | Module loaded: netscan
+2026-05-09 17:38:02 | INFO     | corvus | Module loaded: scan
+2026-05-09 17:38:03 | INFO     | corvus | Module loaded: crawl
+2026-05-09 17:38:03 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 17:38:03 | INFO     | corvus | Module loaded: tech
+2026-05-09 17:38:03 | INFO     | corvus | Module loaded: version
+2026-05-09 17:38:03 | INFO     | corvus | Module loaded: whois
+2026-05-09 17:38:03 | INFO     | corvus | Corvus started.
+2026-05-09 17:38:08 | INFO     | corvus | {"module": "scan", "target": "127.0.0.1", "status": "success", "data": {"mode": "normal", "range": [1, 5], "open_ports": []}}
+2026-05-09 17:38:08 | INFO     | corvus | {"module": "netscan", "target": "127.0.0.0/30", "status": "success", "data": {"network": "127.0.0.0/30", "live_hosts": [], "count": 0}}
+2026-05-09 17:38:08 | INFO     | corvus | {"module": "geoip", "target": "8.8.8.8", "status": "success", "data": {"ip": "8.8.8.8", "country": "United States", "region": "Virginia", "city": "Ashburn", "isp": "Google LLC", "org": "Google Public DNS", "lat": 39.03, "lon": -77.5}}
+2026-05-09 17:38:13 | INFO     | corvus | {"module": "footprint", "target": "example.com", "status": "success", "data": {"domain": "example.com", "ip": "172.66.147.243", "hostname": null}}
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: footprint
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: geoip
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: help
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: netscan
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: scan
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: crawl
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: tech
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: version
+2026-05-09 17:51:30 | INFO     | corvus | Module loaded: whois
+2026-05-09 17:51:30 | INFO     | corvus | Corvus started.
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: footprint
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: geoip
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: help
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: netscan
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: scan
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: crawl
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: tech
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: version
+2026-05-09 17:53:46 | INFO     | corvus | Module loaded: whois
+2026-05-09 17:53:46 | INFO     | corvus | Corvus started.
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: footprint
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: geoip
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: help
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: netscan
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: scan
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: crawl
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: tech
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: version
+2026-05-09 17:58:30 | INFO     | corvus | Module loaded: whois
+2026-05-09 17:58:30 | INFO     | corvus | Corvus started.
+2026-05-09 18:00:41 | INFO     | corvus | {"module": "help", "target": "local", "status": "success", "data": "\nAvailable Commands:\n\nscan <ip> <mode> ... -> normal/slow/banner/subnet scan\nhelp                 -> show commands\nversion              -> show tool version\nfootprint <domain>   -> get IP and hostname\ngeoip <ip>           -> get geolocation info\nnetscan <ip/network> -> scan network\nwhois <domain|ip>    -> run whois lookup\nsubdomain <domain> [wordlist_path] -> passive subdomain enum (crt.sh + wordlist)\ntech <url_or_host>   -> detect server, x-powered-by and framework hints\ncrawl <url_or_host>  -> get title, links, forms and status code\ncontext              -> show clean context summary\n"}
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: footprint
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: geoip
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: help
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: netscan
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: scan
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: crawl
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: tech
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: version
+2026-05-09 18:03:38 | INFO     | corvus | Module loaded: whois
+2026-05-09 18:03:38 | INFO     | corvus | Corvus started.
+2026-05-09 18:03:44 | INFO     | corvus | {"module": "help", "target": "local", "status": "success", "data": "\n================================================================================\n  AVAILABLE COMMANDS\n================================================================================\n  Command     | Arguments            | Description\n--------------------------------------------------------------------------------\n  help        |                      | Show commands\n  version     |                      | Show tool version\n  context     |                      | Show clean context summary\n  scan        | <ip> <mode> ...      | normal/slow/banner/subnet scan\n  netscan     | <ip/network>         | Scan network\n  footprint   | <domain>             | Get IP and hostname\n  geoip       | <ip>                 | Get geolocation info\n  whois       | <domain|ip>          | Run whois lookup\n  subdomain   | <domain> [wordlist]  | Passive subdomain enum (crt.sh+wordlist)\n  tech        | <url_or_host>        | Detect server, x-powered-by & framework\n  crawl       | <url_or_host>        | Get title, links, forms and status code\n================================================================================\n"}
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: footprint
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: geoip
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: help
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: netscan
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: scan
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: crawl
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: tech
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: version
+2026-05-09 18:04:31 | INFO     | corvus | Module loaded: whois
+2026-05-09 18:04:31 | INFO     | corvus | Corvus started.
+2026-05-09 18:04:36 | INFO     | corvus | {"module": "help", "target": "local", "status": "success", "data": "\n================================================================================\n  AVAILABLE COMMANDS\n================================================================================\n  Command     | Arguments            | Description\n--------------------------------------------------------------------------------\n  help        |                      | Show commands\n  version     |                      | Show tool version\n  context     |                      | Show clean context summary\n  scan        | <ip> <mode> ...      | normal/slow/banner/subnet scan\n  netscan     | <ip/network>         | Scan network\n  footprint   | <domain>             | Get IP and hostname\n  geoip       | <ip>                 | Get geolocation info\n  whois       | <domain|ip>          | Run whois lookup\n  subdomain   | <domain> [wordlist]  | Passive subdomain enum (crt.sh+wordlist)\n  tech        | <url_or_host>        | Detect server, x-powered-by & framework\n  crawl       | <url_or_host>        | Get title, links, forms and status code\n================================================================================\n"}
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: footprint
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: geoip
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: help
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: netscan
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: scan
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: crawl
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: subdomain
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: tech
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: version
+2026-05-09 18:06:43 | INFO     | corvus | Module loaded: whois
+2026-05-09 18:06:43 | INFO     | corvus | Corvus started.
+2026-05-09 18:06:48 | INFO     | corvus | {"module": "help", "target": "local", "status": "success", "data": "\n================================================================================\n  AVAILABLE COMMANDS\n================================================================================\n  Command     | Arguments            | Description\n--------------------------------------------------------------------------------\n  help        |                      | Show commands\n  version     |                      | Show tool version\n  context     |                      | Show clean context summary\n  scan        | <ip> <mode> ...      | normal/slow/banner/subnet scan\n  netscan     | <ip/network>         | Scan network\n  footprint   | <domain>             | Get IP and hostname\n  geoip       | <ip>                 | Get geolocation info\n  whois       | <domain|ip>          | Run whois lookup\n  subdomain   | <domain> [wordlist]  | Passive subdomain enum (crt.sh+wordlist)\n  tech        | <url_or_host>        | Detect server, x-powered-by & framework\n  crawl       | <url_or_host>        | Get title, links, forms and status code\n================================================================================\n"}
