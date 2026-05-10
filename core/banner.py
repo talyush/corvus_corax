@@ -1,4 +1,3 @@
-name = "banner"
 from colorama import Fore, Style, init
 
 def show_banner():

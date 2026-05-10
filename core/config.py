@@ -1,14 +1,12 @@
 import os
 import json
 def load_config():
-    path = "config/config.json"
-    
-    print("CONFIG PATH:", os.path.abspath(path))  # 👈 EKLE
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(base_dir, "config", "config.json")
 
     try:
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             content = f.read()
-            print("CONFIG CONTENT:", repr(content))  # 👈 EKLE
             return json.loads(content)
     except Exception as e:
         print(f"[CONFIG ERROR] {e}")

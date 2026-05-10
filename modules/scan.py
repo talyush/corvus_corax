@@ -38,11 +38,11 @@ class ScanModule(BaseModule):
     def detect_service(self, port):
         return COMMON_PORTS.get(port, "Unknown")
 
-    def run(self):
+    def execute(self):
         args = self.target
 
-        if len(args) < 2:
-            raise ValueError("Usage: scan <ip> normal <start> <end>")
+        if not args or len(args) < 2:
+            return self.error("Usage: scan <ip> normal <start> <end>")
 
         ip = args[0]
         mode = args[1]
@@ -55,10 +55,13 @@ class ScanModule(BaseModule):
 
             for port in range(start, end + 1):
                 if self.scan_port(ip, port):
+                    service_name = self.detect_service(port)
                     results.append({
                         "port": port,
-                        "service": self.detect_service(port)
+                        "service": service_name
                     })
+                    if self.context:
+                        self.context.add_port(ip, port, service_name)
 
         elif mode == "slow":
             start = int(args[2])
@@ -66,17 +69,23 @@ class ScanModule(BaseModule):
 
             for port in range(start, end + 1):
                 if self.scan_port(ip, port):
+                    service_name = self.detect_service(port)
                     results.append({
                         "port": port,
-                        "service": self.detect_service(port)
+                        "service": service_name
                     })
+                    if self.context:
+                        self.context.add_port(ip, port, service_name)
                 time.sleep(0.3)
 
         else:
-            raise ValueError("Unknown mode")
+            return self.error("Unknown mode", target=ip)
 
-        return {
-            "ip": ip,
-            "mode": mode,
-            "open_ports": results
-        }
+        return self.success(
+            target=ip,
+            data={
+                "ip": ip,
+                "mode": mode,
+                "open_ports": results
+            }
+        )

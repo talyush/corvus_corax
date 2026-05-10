@@ -44,11 +44,14 @@ class NetscanModule(BaseModule):
         except:
             pass
 
-    def run(self):
+    def execute(self):
+        self.alive_hosts = []
+        self.lock = threading.Lock()
+
         args = self.target
 
         if not args:
-            raise ValueError("Usage: netscan <network>")
+            return self.error("Usage: netscan <network>")
 
         network = args[0]
 
@@ -64,8 +67,11 @@ class NetscanModule(BaseModule):
         for t in threads:
             t.join()
 
-        return {
-            "network": network,
-            "alive_hosts": self.alive_hosts,
-            "count": len(self.alive_hosts)
-        }
+        return self.success(
+            target=network,
+            data={
+                "network": network,
+                "alive_hosts": self.alive_hosts,
+                "count": len(self.alive_hosts)
+            }
+        )
