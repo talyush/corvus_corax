@@ -1,76 +1,67 @@
 # Corvus Corax
 
 Corvus Corax is a modular reconnaissance and analysis framework for cybersecurity learners and researchers.  
-It is designed to collect, normalize, and correlate reconnaissance data in a scalable core architecture.
+It is designed to collect, normalize, and correlate reconnaissance data in a scalable core architecture, creating a unified intelligence flow.
 
 **See the unseen systems.**
 
+---
+
 ## Current Version
 
-**v0.4 - Context-Driven Recon Expansion**
+**v0.5 - Framework Stabilization & Nexus Foundation (Unified Intelligence Flow)**
 
-v0.4 extends the stable v0.3 core with new passive recon modules, configurable runtime behavior, and a richer Nexus-ready context model (notes, relations, meta events).
-
-## What's New in v0.4
-
-- **New Recon Modules**
-  - `whois`: WHOIS lookup with referral-aware querying.
-  - `subdomain`: passive subdomain enum (`crt.sh`) + optional wordlist candidate generation.
-  - `tech`: server, `X-Powered-By`, and framework hint detection.
-  - `crawl`: lightweight page crawl (`title`, `links`, `forms`, `status_code`).
-
-- **Config-Driven Runtime**
-  - `config/config.json` expanded with:
-    - `timeout`
-    - `threads`
-    - `user_agent`
-    - `output_mode`
-    - `scan_defaults`
-  - `scan`, `netscan`, `geoip`, and web request based modules now use config values instead of hardcoded runtime behavior.
-
-- **Logger Upgrade**
-  - Colored console logs by level.
-  - Rotating log files (size-based rollover).
-  - Cleaner timestamped formatting.
-  - Log level/settings can be controlled via config fallback logic.
-
-- **Nexus-Ready Context Upgrade**
-  - Context now includes:
-    - structured `notes`
-    - `relations`
-    - `meta` (`created_at`, `updated_at`, event tracking)
-  - New helper methods:
-    - `add_note(...)`
-    - `add_relation(...)`
-    - `merge_context(...)`
-  - Existing modules progressively emit structured context data for future multi-context reasoning.
-
-- **Platform Stability Fix**
-  - Banner output was made Windows-safe (ASCII rendering) to prevent encoding crashes in non-UTF terminals.
-
-> v0.4 is a capability milestone: same framework philosophy, richer intelligence graph foundation.
+v0.5 stabilizes the modular framework, standardizes all reconnaissance outputs, implements a single unified presentation layer (`OutputManager`), and embeds a robust entity-relationship zeka flow into `ContextManager` to serve as a complete foundation for future Nexus multi-context correlation engines.
 
 ---
 
-## Module Set
+## Unified Intelligence Flow (v0.5 Core Philosophy)
 
-| Module | Description |
-| :--- | :--- |
-| `scan` | Multi-mode port/network target scan (`normal`, `slow`, `banner`, `subnet`) |
-| `netscan` | Network host discovery |
-| `footprint` | Domain resolution and host footprint collection |
-| `geoip` | IP geolocation lookup |
-| `whois` | WHOIS lookup for domain/IP targets |
-| `subdomain` | Passive subdomain discovery (`crt.sh`) + optional wordlist candidates |
-| `tech` | Detect server, powered-by header, and framework hints |
-| `crawl` | Extract title, links, forms, and HTTP status from a target page |
-| `context` | View correlated intelligence context |
-| `help` | Command list |
-| `version` | Framework version information |
+With v0.5, Corvus Corax transitions from a simple command-line recon toolset into a **unified intelligence framework**:
+
+```
+                       [ Module Executions ]
+                                 │
+                   (Generates Standardized Payload)
+                                 │
+         ┌───────────────────────┴───────────────────────┐
+         ▼                                               ▼
+[ OutputManager ]                               [ ContextManager ]
+(Single Presentation)                           (Centralized Mind)
+  │                                               │
+  ├─► Render formatted terminal output            ├─► Map IPs / Domains
+  ├─► Summarize discoveries                       ├─► Record Notes w/ Confidence
+  └─► Display local Notes & Nexus Relations       └─► Graph Varlık Relationships
+```
 
 ---
 
-## Output Standard (v0.4 Core Contract)
+## What's New in v0.5
+
+*   **Universal Module Standardization:**
+    *   All 10 modules subclass `BaseModule` and run via the strict `execute()` cycle.
+    *   **`geoip.py`** has been completely standardized, removing raw dictionaries and utilizing standard wrapper classes.
+    *   No direct `print()` statements exist inside module execution logic; all output is returned as data payloads.
+
+*   **Unified Output Schema:**
+    *   Every single module now returns a predictable JSON structure for both success and error events.
+    *   Includes target details, timestamping, local note structures, and dynamic relationship logs.
+
+*   **OutputManager Rewrite (Single Presentation Layer):**
+    *   Acts as the central renderer and formatter.
+    *   Formats console data beautifully and uniquely based on the active module (ports, subdomains, tech details, crawls, whois records).
+    *   Ensures Windows-safe execution by removing decorative unicode emojis (preventing `UnicodeEncodeError` on Turkish cp1254 consoles).
+    *   Prints local module notes and relationship links directly in real-time under each execution banner.
+
+*   **Nexus-Ready Context Manager Enhancements:**
+    *   Both structural `notes` and entity `relations` inside the central zeka database now support the `confidence` float parameter (default `1.0`).
+    *   Timestamp support has been standardized to ISO-8601 UTC.
+    *   `merge_context()` has been upgraded to support both `"relations"` and `"relationships"` payload formats during context merges.
+    *   **100% Modül Entegrasyonu:** Every single active module (including `netscan` and `geoip`) actively populates the context graph with semantic relationships (e.g., `located_in`, `has_active_host`, `uses_server`, `has_open_port`).
+
+---
+
+## Standard Output Schema (v0.5 Core Contract)
 
 All modules return normalized JSON-style payloads:
 
@@ -79,7 +70,34 @@ All modules return normalized JSON-style payloads:
   "module": "scan",
   "target": "192.168.1.10",
   "status": "success",
-  "data": {}
+  "data": {
+    "ip": "192.168.1.10",
+    "mode": "normal",
+    "open_ports": [
+      {"port": 22, "service": "SSH"},
+      {"port": 80, "service": "HTTP"}
+    ]
+  },
+  "notes": [
+    {
+      "text": "Port 22 (SSH) discovered open on 192.168.1.10",
+      "source": "scan",
+      "severity": "info",
+      "confidence": 1.0,
+      "timestamp": "2026-05-24T17:15:00.000000+00:00"
+    }
+  ],
+  "relationships": [
+    {
+      "src": {"type": "ip", "value": "192.168.1.10"},
+      "relation": "has_open_port",
+      "dst": {"type": "port", "value": "22/SSH"},
+      "evidence": "port scan",
+      "confidence": 1.0,
+      "timestamp": "2026-05-24T17:15:00.000000+00:00"
+    }
+  ],
+  "timestamp": "2026-05-24T17:15:00.000000+00:00"
 }
 ```
 
@@ -90,45 +108,66 @@ Error form:
   "module": "geoip",
   "target": "invalid-ip",
   "status": "error",
-  "error": "lookup failed"
+  "error": "Lookup failed",
+  "notes": [],
+  "relationships": [],
+  "timestamp": "2026-05-24T17:15:00.000000+00:00"
 }
 ```
 
 ---
 
-## Context Structure (Nexus-Compatible)
-
-The context model remains stable while now including relation and event metadata:
+## Context Structure (Nexus-Ready Ontoloji)
 
 ```json
 {
   "ips": {
-    "1.2.3.4": {
+    "8.8.8.8": {
       "ports": [],
-      "geo": {},
-      "hostname": null
+      "geo": {
+        "country": "United States",
+        "region": "California",
+        "city": "Mountain View",
+        "isp": "Google LLC",
+        "org": "Google LLC",
+        "lat": 37.4223,
+        "lon": -122.084
+      },
+      "hostname": "dns.google"
     }
   },
-  "domains": {},
+  "domains": {
+    "dns.google": {
+      "ips": ["8.8.8.8"]
+    }
+  },
   "notes": [
     {
-      "text": "geoip lookup completed for 1.2.3.4",
+      "text": "GeoIP intelligence gathered for 8.8.8.8: located in Mountain View, United States",
       "source": "geoip",
       "severity": "info",
-      "timestamp": "..."
+      "confidence": 1.0,
+      "timestamp": "2026-05-24T17:15:00.000000+00:00"
     }
   ],
-  "relations": [],
+  "relations": [
+    {
+      "src": {"type": "ip", "value": "8.8.8.8"},
+      "relation": "located_in",
+      "dst": {"type": "location", "value": "Mountain View, California, United States"},
+      "evidence": "geoip lookup",
+      "confidence": 1.0,
+      "timestamp": "2026-05-24T17:15:00.000000+00:00"
+    }
+  ],
   "meta": {
     "created_at": "...",
     "updated_at": "...",
-    "event_count": 0,
-    "recent_events": []
+    "event_count": 5,
+    "recent_events": ["ip_added:8.8.8.8", "geo_updated:8.8.8.8", "note_added:geoip"]
   }
 }
 ```
-
-`context` prints a cleaned summary while preserving schema compatibility for future Nexus analysis.
 
 ---
 
@@ -155,10 +194,6 @@ Default runtime config lives in `config/config.json`:
 }
 ```
 
-Notes:
-- `output_mode`: `text` (pretty JSON) or `json` (compact JSON)
-- `scan_defaults` controls scan behavior centrally without touching module code
-
 ---
 
 ## Usage
@@ -167,7 +202,6 @@ Notes:
 corvus > help
 corvus > version
 corvus > scan 192.168.1.10 normal 1 1024
-corvus > scan 192.168.1.10 banner 80
 corvus > netscan 192.168.1.0/24
 corvus > geoip 8.8.8.8
 corvus > footprint example.com
@@ -180,42 +214,15 @@ corvus > context
 
 ---
 
-## Philosophy
-
-Corvus Corax is an evolving system, not a one-off script set.  
-Direction:
-
-**data collection -> data correlation -> automated analysis**
-
----
-
 ## Roadmap
 
-- Nexus multi-context correlation engine
-- Risk scoring layer
-- Cross-module relationship analysis
-- Structured analytical report generation
-- Interactive analyst-style response layer ("framework that thinks and talks")
-- Improved result visualization
+*   **Nexus Correlation Engine:** Active context graph queries and multi-source reasoning.
+*   **Risk Scoring Layer:** Algorithmic vulnerability and footprint risk assessment.
+*   **Structured Report Generation:** HTML/PDF intelligence reports.
+*   **Interactive Analyst Layer:** LLM-guided threat reasoning.
 
 ---
 
 ## Disclaimer
 
-This project is for educational and authorized security research purposes only.  
-Unauthorized use is strictly prohibited.
-
----
-
-## Project History
-
-Corvus Corax is the framework evolution of CrowWatch:
-
-- **CrowWatch**: module-focused reconnaissance tooling
-- **Corvus Corax**: modular, context-aware, extensible framework core
-
----
-
-## Documentation
-
-For architecture details, see `docs/`.
+This project is for educational and authorized security research purposes only. Unauthorized use is strictly prohibited.

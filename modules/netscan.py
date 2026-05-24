@@ -67,6 +67,24 @@ class NetscanModule(BaseModule):
         for t in threads:
             t.join()
 
+        # Context manager sync and relation mapping
+        if self.context:
+            for host in self.alive_hosts:
+                ip_str = host.get("ip")
+                self.context.add_ip(ip_str)
+                self.add_note(
+                    text=f"Active host discovered: {ip_str} on network {network}",
+                    severity="info"
+                )
+                self.add_relation(
+                    src_type="network",
+                    src_value=network,
+                    relation="has_active_host",
+                    dst_type="ip",
+                    dst_value=ip_str,
+                    evidence="probe network scan"
+                )
+
         return self.success(
             target=network,
             data={

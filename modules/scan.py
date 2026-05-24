@@ -62,6 +62,18 @@ class ScanModule(BaseModule):
                     })
                     if self.context:
                         self.context.add_port(ip, port, service_name)
+                    self.add_note(
+                        text=f"Port {port} ({service_name}) discovered open on {ip}",
+                        severity="info"
+                    )
+                    self.add_relation(
+                        src_type="ip",
+                        src_value=ip,
+                        relation="has_open_port",
+                        dst_type="port",
+                        dst_value=f"{port}/{service_name}",
+                        evidence="port scan"
+                    )
 
         elif mode == "slow":
             start = int(args[2])
@@ -76,6 +88,18 @@ class ScanModule(BaseModule):
                     })
                     if self.context:
                         self.context.add_port(ip, port, service_name)
+                    self.add_note(
+                        text=f"Port {port} ({service_name}) discovered open on {ip}",
+                        severity="info"
+                    )
+                    self.add_relation(
+                        src_type="ip",
+                        src_value=ip,
+                        relation="has_open_port",
+                        dst_type="port",
+                        dst_value=f"{port}/{service_name}",
+                        evidence="port scan"
+                    )
                 time.sleep(0.3)
 
         else:

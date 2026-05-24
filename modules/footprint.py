@@ -5,46 +5,48 @@ class FootprintModule(BaseModule):
     name = "footprint"
     
     def execute(self):
-        args = self.target
+        args = self.target or []
         if not args:
             return self.error("usage: footprint <domain>")
 
-        target = args[0]
+        target = args[0].strip().lower()
 
         try:
             ip = socket.gethostbyname(target)
             hostname = None
             
-            # Context'e ekle
+            # Central context mapping
             if self.context:
                 self.context.add_domain_mapping(target, ip)
-                self.context.add_note(
-                    text=f"footprint resolved {target} -> {ip}",
-                    source="footprint",
-                    severity="info",
-                )
-                self.context.add_relation(
-                    "domain",
-                    target,
-                    "resolves_to",
-                    "ip",
-                    ip,
-                    "footprint",
-                )
+                
+            # Add semantic notes and relations
+            self.add_note(
+                text=f"footprint resolved {target} -> {ip}",
+                severity="info"
+            )
+            self.add_relation(
+                src_type="domain",
+                src_value=target,
+                relation="resolves_to",
+                dst_type="ip",
+                dst_value=ip,
+                evidence="footprint dns lookup"
+            )
 
             try:
                 host = socket.gethostbyaddr(ip)
                 hostname = host[0]
                 if self.context:
                     self.context.add_domain_mapping(hostname, ip)
-                    self.context.add_relation(
-                        "ip",
-                        ip,
-                        "reverse_resolves_to",
-                        "domain",
-                        hostname,
-                        "footprint reverse dns",
-                    )
+                
+                self.add_relation(
+                    src_type="ip",
+                    src_value=ip,
+                    relation="reverse_resolves_to",
+                    dst_type="domain",
+                    dst_value=hostname,
+                    evidence="footprint reverse dns lookup"
+                )
             except Exception:
                 pass
 

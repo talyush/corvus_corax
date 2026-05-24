@@ -61,13 +61,33 @@ class SubdomainEnumModule(BaseModule):
             merged = sorted(set(crt_subdomains) | set(wordlist_candidates))
 
             if self.context:
-                for host in crt_subdomains:
+                for host in merged:
                     self.context.data["domains"].setdefault(host, {"ips": []})
-                self.context.add_note(
-                    text=f"subdomain enum completed for {domain} ({len(crt_subdomains)} from crt.sh)",
-                    source="subdomain",
-                    severity="info",
+
+            for host in crt_subdomains:
+                self.add_relation(
+                    src_type="domain",
+                    src_value=domain,
+                    relation="has_subdomain",
+                    dst_type="domain",
+                    dst_value=host,
+                    evidence="crt.sh passive lookup"
                 )
+
+            for host in wordlist_candidates:
+                self.add_relation(
+                    src_type="domain",
+                    src_value=domain,
+                    relation="has_subdomain",
+                    dst_type="domain",
+                    dst_value=host,
+                    evidence="wordlist candidate"
+                )
+
+            self.add_note(
+                text=f"Subdomain enumeration completed for {domain}: {len(crt_subdomains)} from crt.sh, {len(wordlist_candidates)} from wordlist (Total: {len(merged)})",
+                severity="info"
+            )
 
             return self.success(
                 target=domain,

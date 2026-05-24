@@ -1,110 +1,136 @@
-# Corvus Corax Architecture
+# Corvus Corax v0.5 Architecture
 
 ## Overview
-Corvus Corax is a modular reconnaissance and analysis framework designed for extensibility, clarity, and structured intelligence gathering.
+Corvus Corax is a modular, context-aware cybersecurity reconnaissance and footprint analysis framework. It is designed to collect, normalize, and correlate threat intelligence data in a highly structured, scalable architecture.
 
-The system is built around a dynamic module loader that automatically detects and registers modules at runtime.
-
----
-
-## Core Design Philosophy
-Corvus Corax follows three principles:
-
-1. Modularity — each capability exists as an independent module
-2. Transparency — outputs are structured and readable
-3. Extensibility — new modules can be added without modifying core logic
+The v0.5 release stabilizes the codebase by establishing a **Unified Intelligence Flow**, enforcing a strict **Standard Output Schema**, and cementing **ContextManager** as a centralized zeka engine.
 
 ---
 
-## Architecture Layers
+## 🏛️ Core Architectural Layers
 
-### 1. Core Layer
-Responsible for:
-- module loading
-- command parsing
-- execution routing
+The framework consists of four clear operational layers:
 
-Core does NOT contain intelligence logic.  
-It only manages system orchestration.
+```
+┌─────────────────────────────────────────────────────────┐
+│                    1. Presentation Layer                │
+│             (OutputManager - Formats & Prints)          │
+└───────────────────────────▲─────────────────────────────┘
+                            │ (Unified Payload Schema)
+┌───────────────────────────┴─────────────────────────────┐
+│                    2. Execution Layer                   │
+│          (Dinamik Modüller - footprint, scan, etc.)     │
+└───────────────────────────┬──────────────┬──────────────┘
+                            │              │
+       (Central Config API) │              │ (Syncs Notes & Relations)
+┌───────────────────────────▼┐            ┌▼──────────────────────────────┐
+│     3. Configuration API   │            │      4. Context Layer         │
+│     (config/config.json)   │            │   (Centralized Zeka Engine)   │
+└────────────────────────────┘            └───────────────────────────────┘
+```
 
----
+### 1. Presentation Layer (OutputManager)
+*   **Location:** `output/output_manager.py`
+*   **Role:** Acts as the *single source of truth for terminal formatting*. Modüllere ait hiçbir fonksiyon terminale doğrudan yazdıramaz (`print` kullanamaz).
+*   **Responsibility:**
+    *   Receives standardized payloads from the execution layer.
+    *   Translates success or error payloads into beautifully formatted, human-readable terminal summaries.
+    *   Provides custom formatters tailored to the data structures of each individual module (e.g. port tables, technology tags, GeoIP coordinates).
+    *   Directly handles ANSI colors and console layout preferences.
+    *   Safely executes on Windows (Turkish and non-UTF-8 CP1254 terminals) without encoding failures.
+    *   Renders local notes and Nexus intelligence links in real-time.
 
-### 2. Module Layer
-Modules are stored inside:
-Each module must define:
-name = "command_name"
-def run(args)...
-The loader scans the folder and auto-registers modules.
+### 2. Execution Layer (Dynamic Modules)
+*   **Location:** `modules/` (footprint, scan, netscan, geoip, whois, subdomain, tech, crawl, help, version)
+*   **Role:** Performs specialized active and passive intelligence gathering.
+*   **Responsibility:**
+    *   All modules strictly subclass `BaseModule` from `core/module_base.py`.
+    *   All module operations are orchestrated via the `execute()` cycle.
+    *   Modules leverage the central `self.logger` and global configurations (`self.config`).
+    *   Every module registers its findings back to the context layer using standardized note and relation helper APIs (`self.add_note()`, `self.add_relation()`).
+    *   Modules do not format outputs; they only return standard JSON payloads.
 
----
+### 3. Context Layer (ContextManager)
+*   **Location:** `core/context.py`
+*   **Role:** Operates as the centralized, persistent intelligence graph database ("merkezi zihin") of the framework.
+*   **Responsibility:**
+    *   Maintains structured mappings for IPs, ports, and domains.
+    *   Records threat intelligence `notes` characterized by sources, severities, and confidence levels.
+    *   Graphs semantic `relations` between entities (IPs, domains, locations, servers, technologies) with evidence tags and confidence metrics.
+    *   Supports robust multicontext merging through `merge_context()`, aligning disparate intelligence graphs into a unified structure.
 
-### 3. Command Flow
-
-User input → Parser → Loader → Module → Output
-
-Execution pipeline:
-
-1. User enters command
-2. Core parses input
-3. Loader finds matching module
-4. Module executes
-5. Output returned to user
-
----
-
-### 4. Loader System
-
-The loader dynamically imports modules:
-
-- scans directory
-- imports python files
-- validates module structure
-- registers command name
-
-This ensures:
-
-- zero hardcoding
-- plug-and-play modules
-- scalable architecture
-
----
-
-### 5. Output Philosophy
-
-Corvus outputs are designed to be:
-
-- structured
-- readable
-- actionable
-
-Future versions will standardize output format across all modules.
+### 4. Orchestration & Configuration Layer (Core Engine)
+*   **Location:** `core/` (`main.py`, `loader.py`, `config.py`, `logger.py`, `module_base.py`)
+*   **Role:** Manages dynamic imports, configuration mapping, logging rollovers, and command routing.
+*   **Responsibility:**
+    *   `loader.py` dynamically scans the `modules/` folder and registers modules that subclass `BaseModule` at runtime.
+    *   `config.py` safely reads and validates runtime variables.
+    *   `logger.py` logs rotating events cleanly in standard log structures.
 
 ---
 
-### 6. Planned Evolution
+## 📄 Unified Output Schema Contract
 
-Future engine: *Nexus Correlation Engine*
+Every module output follows a strict schema to ensure modularity and unified processing:
 
-Goal:
-Combine outputs from multiple modules and generate:
-
-- risk scores
-- intelligence links
-- probability analysis
-- structured reports
-
-Nexus will transform Corvus from a toolkit into an intelligence system.
+```json
+{
+  "module": "scan",
+  "target": "192.168.1.10",
+  "status": "success",
+  "data": {
+    "ip": "192.168.1.10",
+    "mode": "normal",
+    "open_ports": [{"port": 80, "service": "HTTP"}]
+  },
+  "notes": [
+    {
+      "text": "Port 80 (HTTP) discovered open on 192.168.1.10",
+      "source": "scan",
+      "severity": "info",
+      "confidence": 1.0,
+      "timestamp": "2026-05-24T17:15:00.000000+00:00"
+    }
+  ],
+  "relationships": [
+    {
+      "src": {"type": "ip", "value": "192.168.1.10"},
+      "relation": "has_open_port",
+      "dst": {"type": "port", "value": "80/HTTP"},
+      "evidence": "port scan",
+      "confidence": 1.0,
+      "timestamp": "2026-05-24T17:15:00.000000+00:00"
+    }
+  ],
+  "timestamp": "2026-05-24T17:15:00.000000+00:00"
+}
+```
 
 ---
 
-## Architectural Vision
+## 🔗 Ontology & Relationships (Nexus Readiness)
 
-Corvus Corax is not designed as a tool.
+To allow the future Nexus Correlation Engine to build complex threat links, every module in v0.5 registers semantic relations:
 
-It is designed as a system.
+| Module | Subject Type | Subject Value | Relationship | Object Type | Object Value | Evidence |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `footprint` | `domain` | `example.com` | `resolves_to` | `ip` | `93.184.216.34` | `footprint dns lookup` |
+| `geoip` | `ip` | `8.8.8.8` | `located_in` | `location` | `City, Region, Country` | `geoip lookup` |
+| `netscan` | `network` | `192.168.1.0/24` | `has_active_host` | `ip` | `192.168.1.5` | `probe network scan` |
+| `scan` | `ip` | `192.168.1.5` | `has_open_port` | `port` | `22/SSH` | `port scan` |
+| `subdomain` | `domain` | `example.com` | `has_subdomain` | `domain` | `blog.example.com` | `crt.sh passive lookup` |
+| `tech` | `domain` | `example.com` | `uses_server` | `server` | `nginx/1.18.0` | `http server header` |
+| `tech` | `domain` | `example.com` | `uses_technology` | `tech` | `WordPress` | `web framework detection` |
+| `crawl` | `url` | `http://test.com` | `has_title` | `title` | `Test Homepage` | `web crawl` |
+| `crawl` | `url` | `http://test.com` | `links_to` | `url` | `http://test.com/about` | `web crawl` |
+| `crawl` | `url` | `http://test.com` | `has_form` | `form` | `POST -> /login` | `web crawl` |
 
-A system that observes.
-A system that correlates.
-A system that reveals.
+---
 
-> See the unseen.
+## 🚀 Future Roadmap: The Nexus Engine
+
+v0.5 provides a complete foundation for **Nexus Engine**.
+With v0.6+ and beyond, Nexus will query `ContextManager`'s relations graph to execute automated Multi-Context correlations, such as:
+1. Identifying shared tech stacks across different target subnets.
+2. Correlating DNS IP mappings with GeoIP ISPs to discover shared hosting infrastructure.
+3. Automatically flagging high-risk nodes that have open admin ports *and* outdated server banners.

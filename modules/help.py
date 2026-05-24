@@ -23,4 +23,5 @@ class HelpModule(BaseModule):
   crawl       | <url_or_host>        | Get title, links, forms and status code
 ================================================================================
 """
+        self.add_note("Help information displayed", severity="info")
         return self.success(target="local", data=data)

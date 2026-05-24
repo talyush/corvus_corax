@@ -60,7 +60,7 @@ class ContextManager:
         self.add_relation("domain", domain, "resolves_to", "ip", ip, "dns mapping")
         self._touch(event=f"domain_mapped:{domain}->{ip}")
 
-    def add_note(self, text, source="system", severity="info"):
+    def add_note(self, text, source="system", severity="info", confidence=1.0):
         """Yapisal not ekler (Nexus'ta yorumlanabilir)."""
         if not text:
             return
@@ -69,18 +69,20 @@ class ContextManager:
                 "text": str(text),
                 "source": source,
                 "severity": severity,
+                "confidence": float(confidence),
                 "timestamp": self._now_iso(),
             }
         )
         self._touch(event=f"note_added:{source}")
 
-    def add_relation(self, src_type, src_value, relation, dst_type, dst_value, evidence=None):
+    def add_relation(self, src_type, src_value, relation, dst_type, dst_value, evidence=None, confidence=1.0):
         """Varliklar arasi iliski ekler."""
         rel = {
             "src": {"type": src_type, "value": src_value},
             "relation": relation,
             "dst": {"type": dst_type, "value": dst_value},
             "evidence": evidence,
+            "confidence": float(confidence),
             "timestamp": self._now_iso(),
         }
         if rel not in self.data["relations"]:
@@ -112,21 +114,25 @@ class ContextManager:
                     text=note.get("text"),
                     source=note.get("source", "merge"),
                     severity=note.get("severity", "info"),
+                    confidence=note.get("confidence", 1.0)
                 )
             else:
                 self.add_note(str(note), source="merge")
 
-        for rel in other_context.get("relations", []):
+        # Hem 'relations' hem de 'relationships' yapisini destekle
+        relations_list = other_context.get("relations") or other_context.get("relationships") or []
+        for rel in relations_list:
             if isinstance(rel, dict):
                 src = rel.get("src", {})
                 dst = rel.get("dst", {})
                 self.add_relation(
-                    src.get("type", "unknown"),
-                    src.get("value"),
-                    rel.get("relation", "related_to"),
-                    dst.get("type", "unknown"),
-                    dst.get("value"),
-                    rel.get("evidence"),
+                    src_type=src.get("type", "unknown"),
+                    src_value=src.get("value"),
+                    relation=rel.get("relation", "related_to"),
+                    dst_type=dst.get("type", "unknown"),
+                    dst_value=dst.get("value"),
+                    evidence=rel.get("evidence"),
+                    confidence=rel.get("confidence", 1.0)
                 )
 
     def get_summary(self):

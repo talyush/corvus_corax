@@ -72,12 +72,30 @@ class TechDetectModule(BaseModule):
                 powered_by = headers.get("X-Powered-By")
                 frameworks = self._detect_frameworks(body, headers)
 
-                if self.context:
-                    self.context.add_note(
-                        text=f"tech detection completed for {url}",
-                        source="tech",
-                        severity="info",
+                if server:
+                    self.add_relation(
+                        src_type="domain",
+                        src_value=raw_target,
+                        relation="uses_server",
+                        dst_type="server",
+                        dst_value=server,
+                        evidence="http server header"
                     )
+                
+                for fw in frameworks:
+                    self.add_relation(
+                        src_type="domain",
+                        src_value=raw_target,
+                        relation="uses_technology",
+                        dst_type="tech",
+                        dst_value=fw,
+                        evidence="web framework detection"
+                    )
+
+                self.add_note(
+                    text=f"Technology detection completed for {url}: server={server or 'Unknown'}, powered_by={powered_by or 'Unknown'}, frameworks={frameworks}",
+                    severity="info"
+                )
 
                 return self.success(
                     target=raw_target,

@@ -45,12 +45,19 @@ class WhoisLookupModule(BaseModule):
             final_server = referral_server or "whois.iana.org"
             final_response = self._query_server(final_server, target, timeout)
 
-            if self.context and "." in target and " " not in target:
-                self.context.add_note(
-                    text=f"whois lookup completed for {target}",
-                    source="whois",
-                    severity="info",
-                )
+            self.add_relation(
+                src_type="domain" if "." in target else "ip",
+                src_value=target,
+                relation="queried_via_whois",
+                dst_type="whois_server",
+                dst_value=final_server,
+                evidence="whois query"
+            )
+
+            self.add_note(
+                text=f"WHOIS lookup completed for {target} using server {final_server}",
+                severity="info"
+            )
 
             return self.success(
                 target=target,

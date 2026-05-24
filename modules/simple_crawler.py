@@ -111,12 +111,41 @@ class SimpleCrawlerModule(BaseModule):
                         }
                     )
 
-                if self.context:
-                    self.context.add_note(
-                        text=f"crawl completed for {final_url}",
-                        source="crawl",
-                        severity="info",
+                title = parser.get_title()
+                if title:
+                    self.add_relation(
+                        src_type="url",
+                        src_value=final_url,
+                        relation="has_title",
+                        dst_type="title",
+                        dst_value=title,
+                        evidence="web crawl"
                     )
+
+                for link in normalized_links[:20]:
+                    self.add_relation(
+                        src_type="url",
+                        src_value=final_url,
+                        relation="links_to",
+                        dst_type="url",
+                        dst_value=link,
+                        evidence="web crawl"
+                    )
+
+                for form in normalized_forms:
+                    self.add_relation(
+                        src_type="url",
+                        src_value=final_url,
+                        relation="has_form",
+                        dst_type="form",
+                        dst_value=f"{form.get('method')} -> {form.get('action')}",
+                        evidence="web crawl"
+                    )
+
+                self.add_note(
+                    text=f"Web page crawl completed for {final_url}: status={status_code}, title='{title or ''}', discovered {len(normalized_links)} links & {len(normalized_forms)} forms",
+                    severity="info"
+                )
 
                 return self.success(
                     target=raw_target,
