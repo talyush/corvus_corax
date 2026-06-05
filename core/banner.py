@@ -28,6 +28,6 @@ def show_banner():
        /'\_   _/`\
        \_)=(_/
 
-        v0.5  |  Modular Recon Framework
+        v0.6  |  Modular Recon Framework
     """
     print(Fore.MAGENTA + title_art + Style.RESET_ALL + lower_art)
