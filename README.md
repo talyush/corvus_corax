@@ -9,9 +9,9 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.5 - Framework Stabilization & Nexus Foundation (Unified Intelligence Flow)**
+**v0.6 - Nexus Core (Intelligence Correlation & Risk Engine)**
 
-v0.5 stabilizes the modular framework, standardizes all reconnaissance outputs, implements a single unified presentation layer (`OutputManager`), and embeds a robust entity-relationship zeka flow into `ContextManager` to serve as a complete foundation for future Nexus multi-context correlation engines.
+v0.6 implements the first version of the **Nexus Correlation Engine** and **Tehdit Analizi** framework. It establishes a multi-context graph reasoning layer that queries raw recon data to automatically infer complex threat relationships (`derived_relations`) and calculate asset-level explainable risk scores (0-100) with complete Turkish local CP1254 Windows CLI safety.
 
 ---
 
@@ -36,28 +36,27 @@ With v0.5, Corvus Corax transitions from a simple command-line recon toolset int
 
 ---
 
-## What's New in v0.5
+## What's New in v0.6 (Nexus Core)
 
-*   **Universal Module Standardization:**
-    *   All 10 modules subclass `BaseModule` and run via the strict `execute()` cycle.
-    *   **`geoip.py`** has been completely standardized, removing raw dictionaries and utilizing standard wrapper classes.
-    *   No direct `print()` statements exist inside module execution logic; all output is returned as data payloads.
+*   **Nexus Correlation Engine (`core/nexus.py`):**
+    *   **Subnet Correlation (`shares_subnet`):** Groups entities by `/24` subnets to flag shared hosting or infrastructure ownership.
+    *   **Shared Stack Correlation (`shares_stack`):** Flags domains running identical technology stacks or server headers.
+    *   **Outdated Software Auditing (`outdated_software`):** Checks software versions (Apache < 2.4.50, Nginx < 1.20, PHP < 8.0, WordPress < 6.0, Drupal < 9.0) using static regex-based audits.
+    *   **High Risk Exposure Detection (`high_risk_exposure`):** Automatically maps outdated software to open admin ports (SSH, RDP, FTP, Telnet, SMB) and generates high-risk security alerts.
 
-*   **Unified Output Schema:**
-    *   Every single module now returns a predictable JSON structure for both success and error events.
-    *   Includes target details, timestamping, local note structures, and dynamic relationship logs.
+*   **Weighted Risk Engine & Explainable Evidence:**
+    *   Calculates dynamic asset risk scores (0-100) and maps them to categories (Low, Medium, High, Critical).
+    *   IP assets inherit outdated software penalties from resolving domains for high-fidelity correlation.
+    *   Collects granular, explainable evidence strings for every score (e.g. exposed ports, missing security headers, outdated software).
 
-*   **OutputManager Rewrite (Single Presentation Layer):**
-    *   Acts as the central renderer and formatter.
-    *   Formats console data beautifully and uniquely based on the active module (ports, subdomains, tech details, crawls, whois records).
-    *   Ensures Windows-safe execution by removing decorative unicode emojis (preventing `UnicodeEncodeError` on Turkish cp1254 consoles).
-    *   Prints local module notes and relationship links directly in real-time under each execution banner.
+*   **Separate Inferred Graph Layer (`derived_relations`):**
+    *   Keeps raw reconnaissance relationships separate from engine-inferred intelligence links.
+    *   Exposes `query_relations()` API in `ContextManager` to filter relationships dynamically.
 
-*   **Nexus-Ready Context Manager Enhancements:**
-    *   Both structural `notes` and entity `relations` inside the central zeka database now support the `confidence` float parameter (default `1.0`).
-    *   Timestamp support has been standardized to ISO-8601 UTC.
-    *   `merge_context()` has been upgraded to support both `"relations"` and `"relationships"` payload formats during context merges.
-    *   **100% Modül Entegrasyonu:** Every single active module (including `netscan` and `geoip`) actively populates the context graph with semantic relationships (e.g., `located_in`, `has_active_host`, `uses_server`, `has_open_port`).
+*   **OutputManager Visual ASCII Dashboard:**
+    *   Renders dynamic ASCII bar charts of risk distributions.
+    *   Displays threat tables and detailed risk profiles with evidence.
+    *   Completely safe for Windows Türkçe CP1254 terminal encodings.
 
 ---
 
@@ -210,16 +209,17 @@ corvus > subdomain example.com
 corvus > tech example.com
 corvus > crawl example.com
 corvus > context
+corvus > nexus
+corvus > nexus analyze
 ```
 
 ---
 
 ## Roadmap
 
-*   **Nexus Correlation Engine:** Active context graph queries and multi-source reasoning.
-*   **Risk Scoring Layer:** Algorithmic vulnerability and footprint risk assessment.
-*   **Structured Report Generation:** HTML/PDF intelligence reports.
-*   **Interactive Analyst Layer:** LLM-guided threat reasoning.
+*   **Structured Report Generation:** HTML/PDF intelligence reports and visual dossier export.
+*   **Interactive Analyst Layer:** LLM-guided threat reasoning and natural language context queries.
+*   **Dynamic Visualizer Graph:** Interactive network relationship visualizer graph.
 
 ---
 

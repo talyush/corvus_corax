@@ -127,10 +127,19 @@ To allow the future Nexus Correlation Engine to build complex threat links, ever
 
 ---
 
-## 🚀 Future Roadmap: The Nexus Engine
+## 🚀 implemented in v0.6: The Nexus Engine Core
 
-v0.5 provides a complete foundation for **Nexus Engine**.
-With v0.6+ and beyond, Nexus will query `ContextManager`'s relations graph to execute automated Multi-Context correlations, such as:
-1. Identifying shared tech stacks across different target subnets.
-2. Correlating DNS IP mappings with GeoIP ISPs to discover shared hosting infrastructure.
-3. Automatically flagging high-risk nodes that have open admin ports *and* outdated server banners.
+v0.6-nexus-core implements the core intelligence engine. Nexus queries the `ContextManager`'s raw relations graph to execute automated Multi-Context correlations and Tehdit Analizi:
+
+### 1. Core Correlation Rules
+*   **shares_subnet (Subnet Correlation):** Detects targets residing on the same Class C (/24) subnet and connects them.
+*   **shares_stack (Shared Technology Signature):** Identifies separate domains running identical web servers, technologies, or frameworks.
+*   **outdated_software (Static Version Audits):** Cross-references software versions against static outdated benchmarks (e.g. Apache < 2.4.50, Nginx < 1.20, PHP < 8.0, WordPress < 6.0, Drupal < 9.0).
+*   **high_risk_exposure (Outdated Stack + Critical Ports):** Correlates identified outdated software with open administrative services (21/FTP, 22/SSH, 23/Telnet, 445/SMB, 3389/RDP) on that target.
+
+### 2. Risk Profiling & Explainable Evidence
+Calculates a weighted threat severity score (0-100) per IP and Domain asset, mapped to severity categories (Low, Medium, High, Critical). Risk scores are generated alongside a granular list of explainable evidences (e.g. exposed admin port warnings, associated domain outdated libraries).
+
+### 3. CP1254 Safe Terminal Layout
+Tehdit raporları and correlations are printed to the console using a Turkish Windows CLI-safe ASCII dashboard formatted dynamically inside `OutputManager`.
+

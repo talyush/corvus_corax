@@ -161,7 +161,70 @@ class OutputManager:
                 elif module == "version":
                     lines.append(f"  {C_CYAN}{C_BOLD}{data.get('name') or 'Corvus Corax'} {data.get('version') or 'v0.5'}{C_RESET}")
                     lines.append(f"  Motto: {data.get('motto') or ''}")
-                
+
+                elif module == "nexus":
+                    stats = data.get("stats", {})
+                    dist = data.get("risk_distribution", {})
+                    profiles = data.get("risk_profiles", [])
+                    threats = data.get("threat_findings", [])
+
+                    lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS CORE CORRELATION ENGINE SUMMARY{C_RESET}")
+                    lines.append(f"  {'='*45}")
+                    lines.append(f"  {C_CYAN}{C_BOLD}[+] Intelligence Summary Stats:{C_RESET}")
+                    lines.append(f"    - Total Monitored Entities : {stats.get('total_entities', 0)}")
+                    lines.append(f"    - Raw Collected Relations  : {stats.get('total_raw_relations', 0)}")
+                    lines.append(f"    - Inferred Nexus Relations : {stats.get('total_derived_relations', 0)}")
+                    lines.append("")
+
+                    # Risk distribution bar chart
+                    lines.append(f"  {C_CYAN}{C_BOLD}[+] Asset Risk Distribution:{C_RESET}")
+                    max_val = max(dist.values()) if dist and dist.values() else 0
+                    for level in ("Critical", "High", "Medium", "Low"):
+                        val = dist.get(level, 0)
+                        stars_count = int(val * 10 / max_val) if max_val > 0 else 0
+                        stars = "*" * stars_count
+                        color = C_RESET
+                        if level == "Critical": color = C_RED + C_BOLD
+                        elif level == "High": color = C_RED
+                        elif level == "Medium": color = C_YELLOW
+                        elif level == "Low": color = C_GREEN
+                        lines.append(f"    - {color}{level:<9}{C_RESET} : [{stars:<10}] {val}")
+                    lines.append("")
+
+                    # Threat findings
+                    if threats:
+                        lines.append(f"  {C_YELLOW}{C_BOLD}[!] Inferred Security Alerts:{C_RESET}")
+                        for t in threats:
+                            ent = t.get("entity")
+                            t_type = t.get("type")
+                            desc = t.get("description")
+                            conf = t.get("confidence", 1.0)
+                            lines.append(f"    - {C_RED}{C_BOLD}[{t_type}]{C_RESET} {ent}: {desc} (Confidence: {conf})")
+                        lines.append("")
+
+                    # Asset profiles and evidence
+                    if profiles:
+                        lines.append(f"  {C_CYAN}{C_BOLD}[+] Detailed Risk Profiles & Evidence:{C_RESET}")
+                        sorted_profiles = sorted(profiles, key=lambda x: x.get("score", 0), reverse=True)
+                        for p in sorted_profiles:
+                            val = p.get("value")
+                            p_type = p.get("type")
+                            score = p.get("score")
+                            level = p.get("level")
+                            ev = p.get("evidence", [])
+
+                            color = C_RESET
+                            if level == "Critical": color = C_RED + C_BOLD
+                            elif level == "High": color = C_RED
+                            elif level == "Medium": color = C_YELLOW
+                            elif level == "Low": color = C_GREEN
+
+                            lines.append(f"    * ({p_type}) {C_BOLD}{val}{C_RESET} -> Risk Score: {color}{score} ({level}){C_RESET}")
+                            if ev:
+                                lines.append("      Evidence:")
+                                for e in ev:
+                                    lines.append(f"        - {e}")
+
                 else:
                     lines.append(f"  {C_BOLD}Result Data:{C_RESET}")
                     lines.append(str(data))

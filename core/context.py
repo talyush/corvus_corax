@@ -17,6 +17,7 @@ class ContextManager:
                 "events": [],
             },
             "relations": [],  # Nexus hazirligi: varliklar arasi baglar
+            "derived_relations": [],  # Nexus tarafindan turetilen iliskiler
         }
 
     def _now_iso(self):
@@ -89,6 +90,55 @@ class ContextManager:
             self.data["relations"].append(rel)
             self._touch(event=f"relation_added:{src_type}->{dst_type}:{relation}")
 
+    def add_derived_relation(self, src_type, src_value, relation, dst_type, dst_value, evidence=None, confidence=1.0):
+        """Nexus Engine tarafindan turetilen iliskileri derived_relations alanina ekler."""
+        rel = {
+            "src": {"type": src_type, "value": src_value},
+            "relation": relation,
+            "dst": {"type": dst_type, "value": dst_value},
+            "evidence": evidence,
+            "confidence": float(confidence),
+            "timestamp": self._now_iso(),
+        }
+        if rel not in self.data["derived_relations"]:
+            self.data["derived_relations"].append(rel)
+            self._touch(event=f"derived_relation_added:{src_type}->{dst_type}:{relation}")
+
+    def query_relations(self, entity_type=None, entity_value=None, relation=None):
+        """Sistemdeki hem ham hem de turetilen tum iliskileri sorgular."""
+        results = []
+        all_rels = self.data.get("relations", []) + self.data.get("derived_relations", [])
+        for rel in all_rels:
+            # Check source match
+            src_match = True
+            if entity_type and rel.get("src", {}).get("type") != entity_type:
+                src_match = False
+            if entity_value and rel.get("src", {}).get("value") != entity_value:
+                src_match = False
+
+            # Check destination match
+            dst_match = True
+            if entity_type and rel.get("dst", {}).get("type") != entity_type:
+                dst_match = False
+            if entity_value and rel.get("dst", {}).get("value") != entity_value:
+                dst_match = False
+
+            # Match if source or destination matches (or if no entity filter specified)
+            entity_match = False
+            if not entity_type and not entity_value:
+                entity_match = True
+            elif (entity_type or entity_value) and (src_match or dst_match):
+                entity_match = True
+
+            # Check relation type match
+            rel_match = True
+            if relation and rel.get("relation") != relation:
+                rel_match = False
+
+            if entity_match and rel_match:
+                results.append(rel)
+        return results
+
     def merge_context(self, other_context):
         """Disaridan gelen context yapisini mevcut yapiya birlestirir."""
         if not isinstance(other_context, dict):
@@ -135,6 +185,22 @@ class ContextManager:
                     confidence=rel.get("confidence", 1.0)
                 )
 
+        # derived_relations birlestirmeyi destekle
+        derived_list = other_context.get("derived_relations") or []
+        for rel in derived_list:
+            if isinstance(rel, dict):
+                src = rel.get("src", {})
+                dst = rel.get("dst", {})
+                self.add_derived_relation(
+                    src_type=src.get("type", "unknown"),
+                    src_value=src.get("value"),
+                    relation=rel.get("relation", "related_to"),
+                    dst_type=dst.get("type", "unknown"),
+                    dst_value=dst.get("value"),
+                    evidence=rel.get("evidence"),
+                    confidence=rel.get("confidence", 1.0)
+                )
+
     def get_summary(self):
         """O ana kadar elde edilen verileri temizleyip döner."""
         return json.dumps(self.get_clean_data(), indent=4, ensure_ascii=False)
@@ -163,6 +229,7 @@ class ContextManager:
 
         clean_notes = [n for n in self.data["notes"] if n]
         clean_relations = [r for r in self.data.get("relations", []) if r]
+        clean_derived = [r for r in self.data.get("derived_relations", []) if r]
         meta = self.data.get("meta", {})
         events = meta.get("events", [])
         if len(events) > 200:
@@ -173,6 +240,7 @@ class ContextManager:
             "domains": clean_domains,
             "notes": clean_notes,
             "relations": clean_relations,
+            "derived_relations": clean_derived,
             "meta": {
                 "created_at": meta.get("created_at"),
                 "updated_at": meta.get("updated_at"),
