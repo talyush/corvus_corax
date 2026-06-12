@@ -21,6 +21,7 @@ class HelpModule(BaseModule):
   subdomain   | <domain> [wordlist]  | Passive subdomain enum (crt.sh+wordlist)
   tech        | <url_or_host>        | Detect server, x-powered-by & framework
   crawl       | <url_or_host>        | Get title, links, forms and status code
+  nexus       | [analyze]            | Run Nexus Engine Threat Correlation
 ================================================================================
 """
         self.add_note("Help information displayed", severity="info")

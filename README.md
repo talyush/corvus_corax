@@ -9,9 +9,9 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.6 - Nexus Core (Intelligence Correlation & Risk Engine)**
+**v0.6.1 - Nexus Core & Optimized Scanning**
 
-v0.6 implements the first version of the **Nexus Correlation Engine** and **Tehdit Analizi** framework. It establishes a multi-context graph reasoning layer that queries raw recon data to automatically infer complex threat relationships (`derived_relations`) and calculate asset-level explainable risk scores (0-100) with complete Turkish local CP1254 Windows CLI safety.
+v0.6.1 optimizes the framework's active scanning capabilities by introducing multi-threaded parallel execution (`ThreadPoolExecutor`) and a predefined Top Ports scan list. Version numbers across modules, CLI banners, and help systems have been updated to `v0.6.1-nexus-core`.
 
 ---
 
@@ -36,27 +36,17 @@ With v0.5, Corvus Corax transitions from a simple command-line recon toolset int
 
 ---
 
-## What's New in v0.6 (Nexus Core)
+## What's New in v0.6.1 (Optimized Scanning)
 
-*   **Nexus Correlation Engine (`core/nexus.py`):**
-    *   **Subnet Correlation (`shares_subnet`):** Groups entities by `/24` subnets to flag shared hosting or infrastructure ownership.
-    *   **Shared Stack Correlation (`shares_stack`):** Flags domains running identical technology stacks or server headers.
-    *   **Outdated Software Auditing (`outdated_software`):** Checks software versions (Apache < 2.4.50, Nginx < 1.20, PHP < 8.0, WordPress < 6.0, Drupal < 9.0) using static regex-based audits.
-    *   **High Risk Exposure Detection (`high_risk_exposure`):** Automatically maps outdated software to open admin ports (SSH, RDP, FTP, Telnet, SMB) and generates high-risk security alerts.
+*   **Multi-threaded Port Scanning (`modules/scan.py`):**
+    *   **High-speed Parallel Scanning:** Implements Python's `ThreadPoolExecutor` to execute port probes concurrently.
+    *   **Predefined Top Ports (`TOP_PORTS`):** Added a standard list of 20+ common security services.
+    *   **Default Quick Scan (`scan <ip>`):** Running `scan` without a range now defaults to scanning `TOP_PORTS` concurrently (finishing in ~1 second).
+    *   **Stealth Slow Mode Preservation:** Sequential scanning with configurable delays remains fully supported in `slow` mode to bypass rate limiters.
 
-*   **Weighted Risk Engine & Explainable Evidence:**
-    *   Calculates dynamic asset risk scores (0-100) and maps them to categories (Low, Medium, High, Critical).
-    *   IP assets inherit outdated software penalties from resolving domains for high-fidelity correlation.
-    *   Collects granular, explainable evidence strings for every score (e.g. exposed ports, missing security headers, outdated software).
-
-*   **Separate Inferred Graph Layer (`derived_relations`):**
-    *   Keeps raw reconnaissance relationships separate from engine-inferred intelligence links.
-    *   Exposes `query_relations()` API in `ContextManager` to filter relationships dynamically.
-
-*   **OutputManager Visual ASCII Dashboard:**
-    *   Renders dynamic ASCII bar charts of risk distributions.
-    *   Displays threat tables and detailed risk profiles with evidence.
-    *   Completely safe for Windows Türkçe CP1254 terminal encodings.
+*   **Documentation & Usability Improvements:**
+    *   **Help Commands:** Integrated `nexus` and `nexus analyze` into the CLI help output.
+    *   **Version Alignments:** Standardized the command line banners and query outputs.
 
 ---
 
@@ -200,7 +190,9 @@ Default runtime config lives in `config/config.json`:
 ```bash
 corvus > help
 corvus > version
+corvus > scan 192.168.1.10
 corvus > scan 192.168.1.10 normal 1 1024
+corvus > scan 192.168.1.10 slow 1 100
 corvus > netscan 192.168.1.0/24
 corvus > geoip 8.8.8.8
 corvus > footprint example.com
