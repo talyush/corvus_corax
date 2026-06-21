@@ -163,67 +163,99 @@ class OutputManager:
                     lines.append(f"  Motto: {data.get('motto') or ''}")
 
                 elif module == "nexus":
-                    stats = data.get("stats", {})
-                    dist = data.get("risk_distribution", {})
-                    profiles = data.get("risk_profiles", [])
-                    threats = data.get("threat_findings", [])
+                    export_type = data.get("export_type")
 
-                    lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS CORE CORRELATION ENGINE SUMMARY{C_RESET}")
-                    lines.append(f"  {'='*45}")
-                    lines.append(f"  {C_CYAN}{C_BOLD}[+] Intelligence Summary Stats:{C_RESET}")
-                    lines.append(f"    - Total Monitored Entities : {stats.get('total_entities', 0)}")
-                    lines.append(f"    - Raw Collected Relations  : {stats.get('total_raw_relations', 0)}")
-                    lines.append(f"    - Inferred Nexus Relations : {stats.get('total_derived_relations', 0)}")
-                    lines.append("")
+                    # --- Export Sonucu Çıktısı ---
+                    if export_type == "html":
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE DOSSIER — HTML EXPORT{C_RESET}")
+                        lines.append(f"  {'='*52}")
+                        lines.append(f"  {C_GREEN}{C_BOLD}[+] Report generated successfully.{C_RESET}")
+                        lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")
+                        lines.append(f"    {C_BOLD}Entities       :{C_RESET} {data.get('entities', 0)}")
+                        lines.append(f"    {C_BOLD}Raw Relations  :{C_RESET} {data.get('relations', 0)}")
+                        lines.append(f"    {C_BOLD}Nexus Derived  :{C_RESET} {data.get('derived_relations', 0)}")
+                        lines.append(f"  {C_CYAN}Open the file in a browser to view the interactive dashboard.{C_RESET}")
 
-                    # Risk distribution bar chart
-                    lines.append(f"  {C_CYAN}{C_BOLD}[+] Asset Risk Distribution:{C_RESET}")
-                    max_val = max(dist.values()) if dist and dist.values() else 0
-                    for level in ("Critical", "High", "Medium", "Low"):
-                        val = dist.get(level, 0)
-                        stars_count = int(val * 10 / max_val) if max_val > 0 else 0
-                        stars = "*" * stars_count
-                        color = C_RESET
-                        if level == "Critical": color = C_RED + C_BOLD
-                        elif level == "High": color = C_RED
-                        elif level == "Medium": color = C_YELLOW
-                        elif level == "Low": color = C_GREEN
-                        lines.append(f"    - {color}{level:<9}{C_RESET} : [{stars:<10}] {val}")
-                    lines.append("")
+                    elif export_type == "neo4j_json":
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE — NEO4J JSON EXPORT{C_RESET}")
+                        lines.append(f"  {'='*52}")
+                        lines.append(f"  {C_GREEN}{C_BOLD}[+] Graph schema exported successfully.{C_RESET}")
+                        lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")
+                        lines.append(f"    {C_BOLD}Graph Nodes    :{C_RESET} {data.get('nodes', 0)}")
+                        lines.append(f"    {C_BOLD}Graph Edges    :{C_RESET} {data.get('relationships', 0)}")
+                        lines.append(f"  {C_CYAN}Ready for LOAD CSV or APOC import into Neo4j.{C_RESET}")
 
-                    # Threat findings
-                    if threats:
-                        lines.append(f"  {C_YELLOW}{C_BOLD}[!] Inferred Security Alerts:{C_RESET}")
-                        for t in threats:
-                            ent = t.get("entity")
-                            t_type = t.get("type")
-                            desc = t.get("description")
-                            conf = t.get("confidence", 1.0)
-                            lines.append(f"    - {C_RED}{C_BOLD}[{t_type}]{C_RESET} {ent}: {desc} (Confidence: {conf})")
+                    # --- Analiz Özeti Çıktısı ---
+                    else:
+                        stats = data.get("stats", {})
+                        dist = data.get("risk_distribution", {})
+                        profiles = data.get("risk_profiles", [])
+                        threats = data.get("threat_findings", [])
+
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS CORE CORRELATION ENGINE{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{'='*52}{C_RESET}")
+                        lines.append(f"  {C_CYAN}{C_BOLD}Intelligence Summary{C_RESET}")
+                        lines.append(f"  {'-'*52}")
+                        lines.append(f"  {'Entities Monitored':<30} {stats.get('total_entities', 0)}")
+                        lines.append(f"  {'Raw Collected Relations':<30} {stats.get('total_raw_relations', 0)}")
+                        lines.append(f"  {'Nexus Inferred Relations':<30} {C_MAGENTA}{stats.get('total_derived_relations', 0)}{C_RESET}")
                         lines.append("")
 
-                    # Asset profiles and evidence
-                    if profiles:
-                        lines.append(f"  {C_CYAN}{C_BOLD}[+] Detailed Risk Profiles & Evidence:{C_RESET}")
-                        sorted_profiles = sorted(profiles, key=lambda x: x.get("score", 0), reverse=True)
-                        for p in sorted_profiles:
-                            val = p.get("value")
-                            p_type = p.get("type")
-                            score = p.get("score")
-                            level = p.get("level")
-                            ev = p.get("evidence", [])
-
+                        # Risk dağılım bar chart
+                        lines.append(f"  {C_CYAN}{C_BOLD}Asset Risk Distribution{C_RESET}")
+                        lines.append(f"  {'-'*52}")
+                        max_val = max(dist.values()) if dist and any(dist.values()) else 1
+                        for level in ("Critical", "High", "Medium", "Low"):
+                            val = dist.get(level, 0)
+                            bar_len = int(val * 20 / max_val) if max_val > 0 else 0
+                            bar = "#" * bar_len
                             color = C_RESET
                             if level == "Critical": color = C_RED + C_BOLD
                             elif level == "High": color = C_RED
                             elif level == "Medium": color = C_YELLOW
                             elif level == "Low": color = C_GREEN
+                            lines.append(f"  {color}{level:<10}{C_RESET} |{bar:<20}| {val}")
+                        lines.append("")
 
-                            lines.append(f"    * ({p_type}) {C_BOLD}{val}{C_RESET} -> Risk Score: {color}{score} ({level}){C_RESET}")
-                            if ev:
-                                lines.append("      Evidence:")
-                                for e in ev:
-                                    lines.append(f"        - {e}")
+                        # Tehdit uyarıları
+                        if threats:
+                            lines.append(f"  {C_RED}{C_BOLD}[!] Security Alerts{C_RESET}")
+                            lines.append(f"  {'-'*52}")
+                            for t in threats:
+                                ent = t.get("entity")
+                                t_type = t.get("type")
+                                desc = t.get("description")
+                                conf = t.get("confidence", 1.0)
+                                lines.append(f"  {C_RED}{C_BOLD}[{t_type}]{C_RESET} {C_BOLD}{ent}{C_RESET}")
+                                lines.append(f"    {desc}")
+                                lines.append(f"    Confidence: {conf}")
+                            lines.append("")
+
+                        # Risk profilleri ve kanıtlar
+                        if profiles:
+                            lines.append(f"  {C_CYAN}{C_BOLD}Risk Profiles & Evidence Chains{C_RESET}")
+                            lines.append(f"  {'-'*52}")
+                            sorted_profiles = sorted(profiles, key=lambda x: x.get("score", 0), reverse=True)
+                            for p in sorted_profiles:
+                                val = p.get("value")
+                                p_type = p.get("type")
+                                score = p.get("score")
+                                level = p.get("level")
+                                ev = p.get("evidence", [])
+
+                                color = C_RESET
+                                if level == "Critical": color = C_RED + C_BOLD
+                                elif level == "High": color = C_RED
+                                elif level == "Medium": color = C_YELLOW
+                                elif level == "Low": color = C_GREEN
+
+                                bar_len = int(score / 5)
+                                bar = "#" * bar_len
+                                lines.append(f"  {C_BOLD}({p_type}) {val}{C_RESET}")
+                                lines.append(f"    Score: {color}{score:>3} ({level}){C_RESET} [{bar:<20}]")
+                                if ev:
+                                    for e in ev:
+                                        lines.append(f"      - {e}")
 
                 else:
                     lines.append(f"  {C_BOLD}Result Data:{C_RESET}")
