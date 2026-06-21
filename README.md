@@ -1,7 +1,7 @@
 # Corvus Corax
 
-Corvus Corax is a modular reconnaissance and analysis framework for cybersecurity learners and researchers.  
-It is designed to collect, normalize, and correlate reconnaissance data in a scalable core architecture, creating a unified intelligence flow.
+Corvus Corax is a modular reconnaissance and intelligence analysis framework for cybersecurity learners and researchers.  
+It is designed to collect, normalize, and correlate reconnaissance data in a scalable core architecture, creating a unified intelligence flow — and now exporting it as interactive reports.
 
 **See the unseen systems.**
 
@@ -9,48 +9,120 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.6.1 - Nexus Core & Optimized Scanning**
+**v0.7 — Nexus Intelligence**
 
-v0.6.1 optimizes the framework's active scanning capabilities by introducing multi-threaded parallel execution (`ThreadPoolExecutor`) and a predefined Top Ports scan list. Version numbers across modules, CLI banners, and help systems have been updated to `v0.6.1-nexus-core`.
+v0.7 introduces the **Nexus Exporter Engine** (`core/exporter.py`): a full reporting layer that transforms the collected intelligence graph into a standalone interactive HTML dossier and a Neo4j-ready graph JSON schema. The terminal dashboard for `nexus` has also been redesigned with cleaner structured output and help has been fully updated with all subcommands.
 
 ---
 
-## Unified Intelligence Flow (v0.5 Core Philosophy)
-
-With v0.5, Corvus Corax transitions from a simple command-line recon toolset into a **unified intelligence framework**:
+## Architecture Overview
 
 ```
-                       [ Module Executions ]
-                                 │
-                   (Generates Standardized Payload)
-                                 │
-         ┌───────────────────────┴───────────────────────┐
-         ▼                                               ▼
-[ OutputManager ]                               [ ContextManager ]
-(Single Presentation)                           (Centralized Mind)
-  │                                               │
-  ├─► Render formatted terminal output            ├─► Map IPs / Domains
-  ├─► Summarize discoveries                       ├─► Record Notes w/ Confidence
-  └─► Display local Notes & Nexus Relations       └─► Graph Varlık Relationships
+                     [ Module Executions ]
+                               │
+                 (Generates Standardized Payload)
+                               │
+         ┌─────────────────────┴──────────────────────┐
+         ▼                                            ▼
+[ OutputManager ]                           [ ContextManager ]
+(Terminal Presentation)                     (Centralized Intelligence Graph)
+  │                                           │
+  ├─► Render formatted terminal output        ├─► Map IPs / Domains
+  ├─► Summarize discoveries                   ├─► Record Notes w/ Confidence
+  └─► Display Notes & Nexus alerts            └─► Graph Entity Relationships
+                                                    │
+                                             [ NexusEngine ]
+                                             (Correlation & Risk Scoring)
+                                                    │
+                                             [ NexusExporter ]
+                                             (HTML Dossier / Neo4j JSON)
 ```
+
+---
+
+## What's New in v0.7 (Nexus Intelligence)
+
+### `core/exporter.py` — Intelligence Export Engine *(New)*
+
+- **`export_html(filepath)`** — Generates a standalone, single-file interactive HTML intelligence dossier.
+  - **Executive Summary** tab: Threat alerts, confidence scores, and audit event log.
+  - **Risk Profiles** tab: Expandable entity cards with risk score progress bars and evidence chains.
+  - **Graph Relations Explorer** tab: Searchable table of all raw and Nexus-inferred relationships.
+  - Glassmorphism dark UI, Google Fonts, smooth tab transitions — no external dependencies.
+
+- **`export_neo4j_json(filepath)`** — Exports the full intelligence graph as a Neo4j-ready JSON schema.
+  - Nodes: `IP`, `Domain`, `Port`, `Location`, `Server`, `Tech`, etc.
+  - Relationships: All raw recon relations + Nexus-inferred derived relations.
+  - Ready for `LOAD CSV` or `APOC` import.
+
+- **`generate_neo4j_data()`** — Transforms the `ContextManager` graph into a flat `{ nodes, relationships }` dictionary.
+
+### `modules/nexus.py` — CLI Routing Extended
+
+New subcommands added:
+
+| Command | Description |
+|---|---|
+| `nexus` / `nexus analyze` | Run Nexus Correlation Engine, print terminal dashboard |
+| `nexus export html [path]` | Export interactive HTML dossier (default: `logs/nexus_report.html`) |
+| `nexus export json [path]` | Export Neo4j graph JSON (default: `logs/nexus_neo4j.json`) |
+
+### `output/output_manager.py` — Redesigned Nexus Dashboard
+
+- Aligned column layout with `#` bar charts for risk distribution.
+- Separate terminal formatters for `analyze`, `export html`, and `export json` result types.
+- Improved readability with structured section dividers.
+
+### `modules/help.py` — Fully Updated
+
+- All nexus subcommands (`nexus analyze`, `nexus export html`, `nexus export json`) documented.
+- Notes section added explaining prerequisites and default export paths.
+- Version header updated to v0.7.
 
 ---
 
 ## What's New in v0.6.1 (Optimized Scanning)
 
-*   **Multi-threaded Port Scanning (`modules/scan.py`):**
-    *   **High-speed Parallel Scanning:** Implements Python's `ThreadPoolExecutor` to execute port probes concurrently.
-    *   **Predefined Top Ports (`TOP_PORTS`):** Added a standard list of 20+ common security services.
-    *   **Default Quick Scan (`scan <ip>`):** Running `scan` without a range now defaults to scanning `TOP_PORTS` concurrently (finishing in ~1 second).
-    *   **Stealth Slow Mode Preservation:** Sequential scanning with configurable delays remains fully supported in `slow` mode to bypass rate limiters.
-
-*   **Documentation & Usability Improvements:**
-    *   **Help Commands:** Integrated `nexus` and `nexus analyze` into the CLI help output.
-    *   **Version Alignments:** Standardized the command line banners and query outputs.
+- **Multi-threaded Port Scanning:** `ThreadPoolExecutor` for concurrent port probes.
+- **Predefined Top Ports (`TOP_PORTS`):** Default quick scan covers 20+ common security services, finishing in ~1 second.
+- **Stealth Slow Mode:** Sequential scanning with configurable delays remains fully supported.
 
 ---
 
-## Standard Output Schema (v0.5 Core Contract)
+## Command Reference
+
+```
+================================================================================
+  CORVUS CORAX v0.7 — NEXUS INTELLIGENCE  |  Modular Recon Framework
+================================================================================
+  Command               | Arguments                    | Description
+--------------------------------------------------------------------------------
+  help                  |                              | Show commands
+  version               |                              | Show tool version
+  context               |                              | Show collected context
+  scan                  | <ip> <mode> ...              | Port scan (normal/slow/banner/subnet)
+  netscan               | <ip/network>                 | Scan a network/subnet
+  footprint             | <domain>                     | Get IP and hostname info
+  geoip                 | <ip>                         | Get geolocation info
+  whois                 | <domain|ip>                  | Run WHOIS lookup
+  subdomain             | <domain> [wordlist]          | Passive subdomain enum (crt.sh+wordlist)
+  tech                  | <url_or_host>                | Detect server, framework & tech stack
+  crawl                 | <url_or_host>                | Get title, links, forms & status code
+  nexus                 | [analyze]                    | Run Nexus Correlation Engine
+  nexus analyze         |                              | Correlate & score all collected data
+  nexus export html     | [filepath]                   | Export HTML intelligence dossier
+  nexus export json     | [filepath]                   | Export Neo4j-ready graph JSON
+================================================================================
+  Notes:
+    - Nexus commands require prior data collection (scan, footprint, etc.)
+    - Default export path: logs/nexus_report.html | logs/nexus_neo4j.json
+    - Use 'context' at any time to inspect the collected intelligence graph
+================================================================================
+```
+
+---
+
+## Standard Output Schema
 
 All modules return normalized JSON-style payloads:
 
@@ -73,7 +145,7 @@ All modules return normalized JSON-style payloads:
       "source": "scan",
       "severity": "info",
       "confidence": 1.0,
-      "timestamp": "2026-05-24T17:15:00.000000+00:00"
+      "timestamp": "2026-06-13T00:00:00Z"
     }
   ],
   "relationships": [
@@ -83,10 +155,10 @@ All modules return normalized JSON-style payloads:
       "dst": {"type": "port", "value": "22/SSH"},
       "evidence": "port scan",
       "confidence": 1.0,
-      "timestamp": "2026-05-24T17:15:00.000000+00:00"
+      "timestamp": "2026-06-13T00:00:00Z"
     }
   ],
-  "timestamp": "2026-05-24T17:15:00.000000+00:00"
+  "timestamp": "2026-06-13T00:00:00Z"
 }
 ```
 
@@ -100,60 +172,48 @@ Error form:
   "error": "Lookup failed",
   "notes": [],
   "relationships": [],
-  "timestamp": "2026-05-24T17:15:00.000000+00:00"
+  "timestamp": "2026-06-13T00:00:00Z"
 }
 ```
 
 ---
 
-## Context Structure (Nexus-Ready Ontoloji)
+## Context Structure
+
+The `ContextManager` maintains a live intelligence graph updated by every module:
 
 ```json
 {
   "ips": {
     "8.8.8.8": {
-      "ports": [],
+      "ports": [{"port": 80, "service": "http"}],
       "geo": {
         "country": "United States",
-        "region": "California",
         "city": "Mountain View",
-        "isp": "Google LLC",
-        "org": "Google LLC",
-        "lat": 37.4223,
-        "lon": -122.084
+        "isp": "Google LLC"
       },
       "hostname": "dns.google"
     }
   },
   "domains": {
-    "dns.google": {
-      "ips": ["8.8.8.8"]
-    }
+    "dns.google": {"ips": ["8.8.8.8"]}
   },
-  "notes": [
-    {
-      "text": "GeoIP intelligence gathered for 8.8.8.8: located in Mountain View, United States",
-      "source": "geoip",
-      "severity": "info",
-      "confidence": 1.0,
-      "timestamp": "2026-05-24T17:15:00.000000+00:00"
-    }
-  ],
+  "notes": [...],
   "relations": [
     {
       "src": {"type": "ip", "value": "8.8.8.8"},
       "relation": "located_in",
-      "dst": {"type": "location", "value": "Mountain View, California, United States"},
+      "dst": {"type": "location", "value": "Mountain View, United States"},
       "evidence": "geoip lookup",
-      "confidence": 1.0,
-      "timestamp": "2026-05-24T17:15:00.000000+00:00"
+      "confidence": 1.0
     }
   ],
+  "derived_relations": [...],
   "meta": {
     "created_at": "...",
     "updated_at": "...",
     "event_count": 5,
-    "recent_events": ["ip_added:8.8.8.8", "geo_updated:8.8.8.8", "note_added:geoip"]
+    "recent_events": ["ip_added:8.8.8.8", "geo_updated:8.8.8.8"]
   }
 }
 ```
@@ -162,14 +222,14 @@ Error form:
 
 ## Configuration
 
-Default runtime config lives in `config/config.json`:
+Runtime config lives in `config/config.json`:
 
 ```json
 {
   "log_level": "INFO",
   "threads": 20,
   "timeout": 3.0,
-  "user_agent": "CorvusCorax/0.3 (+https://github.com/corvus-corax/project)",
+  "user_agent": "CorvusCorax/0.7",
   "output_mode": "text",
   "scan_defaults": {
     "connect_timeout": 1.0,
@@ -185,33 +245,38 @@ Default runtime config lives in `config/config.json`:
 
 ---
 
-## Usage
+## Typical Workflow
 
 ```bash
-corvus > help
-corvus > version
-corvus > scan 192.168.1.10
-corvus > scan 192.168.1.10 normal 1 1024
-corvus > scan 192.168.1.10 slow 1 100
-corvus > netscan 192.168.1.0/24
-corvus > geoip 8.8.8.8
+# 1. Collect intelligence
 corvus > footprint example.com
+corvus > scan 192.168.1.10
+corvus > geoip 8.8.8.8
 corvus > whois example.com
 corvus > subdomain example.com
 corvus > tech example.com
 corvus > crawl example.com
+
+# 2. Inspect the live graph
 corvus > context
-corvus > nexus
+
+# 3. Run Nexus correlation & risk analysis
 corvus > nexus analyze
+
+# 4. Export results
+corvus > nexus export html          # -> logs/nexus_report.html
+corvus > nexus export json          # -> logs/nexus_neo4j.json
+corvus > nexus export html reports/my_report.html   # custom path
 ```
 
 ---
 
 ## Roadmap
 
-*   **Structured Report Generation:** HTML/PDF intelligence reports and visual dossier export.
-*   **Interactive Analyst Layer:** LLM-guided threat reasoning and natural language context queries.
-*   **Dynamic Visualizer Graph:** Interactive network relationship visualizer graph.
+- **Interactive Analyst Layer:** LLM-guided threat reasoning and natural language context queries.
+- **Dynamic Visualizer Graph:** Interactive network relationship visualizer (D3.js / Cytoscape).
+- **Neo4j Integration:** Direct push to a running Neo4j instance via Bolt protocol.
+- **PDF Export:** Printable intelligence dossier alongside the HTML version.
 
 ---
 
