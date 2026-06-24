@@ -9,11 +9,24 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.7 — Nexus Intelligence**
+**v0.7.1 — Stability & Polish**
 
-v0.7 introduces the **Nexus Exporter Engine** (`core/exporter.py`): a full reporting layer that transforms the collected intelligence graph into a standalone interactive HTML dossier and a Neo4j-ready graph JSON schema. The terminal dashboard for `nexus` has also been redesigned with cleaner structured output and help has been fully updated with all subcommands.
+v0.7.1 is a focused cleanup release that fixes the logger bleeding into terminal output, adds a typewriter-style exit animation, and polishes the CLI experience — no raw JSON payloads in the console, no noisy status lines for `help`/`version`, and cleaner error messages.
 
 ---
+
+## Changelog
+
+### v0.7.1 — Stability & Polish
+
+- **`core/logger.py`:** Removed `StreamHandler` (console output). Logger now writes to file only — no more raw log lines appearing in the terminal after commands like `help`.
+- **`output/output_manager.py`:**
+  - `to_log()`: Changed from dumping the full JSON payload to logging a brief summary (`[module] status=X target=Y`).
+  - `to_text()`: `help` and `version` modules now skip the `[+] SUCCESS / Target / Time` header block — clean output only.
+- **`main.py`:**
+  - Added `exit_animation()`: typewriter-style *"The crow returns to the shadows..."* on `exit`, `quit`, or `Ctrl+C`.
+  - Removed noisy `[*] Running module` / `[+] Module finished` prints.
+  - Improved unknown command message to show what was typed.
 
 ## Architecture Overview
 
