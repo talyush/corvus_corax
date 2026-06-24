@@ -22,7 +22,10 @@ class OutputManager:
         if not self.logger:
             return
         for r in self.results:
-            self.logger.info(json.dumps(r))
+            module = r.get("module", "unknown")
+            status = r.get("status", "unknown")
+            target = r.get("target", "N/A")
+            self.logger.info(f"[{module}] status={status} target={target}")
 
     def export_json(self, filename="report.json"):
         with open(filename, "w", encoding="utf-8") as f:
@@ -42,22 +45,26 @@ class OutputManager:
         C_BOLD = "\033[1m"
         C_RESET = "\033[0m"
 
+        # UI-only modules that manage their own output — no status header
+        SILENT_HEADER_MODULES = {"help", "version"}
+
         for r in self.results:
             status = r.get("status", "unknown").upper()
             module = r.get("module", "unknown")
             target = r.get("target", "N/A")
             timestamp = r.get("timestamp", "")
-            
-            # Module header
-            if status == "SUCCESS":
-                lines.append(f"{C_BOLD}{C_GREEN}[+] {module.upper()} SUCCESS{C_RESET}")
-            else:
-                lines.append(f"{C_BOLD}{C_RED}[-] {module.upper()} ERROR{C_RESET}")
 
-            lines.append(f"  {C_BOLD}Target:{C_RESET} {target}")
-            if timestamp:
-                lines.append(f"  {C_BOLD}Time  :{C_RESET} {timestamp}")
-            lines.append("")
+            # Module header — suppressed for clean UI modules
+            if module not in SILENT_HEADER_MODULES:
+                if status == "SUCCESS":
+                    lines.append(f"{C_BOLD}{C_GREEN}[+] {module.upper()} SUCCESS{C_RESET}")
+                else:
+                    lines.append(f"{C_BOLD}{C_RED}[-] {module.upper()} ERROR{C_RESET}")
+
+                lines.append(f"  {C_BOLD}Target:{C_RESET} {target}")
+                if timestamp:
+                    lines.append(f"  {C_BOLD}Time  :{C_RESET} {timestamp}")
+                lines.append("")
 
             # Format body depending on success / error
             if status == "SUCCESS":

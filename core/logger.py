@@ -53,6 +53,7 @@ def _load_log_settings():
     }
 
 def get_logger():
+    """Returns the Corvus logger. Logs go to file only — never to the terminal."""
     os.makedirs("logs", exist_ok=True)
     settings = _load_log_settings()
 
@@ -67,21 +68,11 @@ def get_logger():
             backupCount=settings["backup_count"],
             encoding="utf-8",
         )
-        console_handler = logging.StreamHandler()
-
         clean_formatter = logging.Formatter(
             "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
-        console_formatter = ColoredFormatter(
-            "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-            datefmt="%H:%M:%S",
-        )
-
         file_handler.setFormatter(clean_formatter)
-        console_handler.setFormatter(console_formatter)
-
         logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
 
     return logger

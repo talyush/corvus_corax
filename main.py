@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -33,6 +34,23 @@ def print_output(payload):
     output.to_log()
 
 
+def exit_animation():
+    """Corvus exit animasyonu."""
+    C_MAGENTA = "\033[35m"
+    C_BOLD    = "\033[1m"
+    C_DIM     = "\033[2m"
+    C_RESET   = "\033[0m"
+    msg = "The crow returns to the shadows..."
+    print()
+    print(f"  {C_MAGENTA}{C_BOLD}", end="", flush=True)
+    for ch in msg:
+        print(ch, end="", flush=True)
+        time.sleep(0.04)
+    print(f"{C_RESET}")
+    print(f"  {C_DIM}Session ended. Stay unseen.{C_RESET}")
+    print()
+
+
 def main():
     while True:
         try:
@@ -45,7 +63,7 @@ def main():
             args = parts[1:]
 
             if command in ("exit", "quit"):
-                print("Exiting Corvus.")
+                exit_animation()
                 break
 
             if command == "context":
@@ -53,19 +71,18 @@ def main():
                 continue
 
             if command not in modules:
-                print("Unknown command. Type 'help'.")
+                print(f"  Unknown command: '{command}'. Type 'help' to see available commands.")
                 continue
 
-            print(f"[*] Running module: {command}")
             result = run_module(command, args)
-            print(f"[+] Module finished: {command}")
             print_output(result)
 
         except KeyboardInterrupt:
-            print("\nExiting Corvus.")
+            exit_animation()
             break
         except Exception as e:
             logger.error(f"CLI error: {e}")
+            print(f"  [!] An error occurred: {e}")
 
 
 if __name__ == "__main__":
