@@ -9,7 +9,7 @@ class VersionModule(BaseModule):
             target="local",
             data={
                 "name": "Corvus Corax",
-                "version": "v0.7-nexus-intelligence",
+                "version": "v0.7.2-stability-patch",
                 "motto": "Seeing the unseen systems.",
             },
         )

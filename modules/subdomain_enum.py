@@ -8,16 +8,23 @@ class SubdomainEnumModule(BaseModule):
     name = "subdomain"
 
     def _fetch_crtsh(self, domain, timeout, user_agent):
-        query = urllib.parse.quote(f"%.{domain}")
-        url = f"https://crt.sh/?q={query}&output=json"
-        request = urllib.request.Request(url, headers={"User-Agent": user_agent})
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            raw = response.read().decode("utf-8", errors="ignore")
-        if not raw.strip():
-            return []
-        return json.loads(raw)
+        try:
+            query = urllib.parse.quote(f"%.{domain}")
+            url = f"https://crt.sh/?q={query}&output=json"
+            request = urllib.request.Request(url, headers={"User-Agent": user_agent})
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                raw = response.read().decode("utf-8", errors="ignore")
+            if not raw.strip():
+                return []
+            return json.loads(raw)
+        except Exception as e:
+            if self.logger:
+                self.logger.warning(f"crt.sh fetch failed: {e}")
+            return None
 
     def _normalize_crtsh_names(self, rows, domain):
+        if not rows:
+            return []
         found = set()
         suffix = f".{domain}".lower()
 
@@ -34,6 +41,48 @@ class SubdomainEnumModule(BaseModule):
                     found.add(host)
         return sorted(found)
 
+    def _fetch_hackertarget(self, domain, timeout, user_agent):
+        try:
+            url = f"https://api.hackertarget.com/hostsearch/?q={domain}"
+            request = urllib.request.Request(url, headers={"User-Agent": user_agent})
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                raw = response.read().decode("utf-8", errors="ignore")
+            found = set()
+            suffix = f".{domain}".lower()
+            for line in raw.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split(",")
+                if parts:
+                    host = parts[0].strip().lower()
+                    if host == domain or host.endswith(suffix):
+                        found.add(host)
+            return sorted(found)
+        except Exception as e:
+            if self.logger:
+                self.logger.warning(f"HackerTarget fetch failed: {e}")
+            return None
+
+    def _fetch_rapiddns(self, domain, timeout, user_agent):
+        try:
+            import re
+            url = f"https://rapiddns.io/subdomain/{domain}?full=1&down=1"
+            request = urllib.request.Request(url, headers={"User-Agent": user_agent})
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                raw = response.read().decode("utf-8", errors="ignore")
+            found = set()
+            suffix = f".{domain}".lower()
+            for match in re.finditer(r'<td>([^<]+)</td>', raw):
+                host = match.group(1).strip().lower()
+                if host == domain or host.endswith(suffix):
+                    found.add(host)
+            return sorted(found)
+        except Exception as e:
+            if self.logger:
+                self.logger.warning(f"RapidDNS fetch failed: {e}")
+            return None
+
     def _load_wordlist(self, path):
         with open(path, "r", encoding="utf-8") as f:
             lines = [line.strip().lower() for line in f]
@@ -46,62 +95,139 @@ class SubdomainEnumModule(BaseModule):
 
         domain = args[0].strip().lower()
         wordlist_path = args[1].strip() if len(args) > 1 else None
-        timeout = float(self.config.get("timeout", 3.0)) if self.config else 3.0
+        
+        config_timeout = float(self.config.get("timeout", 3.0)) if self.config else 3.0
+        # External passive OSINT lookups are slow. We enforce a minimum of 8.0s for stability.
+        timeout = max(config_timeout, 8.0)
         user_agent = (self.config or {}).get("user_agent", "CorvusCorax/0.3")
 
-        try:
-            crt_rows = self._fetch_crtsh(domain, timeout=timeout, user_agent=user_agent)
-            crt_subdomains = self._normalize_crtsh_names(crt_rows, domain)
+        sources_status = {
+            "crt_sh": {"success": False, "count": 0},
+            "hackertarget": {"success": False, "count": 0},
+            "rapiddns": {"success": False, "count": 0},
+            "wordlist": {"success": False, "count": 0}
+        }
 
-            wordlist_candidates = []
-            if wordlist_path:
+        # 1. crt.sh
+        crt_subdomains = []
+        crt_rows = self._fetch_crtsh(domain, timeout=timeout, user_agent=user_agent)
+        if crt_rows is not None:
+            crt_subdomains = self._normalize_crtsh_names(crt_rows, domain)
+            sources_status["crt_sh"] = {"success": True, "count": len(crt_subdomains)}
+        else:
+            self.add_note(f"Passive source crt.sh query timed out or failed for {domain}.", severity="warning")
+
+        # 2. HackerTarget
+        ht_subdomains = []
+        ht_rows = self._fetch_hackertarget(domain, timeout=timeout, user_agent=user_agent)
+        if ht_rows is not None:
+            ht_subdomains = ht_rows
+            sources_status["hackertarget"] = {"success": True, "count": len(ht_subdomains)}
+        else:
+            self.add_note(f"Passive source HackerTarget query timed out or failed for {domain}.", severity="warning")
+
+        # 3. RapidDNS
+        rd_subdomains = []
+        rd_rows = self._fetch_rapiddns(domain, timeout=timeout, user_agent=user_agent)
+        if rd_rows is not None:
+            rd_subdomains = rd_rows
+            sources_status["rapiddns"] = {"success": True, "count": len(rd_subdomains)}
+        else:
+            self.add_note(f"Passive source RapidDNS query timed out or failed for {domain}.", severity="warning")
+
+        # 4. Wordlist
+        wordlist_candidates = []
+        if wordlist_path:
+            try:
                 words = self._load_wordlist(wordlist_path)
                 wordlist_candidates = sorted({f"{word}.{domain}" for word in words})
+                sources_status["wordlist"] = {"success": True, "count": len(wordlist_candidates)}
+            except Exception as e:
+                self.add_note(f"Wordlist loading failed for {wordlist_path}: {e}", severity="warning")
 
-            merged = sorted(set(crt_subdomains) | set(wordlist_candidates))
+        # Combine all subdomains and assign relations based on where they were found
+        all_passive_subs = {}
+        for sub in crt_subdomains:
+            all_passive_subs.setdefault(sub, []).append("crt.sh passive lookup")
+        for sub in ht_subdomains:
+            all_passive_subs.setdefault(sub, []).append("HackerTarget passive lookup")
+        for sub in rd_subdomains:
+            all_passive_subs.setdefault(sub, []).append("RapidDNS passive lookup")
 
-            if self.context:
-                for host in merged:
-                    self.context.data["domains"].setdefault(host, {"ips": []})
+        merged = sorted(set(all_passive_subs.keys()) | set(wordlist_candidates))
 
-            for host in crt_subdomains:
-                self.add_relation(
-                    src_type="domain",
-                    src_value=domain,
-                    relation="has_subdomain",
-                    dst_type="domain",
-                    dst_value=host,
-                    evidence="crt.sh passive lookup"
-                )
+        # Check if we got any results or if everything failed
+        any_success = (
+            sources_status["crt_sh"]["success"] or
+            sources_status["hackertarget"]["success"] or
+            sources_status["rapiddns"]["success"] or
+            sources_status["wordlist"]["success"]
+        )
 
-            for host in wordlist_candidates:
-                self.add_relation(
-                    src_type="domain",
-                    src_value=domain,
-                    relation="has_subdomain",
-                    dst_type="domain",
-                    dst_value=host,
-                    evidence="wordlist candidate"
-                )
+        if not any_success:
+            return self.error("All subdomain enumeration sources (crt.sh, HackerTarget, RapidDNS) and wordlist failed or timed out.", target=domain)
 
-            self.add_note(
-                text=f"Subdomain enumeration completed for {domain}: {len(crt_subdomains)} from crt.sh, {len(wordlist_candidates)} from wordlist (Total: {len(merged)})",
-                severity="info"
+        # Context updates
+        if self.context:
+            for host in merged:
+                self.context.data["domains"].setdefault(host, {"ips": []})
+
+        # Add relations for passive sources
+        for host, evidences in all_passive_subs.items():
+            evidence_str = " & ".join(evidences)
+            self.add_relation(
+                src_type="domain",
+                src_value=domain,
+                relation="has_subdomain",
+                dst_type="domain",
+                dst_value=host,
+                evidence=evidence_str
             )
 
-            return self.success(
-                target=domain,
-                data={
-                    "domain": domain,
-                    "sources": {
-                        "crt_sh": True,
-                        "wordlist": bool(wordlist_path),
-                    },
-                    "crt_sh_count": len(crt_subdomains),
-                    "wordlist_count": len(wordlist_candidates),
-                    "total_count": len(merged),
-                    "subdomains": merged,
+        # Add relations for wordlist
+        for host in wordlist_candidates:
+            self.add_relation(
+                src_type="domain",
+                src_value=domain,
+                relation="has_subdomain",
+                dst_type="domain",
+                dst_value=host,
+                evidence="wordlist candidate"
+            )
+
+        # Generate module note summary
+        summary_parts = []
+        for name, status in sources_status.items():
+            if status["success"]:
+                summary_parts.append(f"{status['count']} from {name}")
+            else:
+                summary_parts.append(f"{name} failed")
+        
+        self.add_note(
+            text=f"Subdomain enumeration completed for {domain}: {', '.join(summary_parts)} (Total unique: {len(merged)})",
+            severity="info"
+        )
+
+        return self.success(
+            target=domain,
+            data={
+                "domain": domain,
+                "sources": {
+                    "crt_sh": sources_status["crt_sh"]["success"],
+                    "hackertarget": sources_status["hackertarget"]["success"],
+                    "rapiddns": sources_status["rapiddns"]["success"],
+                    "wordlist": sources_status["wordlist"]["success"],
                 },
-            )
-        except Exception as e:
-            return self.error(e, target=domain)
+                "counts": {
+                    "crt_sh": sources_status["crt_sh"]["count"],
+                    "hackertarget": sources_status["hackertarget"]["count"],
+                    "rapiddns": sources_status["rapiddns"]["count"],
+                    "wordlist": sources_status["wordlist"]["count"],
+                    "total": len(merged)
+                },
+                "crt_sh_count": sources_status["crt_sh"]["count"],
+                "wordlist_count": sources_status["wordlist"]["count"],
+                "total_count": len(merged),
+                "subdomains": merged,
+            },
+        )

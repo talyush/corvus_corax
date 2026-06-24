@@ -28,6 +28,6 @@ def show_banner():
        /'\_   _/`\
        \_)=(_/
 
-        v0.7-nexus-intelligence  |  Modular Recon Framework
+        v0.7.2-stability-patch  |  Modular Recon Framework
     """
     print(Fore.MAGENTA + title_art + Style.RESET_ALL + lower_art)

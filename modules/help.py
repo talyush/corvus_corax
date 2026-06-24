@@ -6,7 +6,7 @@ class HelpModule(BaseModule):
     def execute(self):
         data = """
 ================================================================================
-  CORVUS CORAX v0.7 — NEXUS INTELLIGENCE  |  Modular Recon Framework
+  CORVUS CORAX v0.7.2 — STABILITY PATCH  |  Modular Recon Framework
 ================================================================================
   Command               | Arguments                    | Description
 --------------------------------------------------------------------------------

@@ -9,13 +9,26 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.7.1 — Stability & Polish**
+**v0.7.2 — Subdomain Stability Patch**
 
-v0.7.1 is a focused cleanup release that fixes the logger bleeding into terminal output, adds a typewriter-style exit animation, and polishes the CLI experience — no raw JSON payloads in the console, no noisy status lines for `help`/`version`, and cleaner error messages.
+v0.7.2 is a stability release that resolves subdomain enumeration timeout errors by introducing multiple passive OSINT sources (HackerTarget and RapidDNS) with custom timeout handling and graceful fallbacks.
 
 ---
 
 ## Changelog
+
+### v0.7.2 — Subdomain Stability Patch
+
+- **`modules/subdomain_enum.py`**:
+  - Added **HackerTarget** API and **RapidDNS** parsing lookups to run alongside `crt.sh`.
+  - Configured minimum `8.0 seconds` timeout for all passive OSINT resources to prevent premature timeouts on slower servers.
+  - Isolated connection/timeout errors per source so that one flaky source (like `crt.sh`) does not fail the entire module execution.
+  - Consolidated subdomains across all active sources and updated intelligence relations with consolidated evidence names.
+- **`output/output_manager.py`**:
+  - Dynamically formats subdomain results to list the specific active sources (e.g. `Active Sources: hackertarget, rapiddns`).
+  - Supports backwards-compatible data structures for legacy count values.
+- **Branding updates**:
+  - Version updated to `v0.7.2-stability-patch` in `core/banner.py`, `modules/version.py`, and `modules/help.py`.
 
 ### v0.7.1 — Stability & Polish
 

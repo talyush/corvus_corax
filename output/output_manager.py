@@ -116,9 +116,13 @@ class OutputManager:
                 
                 elif module == "subdomain":
                     subdomains = data.get("subdomains", [])
+                    sources = data.get("sources", {})
+                    active_sources = [k for k, v in sources.items() if v]
+                    total_count = data.get("total_count", data.get("counts", {}).get("total", len(subdomains)))
+                    
                     lines.append(f"  {C_CYAN}{C_BOLD}Subdomain Enumeration for {data.get('domain')}:{C_RESET}")
-                    lines.append(f"    {C_BOLD}Sources     :{C_RESET} crt.sh (Passive) | Wordlist ({'Enabled' if data.get('sources', {}).get('wordlist') else 'Disabled'})")
-                    lines.append(f"    {C_BOLD}Total Found :{C_RESET} {data.get('total_count', 0)}")
+                    lines.append(f"    {C_BOLD}Active Sources:{C_RESET} {', '.join(active_sources) if active_sources else 'None'}")
+                    lines.append(f"    {C_BOLD}Total Found   :{C_RESET} {total_count}")
                     if subdomains:
                         lines.append("    Discovered Subdomains:")
                         for s in subdomains[:30]:
