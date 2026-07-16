@@ -11,6 +11,13 @@ class ContextManager:
             "ips": {},        # ip: {ports: [], geo: {}, hostname: ""}
             "domains": {},    # domain: {ips: []}
             "notes": [],      # genel notlar / tespitler
+            "certificates": {},  # fingerprint: {cert_data, hosts: []}
+            "dns_records": {},   # domain: {type: data}
+            "http_headers": {},  # domain: {headers, cookies}
+            "email_intel": {},   # domain: {provider, pattern, formats, report_emails}
+            "metadata_intel": {},# domain: {robots, sitemap, security_txt, humans_txt, favicon}
+            "tech_intel": {},    # domain: {server, runtime, cdn_waf, cms, frameworks, js_libs, stack_profile}
+            "asn_intel": {},     # ip: {asn, org, cidr, country, related_ips}
             "meta": {
                 "created_at": self._now_iso(),
                 "updated_at": self._now_iso(),
@@ -60,6 +67,61 @@ class ContextManager:
         self.data["ips"][ip]["hostname"] = domain
         self.add_relation("domain", domain, "resolves_to", "ip", ip, "dns mapping")
         self._touch(event=f"domain_mapped:{domain}->{ip}")
+
+    def add_certificate(self, host, fingerprint, cert_data):
+        """Stores a certificate fingerprint and the host that served it.
+        If the same fingerprint is seen on multiple hosts, they are grouped
+        under the same certificate record (enabling shared-cert detection)."""
+        if fingerprint not in self.data["certificates"]:
+            entry = dict(cert_data)  # copy cert fields
+            entry["hosts"] = []
+            self.data["certificates"][fingerprint] = entry
+        cert_entry = self.data["certificates"][fingerprint]
+        if host not in cert_entry["hosts"]:
+            cert_entry["hosts"].append(host)
+        self._touch(event=f"certificate_added:{fingerprint[:16]}...@{host}")
+
+    def add_dns_record(self, domain, dns_data):
+        """Stores structured DNS records for a domain in the context."""
+        if domain not in self.data["dns_records"]:
+            self.data["dns_records"][domain] = {}
+        self.data["dns_records"][domain].update(dns_data)
+        self._touch(event=f"dns_record_added:{domain}")
+
+    def add_http_headers(self, domain, headers_data):
+        """Stores structured HTTP headers for a domain in the context."""
+        if domain not in self.data["http_headers"]:
+            self.data["http_headers"][domain] = {}
+        self.data["http_headers"][domain].update(headers_data)
+        self._touch(event=f"http_headers_added:{domain}")
+
+    def add_email_intel(self, domain, email_data):
+        """Stores email intelligence (provider, pattern, formats) for a domain."""
+        if domain not in self.data["email_intel"]:
+            self.data["email_intel"][domain] = {}
+        self.data["email_intel"][domain].update(email_data)
+        self._touch(event=f"email_intel_added:{domain}")
+
+    def add_metadata_intel(self, domain, metadata_data):
+        """Stores metadata intelligence (robots, sitemaps, favicon hash) for a domain."""
+        if domain not in self.data["metadata_intel"]:
+            self.data["metadata_intel"][domain] = {}
+        self.data["metadata_intel"][domain].update(metadata_data)
+        self._touch(event=f"metadata_intel_added:{domain}")
+
+    def add_tech_intel(self, domain, tech_data):
+        """Stores deep technology fingerprint data for a domain."""
+        if domain not in self.data["tech_intel"]:
+            self.data["tech_intel"][domain] = {}
+        self.data["tech_intel"][domain].update(tech_data)
+        self._touch(event=f"tech_intel_added:{domain}")
+
+    def add_asn_intel(self, ip, asn_data):
+        """Stores ASN intelligence data for an IP address."""
+        if ip not in self.data["asn_intel"]:
+            self.data["asn_intel"][ip] = {}
+        self.data["asn_intel"][ip].update(asn_data)
+        self._touch(event=f"asn_intel_added:{ip}")
 
     def add_note(self, text, source="system", severity="info", confidence=1.0):
         """Yapisal not ekler (Nexus'ta yorumlanabilir)."""
@@ -205,6 +267,119 @@ class ContextManager:
         """O ana kadar elde edilen verileri temizleyip döner."""
         return json.dumps(self.get_clean_data(), indent=4, ensure_ascii=False)
 
+    def get_admiralty_summary(self):
+        """Show admiralty intelligence summary for all entities."""
+        lines = []
+        lines.append("=" * 80)
+        lines.append("ADMIRALTY INTELLIGENCE SUMMARY")
+        lines.append("=" * 80)
+        
+        # ASN Intelligence
+        asn_intel = self.data.get("asn_intel", {})
+        if asn_intel:
+            lines.append(f"\nASN Intelligence ({len(asn_intel)} IPs):")
+            for ip, data in asn_intel.items():
+                lines.append(f"  {ip}:")
+                lines.append(f"    ASN: {data.get('asn')}")
+                lines.append(f"    Organization: {data.get('organization')}")
+                lines.append(f"    CIDR: {data.get('cidr')}")
+                lines.append(f"    Related IPs: {data.get('related_count', 0)}")
+        
+        # Tech Intelligence
+        tech_intel = self.data.get("tech_intel", {})
+        if tech_intel:
+            lines.append(f"\nTechnology Intelligence ({len(tech_intel)} domains):")
+            for domain, data in tech_intel.items():
+                lines.append(f"  {domain}:")
+                lines.append(f"    Server: {data.get('server')}")
+                lines.append(f"    Runtime: {data.get('runtime')}")
+                lines.append(f"    CMS: {[cms['name'] for cms in data.get('cms', [])]}")
+                lines.append(f"    Stack Profile: {data.get('stack_profile')}")
+        
+        # Derived Relations (Admiralty-based)
+        derived_relations = self.data.get("derived_relations", [])
+        admiralty_relations = [r for r in derived_relations if r.get("relation") in (
+            "shares_asn", "same_provider", "same_prefix", "shares_technology_stack"
+        )]
+        
+        if admiralty_relations:
+            lines.append(f"\nAdmiralty Correlations ({len(admiralty_relations)} relations):")
+            for rel in admiralty_relations[:20]:  # Limit to first 20
+                lines.append(f"  {rel.get('src', {}).get('value')} {rel.get('relation')} {rel.get('dst', {}).get('value')}")
+                lines.append(f"    Evidence: {rel.get('evidence')}")
+                lines.append(f"    Confidence: {rel.get('confidence')}")
+        
+        lines.append("\n" + "=" * 80)
+        lines.append("Use 'context <entity> --admiralty' for detailed evidence chains")
+        lines.append("=" * 80)
+        
+        return "\n".join(lines)
+
+    def get_entity_admiralty(self, entity):
+        """Show detailed admiralty evidence chain for a specific entity."""
+        lines = []
+        lines.append("=" * 80)
+        lines.append(f"ADMIRALTY INTELLIGENCE: {entity}")
+        lines.append("=" * 80)
+        
+        # Check if entity is in ASN intel
+        asn_intel = self.data.get("asn_intel", {})
+        if entity in asn_intel:
+            data = asn_intel[entity]
+            lines.append(f"\nASN Intelligence:")
+            lines.append(f"  ASN: {data.get('asn')}")
+            lines.append(f"  AS Number: {data.get('as_number')}")
+            lines.append(f"  Organization: {data.get('organization')}")
+            lines.append(f"  ISP: {data.get('isp')}")
+            lines.append(f"  Country: {data.get('country')}")
+            lines.append(f"  CIDR: {data.get('cidr')}")
+            lines.append(f"  Related IPs: {data.get('related_count', 0)}")
+            if data.get('related_ips'):
+                lines.append(f"  Related IP List: {', '.join(data['related_ips'][:10])}")
+        
+        # Check if entity is in tech intel
+        tech_intel = self.data.get("tech_intel", {})
+        if entity in tech_intel:
+            data = tech_intel[entity]
+            lines.append(f"\nTechnology Intelligence:")
+            lines.append(f"  Server: {data.get('server')}")
+            lines.append(f"  Runtime: {data.get('runtime')}")
+            lines.append(f"  Generator: {data.get('generator')}")
+            lines.append(f"  WAF/CDN: {[waf['name'] for waf in data.get('waf_cdn', [])]}")
+            cms_list = [f"{cms['name']} {cms.get('version', '')}" for cms in data.get('cms', [])]
+            lines.append(f"  CMS: {cms_list}")
+            lines.append(f"  Frameworks: {[fw['name'] for fw in data.get('frameworks', [])]}")
+            lines.append(f"  JS Libraries: {[js['name'] for js in data.get('js_libraries', [])]}")
+            lines.append(f"  Stack Profile: {data.get('stack_profile')}")
+        
+        # Check derived relations for this entity
+        derived_relations = self.data.get("derived_relations", [])
+        entity_relations = []
+        for rel in derived_relations:
+            src = rel.get("src", {})
+            dst = rel.get("dst", {})
+            if src.get("value") == entity or dst.get("value") == entity:
+                entity_relations.append(rel)
+        
+        if entity_relations:
+            lines.append(f"\nAdmiralty Correlations ({len(entity_relations)} relations):")
+            for rel in entity_relations:
+                rel_type = rel.get("relation")
+                src_val = rel.get("src", {}).get("value")
+                dst_val = rel.get("dst", {}).get("value")
+                evidence = rel.get("evidence")
+                confidence = rel.get("confidence")
+                
+                if src_val == entity:
+                    lines.append(f"  {entity} {rel_type} {dst_val}")
+                else:
+                    lines.append(f"  {dst_val} {rel_type} {entity}")
+                lines.append(f"    Evidence: {evidence}")
+                lines.append(f"    Confidence: {confidence}")
+        
+        lines.append("\n" + "=" * 80)
+        return "\n".join(lines)
+
     def get_clean_data(self):
         """
         Nexus uyumluluğu için veri şemasını korur,
@@ -235,10 +410,40 @@ class ContextManager:
         if len(events) > 200:
             events = events[-200:]
 
+        clean_certs = {}
+        for fp, cert_entry in self.data.get("certificates", {}).items():
+            clean_certs[fp] = cert_entry
+
+        clean_dns = {}
+        for dom, records in self.data.get("dns_records", {}).items():
+            clean_dns[dom] = records
+
+        clean_http = {}
+        for dom, records in self.data.get("http_headers", {}).items():
+            clean_http[dom] = records
+
+        clean_email = {}
+        for dom, records in self.data.get("email_intel", {}).items():
+            clean_email[dom] = records
+
+        clean_metadata = {}
+        for dom, records in self.data.get("metadata_intel", {}).items():
+            clean_metadata[dom] = records
+
+        clean_tech = {}
+        for dom, records in self.data.get("tech_intel", {}).items():
+            clean_tech[dom] = records
+
         return {
             "ips": clean_ips,
             "domains": clean_domains,
             "notes": clean_notes,
+            "certificates": clean_certs,
+            "dns_records": clean_dns,
+            "http_headers": clean_http,
+            "email_intel": clean_email,
+            "metadata_intel": clean_metadata,
+            "tech_intel": clean_tech,
             "relations": clean_relations,
             "derived_relations": clean_derived,
             "meta": {

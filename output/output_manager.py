@@ -130,7 +130,291 @@ class OutputManager:
                         if len(subdomains) > 30:
                             lines.append(f"    ... and {len(subdomains) - 30} more (see logs/report for full list)")
                 
+                elif module == "cert":
+                    expired       = data.get("expired", False)
+                    days_rem      = data.get("days_remaining", 0)
+                    is_wildcard   = data.get("wildcard", False)
+                    wildcards     = data.get("wildcards", [])
+                    san_list      = data.get("san", [])
+
+                    # Expiry indicator
+                    if expired:
+                        expiry_label = f"{C_RED}{C_BOLD}EXPIRED{C_RESET}"
+                    elif days_rem < 30:
+                        expiry_label = f"{C_YELLOW}{C_BOLD}EXPIRING SOON ({days_rem}d){C_RESET}"
+                    else:
+                        expiry_label = f"{C_GREEN}Valid — {days_rem} days remaining{C_RESET}"
+
+                    wildcard_label = f"{C_YELLOW}YES — {', '.join(wildcards)}{C_RESET}" if is_wildcard else "No"
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Certificate Intelligence for {data.get('host')}:{data.get('port', 443)}{C_RESET}")
+                    lines.append(f"    {C_BOLD}Subject CN    :{C_RESET} {data.get('subject_cn') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}Organization  :{C_RESET} {data.get('organization') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}Country       :{C_RESET} {data.get('country') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}Issuer        :{C_RESET} {data.get('issuer') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}Valid From    :{C_RESET} {data.get('valid_from') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}Valid To      :{C_RESET} {data.get('valid_to') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}Status        :{C_RESET} {expiry_label}")
+                    lines.append(f"    {C_BOLD}Wildcard      :{C_RESET} {wildcard_label}")
+                    if san_list:
+                        lines.append(f"    {C_BOLD}SAN ({len(san_list)} entries):{C_RESET}")
+                        for s in san_list[:10]:
+                            lines.append(f"      - {s}")
+                        if len(san_list) > 10:
+                            lines.append(f"      ... and {len(san_list) - 10} more")
+                    lines.append(f"    {C_BOLD}Serial No.    :{C_RESET} {data.get('serial_number') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}SHA-256       :{C_RESET} {data.get('fingerprint', 'N/A')[:59]}...")
+
+                elif module == "dns":
+                    domain = data.get("domain")
+                    a_records = data.get("A", [])
+                    aaaa_records = data.get("AAAA", [])
+                    ns_records = data.get("NS", [])
+                    mx_records = data.get("MX", [])
+                    caa_records = data.get("CAA", [])
+                    spf = data.get("spf")
+                    dmarc = data.get("dmarc")
+                    dkim = data.get("dkim", {})
+
+                    # Email security indicators
+                    if not spf:
+                        spf_status = f"{C_RED}{C_BOLD}Missing (No SPF spoofing protection){C_RESET}"
+                    elif data.get("spf_weak", False):
+                        spf_status = f"{C_RED}{C_BOLD}WEAK ({spf}){C_RESET}"
+                    else:
+                        spf_status = f"{C_GREEN}Valid ({spf}){C_RESET}"
+
+                    if not dmarc:
+                        dmarc_status = f"{C_YELLOW}{C_BOLD}Missing (No DMARC spoofing policy){C_RESET}"
+                    elif data.get("dmarc_weak", False):
+                        dmarc_status = f"{C_YELLOW}{C_BOLD}Weak policy ({dmarc}){C_RESET}"
+                    else:
+                        dmarc_status = f"{C_GREEN}Strong policy ({dmarc}){C_RESET}"
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}DNS Intelligence & Email Security for {domain}:{C_RESET}")
+                    
+                    if a_records:
+                        lines.append(f"    {C_BOLD}A Records     :{C_RESET} {', '.join(a_records)}")
+                    if aaaa_records:
+                        lines.append(f"    {C_BOLD}AAAA Records  :{C_RESET} {', '.join(aaaa_records)}")
+                    if ns_records:
+                        lines.append(f"    {C_BOLD}Nameservers   :{C_RESET} {', '.join(ns_records)}")
+                    
+                    if mx_records:
+                        lines.append(f"    {C_BOLD}Mail Servers  :{C_RESET}")
+                        for mx in mx_records:
+                            lines.append(f"      - {mx['host']} (Priority: {mx['priority']})")
+
+                    lines.append(f"    {C_BOLD}SPF Status    :{C_RESET} {spf_status}")
+                    lines.append(f"    {C_BOLD}DMARC Status  :{C_RESET} {dmarc_status}")
+                    
+                    if dkim:
+                        lines.append(f"    {C_BOLD}DKIM Keys ({len(dkim)} found):{C_RESET}")
+                        for sel, key in dkim.items():
+                            lines.append(f"      - {sel}._domainkey: {key[:50]}...")
+                    else:
+                        lines.append(f"    {C_BOLD}DKIM Keys     :{C_RESET} No keys found in tested selectors.")
+                    
+                    if caa_records:
+                        lines.append(f"    {C_BOLD}CAA Records   :{C_RESET} {', '.join(caa_records)}")
+
+                elif module == "headers":
+                    h_data = data.get("headers", {})
+                    cookies = data.get("cookies", [])
+                    missing = data.get("missing_security_headers", [])
+                    
+                    lines.append(f"  {C_CYAN}{C_BOLD}HTTP Header Analysis for {data.get('url')}:{C_RESET}")
+                    
+                    # Web server stack info
+                    lines.append(f"    {C_BOLD}Server Stack  :{C_RESET}")
+                    lines.append(f"      - Server      : {h_data.get('server') or 'N/A'}")
+                    lines.append(f"      - X-Powered-By: {h_data.get('x-powered-by') or 'N/A'}")
+                    if h_data.get("x-aspnet-version"):
+                        lines.append(f"      - ASP.NET Ver : {h_data.get('x-aspnet-version')}")
+                        
+                    # Security compliance headers
+                    def check_header(name):
+                        val = h_data.get(name.lower())
+                        if val:
+                            return f"{C_GREEN}Present{C_RESET} ({val[:40]}...)" if len(val) > 40 else f"{C_GREEN}Present{C_RESET} ({val})"
+                        return f"{C_RED}{C_BOLD}Missing{C_RESET}"
+                        
+                    lines.append(f"    {C_BOLD}Security Posture:{C_RESET}")
+                    lines.append(f"      - Content-Security-Policy (CSP) : {check_header('Content-Security-Policy')}")
+                    lines.append(f"      - Strict-Transport-Security (HSTS): {check_header('Strict-Transport-Security')}")
+                    lines.append(f"      - X-Frame-Options (XFO)           : {check_header('X-Frame-Options')}")
+                    lines.append(f"      - X-Content-Type-Options (XCTO)   : {check_header('X-Content-Type-Options')}")
+                    lines.append(f"      - Referrer-Policy                 : {check_header('Referrer-Policy')}")
+                    
+                    # Access Control
+                    lines.append(f"    {C_BOLD}Access Control (CORS):{C_RESET}")
+                    lines.append(f"      - Access-Control-Allow-Origin     : {h_data.get('access-control-allow-origin') or 'N/A'}")
+                    lines.append(f"      - Access-Control-Allow-Credentials: {h_data.get('access-control-allow-credentials') or 'N/A'}")
+                    
+                    # Cache & Encoding
+                    lines.append(f"    {C_BOLD}Performance & Caching:{C_RESET}")
+                    lines.append(f"      - Cache-Control : {h_data.get('cache-control') or 'N/A'}")
+                    lines.append(f"      - Content-Encoding: {h_data.get('content-encoding') or 'N/A'}")
+                    
+                    # Cookies
+                    if cookies:
+                        lines.append(f"    {C_BOLD}Set-Cookie Headers ({len(cookies)} found):{C_RESET}")
+                        for c in cookies:
+                            flags = []
+                            if c.get("httponly"):
+                                flags.append(f"{C_GREEN}HttpOnly{C_RESET}")
+                            else:
+                                flags.append(f"{C_RED}HttpOnly missing{C_RESET}")
+                                
+                            if c.get("secure"):
+                                flags.append(f"{C_GREEN}Secure{C_RESET}")
+                            else:
+                                flags.append(f"{C_RED}Secure missing{C_RESET}")
+                                
+                            if c.get("samesite"):
+                                flags.append(f"SameSite={c.get('samesite')}")
+                                
+                            lines.append(f"      - {c.get('name')} = {c.get('value')} [{', '.join(flags)}]")
+                    else:
+                        lines.append(f"    {C_BOLD}Cookies       :{C_RESET} No cookies set in response.")
+
+                elif module == "email":
+                    provider      = data.get("provider")
+                    prov_evidence = data.get("provider_evidence")
+                    report_emails = data.get("dmarc_report_emails", [])
+                    sample_emails = data.get("sample_emails", [])
+                    pattern       = data.get("detected_pattern")
+                    pat_conf      = data.get("pattern_confidence", 0)
+                    formats       = data.get("suggested_formats", [])
+                    domain_name   = data.get("domain")
+
+                    role_emails   = data.get("role_emails", [])
+                    personal_emails = data.get("personal_emails", [])
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Email Intelligence for {domain_name}:{C_RESET}")
+
+                    # Provider
+                    if provider:
+                        lines.append(f"    {C_BOLD}Email Provider :{C_RESET} {C_GREEN}{provider}{C_RESET}")
+                        lines.append(f"    {C_BOLD}Evidence       :{C_RESET} {prov_evidence}")
+                    else:
+                        lines.append(f"    {C_BOLD}Email Provider :{C_RESET} {C_YELLOW}Unknown - run 'dns' first{C_RESET}")
+
+                    # Role/System Emails
+                    if role_emails:
+                        lines.append(f"    {C_BOLD}Role/System Mailboxes ({len(role_emails)}):{C_RESET}")
+                        for addr in role_emails:
+                            lines.append(f"      - {C_YELLOW}{addr}{C_RESET}")
+                    else:
+                        lines.append(f"    {C_BOLD}Role/System Mailboxes : {C_RESET}None found")
+
+                    # Personal Contacts
+                    if personal_emails:
+                        lines.append(f"    {C_BOLD}Personal Contacts ({len(personal_emails)}):{C_RESET}")
+                        for addr in personal_emails:
+                            lines.append(f"      - {C_GREEN}{addr}{C_RESET}")
+
+                    # DMARC reporting addresses
+                    if report_emails:
+                        lines.append(f"    {C_BOLD}DMARC Report Inboxes ({len(report_emails)}):{C_RESET}")
+                        for addr in report_emails:
+                            lines.append(f"      - {C_YELLOW}{addr}{C_RESET}")
+
+                    # Pattern
+                    if pat_conf >= 0.85:
+                        conf_color = C_GREEN
+                    elif pat_conf >= 0.6:
+                        conf_color = C_YELLOW
+                    else:
+                        conf_color = C_RED
+
+                    lines.append(f"    {C_BOLD}Detected Pattern:{C_RESET} "
+                                 f"{conf_color}{pattern}{C_RESET}  "
+                                 f"(confidence: {conf_color}{int(pat_conf * 100)}%{C_RESET})")
+
+
+                    # Format suggestions
+                    if formats:
+                        lines.append(f"    {C_BOLD}Suggested Formats:{C_RESET}")
+                        for fmt in formats[:6]:
+                            c = fmt["confidence"]
+                            col = C_GREEN if c == "HIGH" else (C_YELLOW if c == "MEDIUM" else C_RED)
+                            lines.append(f"      [{col}{c:6}{C_RESET}] {fmt['format']}")
+
+                elif module == "metadata":
+                    domain_name = data.get("domain")
+                    robots      = data.get("robots") or {}
+                    sitemap     = data.get("sitemap") or {}
+                    sec_txt     = data.get("security_txt") or {}
+                    humans      = data.get("humans_txt") or {}
+                    favicon     = data.get("favicon") or {}
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Metadata Intelligence for {domain_name}:{C_RESET}")
+
+                    # --- robots.txt ---
+                    if robots:
+                        lines.append(f"    {C_BOLD}robots.txt:{C_RESET}")
+                        lines.append(f"      Disallowed : {len(robots.get('disallowed', []))} path(s)")
+                        lines.append(f"      Sitemaps   : {len(robots.get('sitemaps', []))} reference(s)")
+                        sensitive = robots.get("sensitive_paths", [])
+                        if sensitive:
+                            lines.append(f"      {C_RED}{C_BOLD}Sensitive Paths ({len(sensitive)}):{C_RESET}")
+                            for sp in sensitive[:10]:
+                                lines.append(f"        {C_RED}- {sp}{C_RESET}")
+                    else:
+                        lines.append(f"    {C_BOLD}robots.txt    :{C_RESET} Not found")
+
+                    # --- sitemap.xml ---
+                    if sitemap:
+                        lines.append(f"    {C_BOLD}sitemap.xml:{C_RESET}")
+                        lines.append(f"      Total URLs : {sitemap.get('total_urls', 0)}")
+                    else:
+                        lines.append(f"    {C_BOLD}sitemap.xml   :{C_RESET} Not found")
+
+                    # --- security.txt ---
+                    if sec_txt:
+                        contacts = sec_txt.get("contacts", [])
+                        emails   = sec_txt.get("emails", [])
+                        policy   = sec_txt.get("policy")
+                        lines.append(f"    {C_BOLD}security.txt:{C_RESET}")
+                        if emails:
+                            lines.append(f"      {C_GREEN}Security Contacts:{C_RESET}")
+                            for e in emails:
+                                lines.append(f"        - {C_GREEN}{e}{C_RESET}")
+                        if policy:
+                            lines.append(f"      Policy URL : {policy}")
+                    else:
+                        lines.append(f"    {C_BOLD}security.txt  :{C_RESET} Not found")
+
+                    # --- humans.txt ---
+                    if humans:
+                        h_emails = humans.get("emails", [])
+                        h_tech   = humans.get("tech_hints", [])
+                        lines.append(f"    {C_BOLD}humans.txt:{C_RESET}")
+                        if h_emails:
+                            lines.append(f"      {C_YELLOW}Staff Emails ({len(h_emails)}):{C_RESET}")
+                            for e in h_emails:
+                                lines.append(f"        - {C_YELLOW}{e}{C_RESET}")
+                        if h_tech:
+                            lines.append(f"      Tech Hints : {', '.join(h_tech[:3])}")
+                    else:
+                        lines.append(f"    {C_BOLD}humans.txt    :{C_RESET} Not found")
+
+                    # --- favicon ---
+                    if favicon:
+                        fhash = favicon.get("shodan_hash")
+                        furl  = favicon.get("url")
+                        lines.append(f"    {C_BOLD}favicon.ico:{C_RESET}")
+                        lines.append(f"      URL        : {furl}")
+                        lines.append(f"      MD5        : {favicon.get('md5')}")
+                        lines.append(f"      {C_CYAN}Shodan Hash: {fhash}{C_RESET}")
+                        lines.append(f"      {C_CYAN}Shodan Query: http.favicon.hash:{fhash}{C_RESET}")
+                    else:
+                        lines.append(f"    {C_BOLD}favicon.ico   :{C_RESET} Not found")
+
                 elif module == "tech":
+
+
                     frameworks = data.get("frameworks", [])
                     lines.append(f"  {C_CYAN}{C_BOLD}Technology Stack Discovery:{C_RESET}")
                     lines.append(f"    {C_BOLD}URL         :{C_RESET} {data.get('url')}")
@@ -175,6 +459,7 @@ class OutputManager:
 
                 elif module == "nexus":
                     export_type = data.get("export_type")
+                    verbose = data.get("verbose", False)
 
                     # --- Export Sonucu Çıktısı ---
                     if export_type == "html":
@@ -195,6 +480,16 @@ class OutputManager:
                         lines.append(f"    {C_BOLD}Graph Nodes    :{C_RESET} {data.get('nodes', 0)}")
                         lines.append(f"    {C_BOLD}Graph Edges    :{C_RESET} {data.get('relationships', 0)}")
                         lines.append(f"  {C_CYAN}Ready for LOAD CSV or APOC import into Neo4j.{C_RESET}")
+
+                    elif export_type == "graph_json":
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE — GENERIC GRAPH JSON EXPORT{C_RESET}")
+                        lines.append(f"  {'='*52}")
+                        lines.append(f"  {C_GREEN}{C_BOLD}[+] Graph data exported successfully.{C_RESET}")
+                        lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")
+                        lines.append(f"    {C_BOLD}Graph Nodes    :{C_RESET} {data.get('nodes', 0)}")
+                        lines.append(f"    {C_BOLD}Graph Edges    :{C_RESET} {data.get('edges', 0)}")
+                        lines.append(f"    {C_BOLD}Format         :{C_RESET} {data.get('format', 'corvus_graph_v1')}")
+                        lines.append(f"  {C_CYAN}Ready for AI/ML pipelines and visualization tools.{C_RESET}")
 
                     # --- Analiz Özeti Çıktısı ---
                     else:
@@ -244,7 +539,7 @@ class OutputManager:
 
                         # Risk profilleri ve kanıtlar
                         if profiles:
-                            lines.append(f"  {C_CYAN}{C_BOLD}Risk Profiles & Evidence Chains{C_RESET}")
+                            lines.append(f"  {C_CYAN}{C_BOLD}Risk Profiles{C_RESET}")
                             lines.append(f"  {'-'*52}")
                             sorted_profiles = sorted(profiles, key=lambda x: x.get("score", 0), reverse=True)
                             for p in sorted_profiles:
@@ -252,7 +547,8 @@ class OutputManager:
                                 p_type = p.get("type")
                                 score = p.get("score")
                                 level = p.get("level")
-                                ev = p.get("evidence", [])
+                                admiralty_rating = p.get("admiralty_rating", "N/A")
+                                evidence_count = p.get("evidence_count", 0)
 
                                 color = C_RESET
                                 if level == "Critical": color = C_RED + C_BOLD
@@ -263,10 +559,26 @@ class OutputManager:
                                 bar_len = int(score / 5)
                                 bar = "#" * bar_len
                                 lines.append(f"  {C_BOLD}({p_type}) {val}{C_RESET}")
-                                lines.append(f"    Score: {color}{score:>3} ({level}){C_RESET} [{bar:<20}]")
-                                if ev:
-                                    for e in ev:
-                                        lines.append(f"      - {e}")
+                                lines.append(f"    Risk Score: {color}{score:>3}/100 ({level}){C_RESET} [{bar:<20}]")
+                                lines.append(f"    Admiralty Rating: {C_CYAN}{admiralty_rating}{C_RESET}")
+                                
+                                if verbose:
+                                    # Verbose mode: show full evidence chain
+                                    evidence_chain = p.get("evidence_chain", [])
+                                    lines.append(f"    Evidence Chain ({evidence_count} items):")
+                                    for i, ev in enumerate(evidence_chain, 1):
+                                        ev_type = ev.get("type")
+                                        adm_code = ev.get("admiralty_code")
+                                        weighted_score = ev.get("weighted_score")
+                                        description = ev.get("description")
+                                        source = ev.get("source")
+                                        
+                                        lines.append(f"      {i}. {C_BOLD}{ev_type}{C_RESET} ({C_CYAN}{adm_code}{C_RESET}) - +{weighted_score} points")
+                                        lines.append(f"         Source: {source}")
+                                        lines.append(f"         {description}")
+                                else:
+                                    # Summary mode: just show count
+                                    lines.append(f"    Evidence: {evidence_count} items (use --verbose for details)")
 
                 else:
                     lines.append(f"  {C_BOLD}Result Data:{C_RESET}")

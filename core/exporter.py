@@ -113,6 +113,145 @@ class NexusExporter:
             "relationships": relationships
         }
 
+    def generate_graph_data(self):
+        """
+        Generic graph format suitable for AI/ML pipelines and visualization.
+        More flexible than Neo4j format, includes Admiralty intelligence.
+        """
+        nodes = {}
+        edges = []
+        
+        # Risk profillerini indeksle
+        profiles = {p["value"]: p for p in self.report_data.get("risk_profiles", [])}
+        
+        # 1. IP Nodes with full intelligence
+        ips = self.context_manager.data.get("ips", {})
+        asn_intel = self.context_manager.data.get("asn_intel", {})
+        
+        for ip, ip_data in ips.items():
+            node_id = f"ip:{ip}"
+            profile = profiles.get(ip, {})
+            asn_data = asn_intel.get(ip, {})
+            
+            node = {
+                "id": node_id,
+                "type": "ip",
+                "value": ip,
+                "properties": {
+                    "hostname": ip_data.get("hostname") or "",
+                    "ports": [p.get("port") for p in ip_data.get("ports", [])],
+                    "geo": ip_data.get("geo", {}),
+                    "risk_score": profile.get("score", 0),
+                    "risk_level": profile.get("level", "Low"),
+                    "admiralty_rating": profile.get("admiralty_rating", "N/A"),
+                    "evidence_count": profile.get("evidence_count", 0),
+                    "asn": asn_data.get("asn") or "",
+                    "organization": asn_data.get("organization") or "",
+                    "cidr": asn_data.get("cidr") or "",
+                    "country": asn_data.get("country") or ""
+                }
+            }
+            nodes[node_id] = node
+        
+        # 2. Domain Nodes with tech intelligence
+        domains = self.context_manager.data.get("domains", {})
+        tech_intel = self.context_manager.data.get("tech_intel", {})
+        
+        for dom, dom_data in domains.items():
+            node_id = f"domain:{dom}"
+            profile = profiles.get(dom, {})
+            tech_data = tech_intel.get(dom, {})
+            
+            node = {
+                "id": node_id,
+                "type": "domain",
+                "value": dom,
+                "properties": {
+                    "ips": dom_data.get("ips", []),
+                    "risk_score": profile.get("score", 0),
+                    "risk_level": profile.get("level", "Low"),
+                    "admiralty_rating": profile.get("admiralty_rating", "N/A"),
+                    "evidence_count": profile.get("evidence_count", 0),
+                    "server": tech_data.get("server") or "",
+                    "runtime": tech_data.get("runtime") or "",
+                    "cms": [cms.get("name") for cms in tech_data.get("cms", [])],
+                    "frameworks": [fw.get("name") for fw in tech_data.get("frameworks", [])],
+                    "waf_cdn": [waf.get("name") for waf in tech_data.get("waf_cdn", [])],
+                    "stack_profile": tech_data.get("stack_profile") or ""
+                }
+            }
+            nodes[node_id] = node
+        
+        # 3. Extract all relationships with full metadata
+        all_rels = (self.context_manager.data.get("relations", []) + 
+                    self.context_manager.data.get("derived_relations", []))
+        
+        edge_counter = 0
+        for rel in all_rels:
+            src = rel.get("src", {})
+            dst = rel.get("dst", {})
+            relation_type = rel.get("relation", "related_to")
+            
+            src_type = src.get("type", "unknown")
+            src_val = src.get("value")
+            dst_type = dst.get("type", "unknown")
+            dst_val = dst.get("value")
+            
+            if not src_val or not dst_val:
+                continue
+                
+            src_node_id = f"{src_type}:{src_val}"
+            dst_node_id = f"{dst_type}:{dst_val}"
+            
+            # Create source node if not exists
+            if src_node_id not in nodes:
+                nodes[src_node_id] = {
+                    "id": src_node_id,
+                    "type": src_type,
+                    "value": src_val,
+                    "properties": {}
+                }
+            
+            # Create destination node if not exists
+            if dst_node_id not in nodes:
+                nodes[dst_node_id] = {
+                    "id": dst_node_id,
+                    "type": dst_type,
+                    "value": dst_val,
+                    "properties": {}
+                }
+            
+            # Add edge with full metadata
+            edge_counter += 1
+            edges.append({
+                "id": f"edge_{edge_counter}",
+                "source": src_node_id,
+                "target": dst_node_id,
+                "relation": relation_type,
+                "properties": {
+                    "evidence": rel.get("evidence") or "",
+                    "confidence": float(rel.get("confidence", 1.0)),
+                    "timestamp": rel.get("timestamp") or "",
+                    "derived": rel in self.context_manager.data.get("derived_relations", [])
+                }
+            })
+        
+        # 4. Add metadata for AI/ML context
+        graph_metadata = {
+            "version": "0.8",
+            "format": "corvus_graph_v1",
+            "generated_at": datetime.now().isoformat(),
+            "stats": self.report_data.get("stats", {}),
+            "risk_distribution": self.report_data.get("risk_distribution", {}),
+            "threat_findings": self.report_data.get("threat_findings", [])
+        }
+        
+        return {
+            "metadata": graph_metadata,
+            "nodes": list(nodes.values()),
+            "edges": edges
+        }
+
     def export_neo4j_json(self, filepath):
         """Neo4j grafik şemasını JSON dosyası olarak diske yazar."""
         # Dizin yoksa oluştur
@@ -123,6 +262,18 @@ class NexusExporter:
         neo4j_data = self.generate_neo4j_data()
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(neo4j_data, f, indent=4, ensure_ascii=False)
+        return filepath
+
+    def export_graph_json(self, filepath):
+        """Generic graph format for AI/ML pipelines and visualization."""
+        # Dizin yoksa oluştur
+        dir_name = os.path.dirname(filepath)
+        if dir_name and not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+            
+        graph_data = self.generate_graph_data()
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(graph_data, f, indent=4, ensure_ascii=False)
         return filepath
 
     def export_html(self, filepath):

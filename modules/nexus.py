@@ -14,6 +14,7 @@ class NexusModule(BaseModule):
     # Varsayılan export dosya yolları
     DEFAULT_HTML_PATH = os.path.join("logs", "nexus_report.html")
     DEFAULT_JSON_PATH = os.path.join("logs", "nexus_neo4j.json")
+    DEFAULT_GRAPH_PATH = os.path.join("logs", "nexus_graph.json")
 
     def execute(self):
         args = self.target or []
@@ -23,11 +24,13 @@ class NexusModule(BaseModule):
 
         # Komut yönlendirme
         if not args or args[0].lower() in ("analyze", ""):
-            return self._run_analyze()
+            # Check for --verbose flag
+            verbose = "--verbose" in args or "-v" in args
+            return self._run_analyze(verbose=verbose)
 
         if args[0].lower() == "export":
             if len(args) < 2:
-                return self.error("Usage: nexus export [html|json] [filepath]", target="context")
+                return self.error("Usage: nexus export [html|json|graph] [filepath]", target="context")
 
             export_type = args[1].lower()
             filepath = args[2] if len(args) > 2 else None
@@ -36,12 +39,14 @@ class NexusModule(BaseModule):
                 return self._run_export_html(filepath)
             elif export_type == "json":
                 return self._run_export_json(filepath)
+            elif export_type == "graph":
+                return self._run_export_graph(filepath)
             else:
-                return self.error(f"Unknown export format: '{export_type}'. Use: html | json", target="context")
+                return self.error(f"Unknown export format: '{export_type}'. Use: html | json | graph", target="context")
 
-        return self.error("Usage: nexus [analyze] | nexus export [html|json] [filepath]", target="context")
+        return self.error("Usage: nexus [analyze] [--verbose] | nexus export [html|json|graph] [filepath]", target="context")
 
-    def _run_analyze(self):
+    def _run_analyze(self, verbose=False):
         """Nexus Korelasyon Motoru'nu çalıştırır ve terminale özet raporu basar."""
         try:
             self.logger.info("Executing Nexus Correlation Engine...")
@@ -57,6 +62,9 @@ class NexusModule(BaseModule):
                 )
 
             self.logger.info("Nexus Correlation execution completed successfully.")
+            
+            # Add verbose flag to report data for output formatting
+            report["verbose"] = verbose
             return self.success(target="context", data=report)
 
         except Exception as e:
@@ -120,3 +128,33 @@ class NexusModule(BaseModule):
         except Exception as e:
             self.logger.error(f"JSON export error: {e}")
             return self.error(f"JSON export failed: {e}", target=filepath)
+
+    def _run_export_graph(self, filepath=None):
+        """Nexus verilerini generic graph format (AI/ML ready) olarak dışa aktarır."""
+        filepath = filepath or self.DEFAULT_GRAPH_PATH
+        try:
+            self.logger.info(f"Generating generic graph JSON export: {filepath}")
+            engine = NexusEngine(self.context)
+            report = engine.generate_report()
+            exporter = NexusExporter(self.context, report_data=report)
+            graph_data = exporter.generate_graph_data()
+            saved_path = exporter.export_graph_json(filepath)
+
+            self.add_note(
+                text=f"Generic graph JSON exported to: {saved_path}",
+                severity="info"
+            )
+            self.logger.info(f"Graph export completed: {saved_path}")
+            return self.success(
+                target="context",
+                data={
+                    "export_type": "graph_json",
+                    "filepath": saved_path,
+                    "nodes": len(graph_data.get("nodes", [])),
+                    "edges": len(graph_data.get("edges", [])),
+                    "format": graph_data.get("metadata", {}).get("format", "corvus_graph_v1")
+                }
+            )
+        except Exception as e:
+            self.logger.error(f"Graph export error: {e}")
+            return self.error(f"Graph export failed: {e}", target=filepath)

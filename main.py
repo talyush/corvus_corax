@@ -67,7 +67,15 @@ def main():
                 break
 
             if command == "context":
-                print(context.get_summary())
+                if args and args[0] == "--admiralty":
+                    # Show admiralty intelligence details
+                    print(context.get_admiralty_summary())
+                elif args and len(args) >= 2 and args[1] == "--admiralty":
+                    # Show admiralty details for specific entity
+                    entity = args[0]
+                    print(context.get_entity_admiralty(entity))
+                else:
+                    print(context.get_summary())
                 continue
 
             if command not in modules:
