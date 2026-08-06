@@ -11,11 +11,14 @@ from core.logger import get_logger
 from core.context import ContextManager
 from output.output_manager import OutputManager
 
+from core.analyst_advisor import AnalystAdvisor
+
 config = load_config()
 logger = get_logger()
 modules = load_modules()
 context = ContextManager()
 output = OutputManager(logger, mode=config.get("output_mode", "text"))
+advisor = AnalystAdvisor(context)
 
 show_banner()
 logger.info("Corvus started.")
@@ -84,6 +87,7 @@ def main():
 
             result = run_module(command, args)
             print_output(result)
+            advisor.print_suggestions()
 
         except KeyboardInterrupt:
             exit_animation()

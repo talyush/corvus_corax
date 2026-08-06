@@ -69,42 +69,58 @@ class DnsIntelModule(BaseModule):
         config_timeout = float(self.config.get("timeout", 5.0)) if self.config else 5.0
         timeout = max(config_timeout, 4.0)
 
-        # 1. Base lookups
-        a_records = self._query_record(domain, "A", timeout)
-        aaaa_records = self._query_record(domain, "AAAA", timeout)
-        ns_records = self._query_record(domain, "NS", timeout)
-        txt_records = self._query_record(domain, "TXT", timeout)
-        caa_records = self._query_caa(domain, timeout)
-        mx_records = self._query_mx(domain, timeout)
+        inv = self.begin_investigation(
+            f"Map DNS infrastructure & email security posture for {domain}",
+            ["TARGET ACQUISITION", "RECORD ENUMERATION", "POLICY ANALYSIS", "CONTEXT INTEGRATION"]
+        )
 
-        # 2. Extract SPF
+        with inv.phase(0):
+            self.status_step(f"Initiating DNS resolver query for {domain}")
+
+        a_records, aaaa_records, ns_records, txt_records, caa_records, mx_records = [], [], [], [], [], []
+        with inv.phase(1):
+            def fetch_records():
+                nonlocal a_records, aaaa_records, ns_records, txt_records, caa_records, mx_records
+                a_records = self._query_record(domain, "A", timeout)
+                aaaa_records = self._query_record(domain, "AAAA", timeout)
+                ns_records = self._query_record(domain, "NS", timeout)
+                txt_records = self._query_record(domain, "TXT", timeout)
+                caa_records = self._query_caa(domain, timeout)
+                mx_records = self._query_mx(domain, timeout)
+
+            self.status_step(f"Querying A, AAAA, NS, TXT, CAA & MX records for {domain}", work=fetch_records)
+
         spf_record = None
-        for txt in txt_records:
-            if txt.lower().startswith("v=spf1"):
-                spf_record = txt
-                break
-
-        # 3. Extract DMARC
-        dmarc_txts = self._query_record(f"_dmarc.{domain}", "TXT", timeout)
         dmarc_record = None
-        for txt in dmarc_txts:
-            if txt.lower().startswith("v=dmarc1"):
-                dmarc_record = txt
-                break
-
-        # 4. Extract DKIM
-        common_selectors = ["default", "google", "mail", "k1", "smtp", "key1", "dkim"]
-        if custom_selector and custom_selector not in common_selectors:
-            common_selectors.insert(0, custom_selector)
-
         dkim_keys = {}
-        for sel in common_selectors:
-            dkim_domain = f"{sel}._domainkey.{domain}"
-            dkim_txts = self._query_record(dkim_domain, "TXT", timeout)
-            for txt in dkim_txts:
-                if "v=dkim1" in txt.lower() or "p=" in txt.lower():
-                    dkim_keys[sel] = txt
-                    break
+
+        with inv.phase(2):
+            def analyze_policies():
+                nonlocal spf_record, dmarc_record, dkim_keys
+                for txt in txt_records:
+                    if txt.lower().startswith("v=spf1"):
+                        spf_record = txt
+                        break
+
+                dmarc_txts = self._query_record(f"_dmarc.{domain}", "TXT", timeout)
+                for txt in dmarc_txts:
+                    if txt.lower().startswith("v=dmarc1"):
+                        dmarc_record = txt
+                        break
+
+                common_selectors = ["default", "google", "mail", "k1", "smtp", "key1", "dkim"]
+                if custom_selector and custom_selector not in common_selectors:
+                    common_selectors.insert(0, custom_selector)
+
+                for sel in common_selectors:
+                    dkim_domain = f"{sel}._domainkey.{domain}"
+                    dkim_txts = self._query_record(dkim_domain, "TXT", timeout)
+                    for txt in dkim_txts:
+                        if "v=dkim1" in txt.lower() or "p=" in txt.lower():
+                            dkim_keys[sel] = txt
+                            break
+
+            self.status_step("Evaluating SPF, DMARC policy & DKIM selectors", work=analyze_policies)
 
         # --- Security & Email Spoofing Analysis ---
         spf_weak = False
@@ -114,6 +130,7 @@ class DnsIntelModule(BaseModule):
                 severity="critical"
             )
             spf_weak = True
+            self.analyst_log(f"SPF record missing on {domain} — email spoofing protection absent")
         else:
             spf_lower = spf_record.lower()
             if "+all" in spf_lower:
@@ -122,6 +139,7 @@ class DnsIntelModule(BaseModule):
                     severity="critical"
                 )
                 spf_weak = True
+                self.analyst_log("SPF record permits all (+all) — spoofing risk CRITICAL")
             elif "?all" in spf_lower:
                 self.add_note(
                     f"SPF record on {domain} uses neutral fail (?all). Soft authentication only.",
@@ -135,6 +153,7 @@ class DnsIntelModule(BaseModule):
 
         dmarc_weak = False
         if not dmarc_record:
+            self.analyst_log("DMARC record missing — domain unprotected against executive impersonation")
             self.add_note(
                 f"Missing DMARC record on {domain}. Incoming spoofed mail has no verification policy.",
                 severity="warning"

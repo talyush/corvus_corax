@@ -57,45 +57,58 @@ class HttpHeadersModule(BaseModule):
         timeout = float(self.config.get("timeout", 5.0)) if self.config else 5.0
 
         url = self._normalize_target(raw_target)
-        
-        # Follow redirects but keep cookie jar / response details
         user_agent = (self.config or {}).get("user_agent", "CorvusCorax/0.8")
-        
-        req = urllib.request.Request(
-            url,
-            headers={
-                "User-Agent": user_agent,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            }
+
+        inv = self.begin_investigation(
+            f"Audit HTTP security response posture & cookie attributes for {url}",
+            ["HTTP PROBE", "SECURITY COMPLIANCE AUDIT", "COOKIE & CORS EVALUATION"]
         )
 
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as response:
-                headers = response.headers
-                final_url = response.url
-        except urllib.error.HTTPError as e:
-            # Still have headers in HTTPError
-            headers = e.headers
-            final_url = url
-        except Exception as e:
-            # If HTTPS fails, try HTTP fallback
-            if url.startswith("https://"):
-                fallback_url = url.replace("https://", "http://", 1)
-                req_fallback = urllib.request.Request(
-                    fallback_url,
-                    headers={"User-Agent": user_agent}
+        headers = None
+        final_url = url
+        with inv.phase(0):
+            def fetch_headers():
+                nonlocal headers, final_url
+                req = urllib.request.Request(
+                    url,
+                    headers={
+                        "User-Agent": user_agent,
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    }
                 )
                 try:
-                    with urllib.request.urlopen(req_fallback, timeout=timeout) as response:
+                    with urllib.request.urlopen(req, timeout=timeout) as response:
                         headers = response.headers
                         final_url = response.url
                 except urllib.error.HTTPError as e:
                     headers = e.headers
-                    final_url = fallback_url
-                except Exception as ex:
-                    return self.error(f"Failed to connect: {ex}", target=raw_target)
-            else:
-                return self.error(f"Failed to connect: {e}", target=raw_target)
+                    final_url = url
+                except Exception as e:
+                    if url.startswith("https://"):
+                        fallback_url = url.replace("https://", "http://", 1)
+                        req_fallback = urllib.request.Request(
+                            fallback_url,
+                            headers={"User-Agent": user_agent}
+                        )
+                        try:
+                            with urllib.request.urlopen(req_fallback, timeout=timeout) as response:
+                                headers = response.headers
+                                final_url = response.url
+                        except urllib.error.HTTPError as e_fb:
+                            headers = e_fb.headers
+                            final_url = fallback_url
+                        except Exception as ex:
+                            raise ex
+                    else:
+                        raise e
+
+            try:
+                self.status_step(f"Dispatching HTTP GET request to {url}", work=fetch_headers)
+            except Exception as ex:
+                return self.error(f"Failed to connect: {ex}", target=raw_target)
+
+        with inv.phase(1):
+            self.status_step("Evaluating security compliance headers (CSP, HSTS, XFO, XCTO)")
 
         # Parse key fields
         server = headers.get("Server")

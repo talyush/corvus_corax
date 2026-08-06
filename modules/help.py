@@ -4,6 +4,12 @@ class HelpModule(BaseModule):
     name = "help"
 
     def execute(self):
+        inv = self.begin_investigation(
+            "Compile Corvus Corax command index & operational documentation",
+            ["INDEX COMPILATION", "DOCUMENTATION RENDERING"]
+        )
+        with inv.phase(0):
+            self.status_step("Loading module registry & command usage schemas")
         data = """
 ================================================================================
   CORVUS CORAX v0.8 — INTELLIGENCE EXPANSION  |  Modular Recon Framework

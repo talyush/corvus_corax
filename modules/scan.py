@@ -104,32 +104,64 @@ class ScanModule(BaseModule):
         if self.config:
             timeout = float(self.config.get("timeout", 1.0))
 
+        inv = self.begin_investigation(
+            f"Discover open TCP services & attack surface on {ip}",
+            ["PORT RANGE CONFIG", "SOCKET PROBING", "SERVICE ATTRIBUTION"]
+        )
+
+        with inv.phase(0):
+            self.status_step(f"Configuring port range mode: {mode} ({len(ports_to_scan)} ports target)")
+
         results = []
 
-        if mode in ("normal", "quick"):
-            # Yapılandırmadan maksimum iş parçacığı sayısını oku
-            max_workers = 100
-            if self.config:
-                max_workers = int(self.config.get("scan_defaults", {}).get("max_threads", 100))
+        with inv.phase(1):
+            if mode in ("normal", "quick"):
+                max_workers = 100
+                if self.config:
+                    max_workers = int(self.config.get("scan_defaults", {}).get("max_threads", 100))
 
-            # ThreadPoolExecutor ile paralel tarama gerçekleştir
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_port = {
-                    executor.submit(self.scan_port, ip, port, timeout): port 
-                    for port in ports_to_scan
-                }
-                
-                # Gelecekteki sonuçları topla (sırayla işleme)
-                for future in future_to_port:
-                    port = future_to_port[future]
-                    try:
-                        is_open = future.result()
-                        if is_open:
+                def run_threadpool():
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        future_to_port = {
+                            executor.submit(self.scan_port, ip, port, timeout): port
+                            for port in ports_to_scan
+                        }
+                        for future in future_to_port:
+                            port = future_to_port[future]
+                            try:
+                                is_open = future.result()
+                                if is_open:
+                                    service_name = self.detect_service(port)
+                                    results.append({"port": port, "service": service_name})
+                                    if self.context:
+                                        self.context.add_port(ip, port, service_name)
+                                    self.add_note(
+                                        text=f"Port {port} ({service_name}) discovered open on {ip}",
+                                        severity="info"
+                                    )
+                                    self.add_relation(
+                                        src_type="ip", src_value=ip,
+                                        relation="has_open_port",
+                                        dst_type="port",
+                                        dst_value=f"{port}/{service_name}",
+                                        evidence="port scan"
+                                    )
+                            except Exception as e:
+                                self.logger.error(f"Error scanning port {port}: {e}")
+
+                self.status_step(f"Executing parallel thread pool scan on {ip}", work=run_threadpool)
+
+            elif mode == "slow":
+                # Yavaş tarama (sıralı ve gecikmeli) - Stealth amacını korur
+                delay = 0.3
+                if self.config:
+                    delay = float(self.config.get("scan_defaults", {}).get("slow_scan_delay", 0.3))
+
+                def run_slow():
+                    for port in ports_to_scan:
+                        if self.scan_port(ip, port, timeout):
                             service_name = self.detect_service(port)
-                            results.append({
-                                "port": port,
-                                "service": service_name
-                            })
+                            results.append({"port": port, "service": service_name})
                             if self.context:
                                 self.context.add_port(ip, port, service_name)
                             self.add_note(
@@ -137,44 +169,24 @@ class ScanModule(BaseModule):
                                 severity="info"
                             )
                             self.add_relation(
-                                src_type="ip",
-                                src_value=ip,
+                                src_type="ip", src_value=ip,
                                 relation="has_open_port",
                                 dst_type="port",
                                 dst_value=f"{port}/{service_name}",
                                 evidence="port scan"
                             )
-                    except Exception as e:
-                        self.logger.error(f"Error scanning port {port}: {e}")
+                        time.sleep(delay)
 
-        elif mode == "slow":
-            # Yavaş tarama (sıralı ve gecikmeli) - Stealth amacını korur
-            delay = 0.3
-            if self.config:
-                delay = float(self.config.get("scan_defaults", {}).get("slow_scan_delay", 0.3))
+                self.status_step(f"Executing slow stealth scan on {ip} (delay={delay}s)", work=run_slow)
 
-            for port in ports_to_scan:
-                if self.scan_port(ip, port, timeout):
-                    service_name = self.detect_service(port)
-                    results.append({
-                        "port": port,
-                        "service": service_name
-                    })
-                    if self.context:
-                        self.context.add_port(ip, port, service_name)
-                    self.add_note(
-                        text=f"Port {port} ({service_name}) discovered open on {ip}",
-                        severity="info"
+        with inv.phase(2):
+            high_risk_ports = [p for p in results if p['port'] in (21, 22, 23, 3389, 5900)]
+            if high_risk_ports:
+                for p in high_risk_ports:
+                    self.analyst_log(
+                        f"Remote access/management service exposed: Port {p['port']}/{p['service']} on {ip}"
                     )
-                    self.add_relation(
-                        src_type="ip",
-                        src_value=ip,
-                        relation="has_open_port",
-                        dst_type="port",
-                        dst_value=f"{port}/{service_name}",
-                        evidence="port scan"
-                    )
-                time.sleep(delay)
+            self.status_step(f"Attribution complete — {len(results)} open port(s) identified on {ip}")
 
         return self.success(
             target=ip,

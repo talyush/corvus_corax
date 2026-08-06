@@ -187,6 +187,14 @@ class EmailIntelModule(BaseModule):
 
         domain = args[0].strip().lower()
 
+        inv = self.begin_investigation(
+            f"Analyze corporate email infrastructure, forensic contacts & address patterns for {domain}",
+            ["DNS CONTEXT RECON", "FORENSIC CONTACT EXTRACTION", "PATTERN DEDUCTION"]
+        )
+
+        with inv.phase(0):
+            self.status_step(f"Retrieving DNS context & prior relation graph for {domain}")
+
         # Optional: user-supplied sample email addresses
         sample_emails = []
         if len(args) > 1:

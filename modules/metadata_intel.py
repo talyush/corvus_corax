@@ -244,6 +244,11 @@ class MetadataIntelModule(BaseModule):
         parsed = urllib.parse.urlparse(base_url)
         domain = parsed.netloc or raw_target
 
+        inv = self.begin_investigation(
+            f"Discover hidden administrative metadata, robots.txt & favicon hashes for {domain}",
+            ["ENDPOINT DISCOVERY", "METADATA HARVESTING", "FAVICON HASH FINGERPRINTING"]
+        )
+
         result_data = {
             "domain": domain,
             "base_url": base_url,
@@ -254,10 +259,21 @@ class MetadataIntelModule(BaseModule):
             "favicon": None,
         }
 
-        # ------------------------------------------------------------------
-        # 1. robots.txt
-        # ------------------------------------------------------------------
-        status, text, _ = self._fetch(f"{base_url}/robots.txt", timeout)
+        with inv.phase(0):
+            def harvest_metadata():
+                status, text, _ = self._fetch(f"{base_url}/robots.txt", timeout)
+                if status == 200 and text:
+                    robots = self._parse_robots(text)
+                    result_data["robots"] = robots
+                    if robots["sensitive_paths"]:
+                        for sp in robots["sensitive_paths"]:
+                            self.add_note(
+                                f"Sensitive path found in robots.txt for {domain}: {sp}",
+                                severity="warning"
+                            )
+                        self.analyst_log(f"Robots.txt exposes {len(robots['sensitive_paths'])} sensitive path(s) on {domain}")
+
+            self.status_step(f"Probing /robots.txt, /sitemap.xml & /security.txt for {domain}", work=harvest_metadata)
         if status == 200 and text:
             robots = self._parse_robots(text)
             result_data["robots"] = robots

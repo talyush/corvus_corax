@@ -34,13 +34,29 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.8 — Intelligence Expansion**
+**v0.8.5 — Identity Update & Dynamic Analysis Flow**
 
-v0.8 represents a major expansion of the Corvus Corax framework, introducing deep intelligence modules, NATO Admiralty confidence scoring, and flexible graph export formats for AI/ML pipelines.
+v0.8.5 overhauls Corvus Corax's identity, introducing interactive boot sequences, 3D title graphics, surveillance reticle art, phased investigation goal tracking, real-time dynamic work execution, and Cyber Sherlock narrative assessment commentary.
 
 ---
 
 ## Changelog
+
+### v0.8.5 — Identity Update & Dynamic Analysis Flow
+
+**Visual Identity & Boot Experience:**
+- **`core/banner.py`** — Interactive boot sequence initialization routine (`[READY]`, `[INITIALIZED]`), ANSI 3D "Corvus Corax" title banner, and 67-character surveillance reticle ASCII artwork.
+- **Mottos & Branding** — *See The Unseen* and *>> From Evidence to Intelligence <<*.
+- **Exit Animation** — Typing typewriter animation effect on `exit`/`quit` or `Ctrl+C` session end ("*The crow returns to the shadows...*").
+
+**Analyst Experience & Real-Time Dynamic Execution:**
+- **`core/investigation_flow.py`** — High-contrast `[INVESTIGATION GOAL]` header rendering and multi-phase progression tracker (`>> Phase 1/3 -- TARGET ACQUISITION`).
+- **`core/module_base.py`** — Live work-wrapped `status_step()` execution. Status steps dynamically transition from `[~] RUNNING` to `[OK]` during actual network & socket tasks.
+- **`output/output_manager.py`** — `[Analyst Assessment]` Cyber Sherlock narrative synthesis blocks highlighting critical security findings.
+- **`core/analyst_advisor.py` & `core/analyst_runtime.py`** — Context-aware preflight commentary and intelligent next-step investigative suggestions after module execution.
+- **Full Module Coverage** — Integrated phased investigation flows across all 18 platform modules (`dns`, `scan`, `cert`, `headers`, `metadata`, `email`, `tech`, `subdomain`, `geoip`, `whois`, `asn`, `netscan`, `footprint`, `crawl`, `nexus`, `help`, `version`).
+
+---
 
 ### v0.8 — Intelligence Expansion
 

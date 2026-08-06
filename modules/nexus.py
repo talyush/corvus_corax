@@ -48,22 +48,37 @@ class NexusModule(BaseModule):
 
     def _run_analyze(self, verbose=False):
         """Nexus Korelasyon Motoru'nu çalıştırır ve terminale özet raporu basar."""
-        try:
-            self.logger.info("Executing Nexus Correlation Engine...")
-            engine = NexusEngine(self.context)
-            report = engine.generate_report()
+        inv = self.begin_investigation(
+            "Synthesize cross-domain intelligence graph & compute threat correlation rules",
+            ["GRAPH INGESTION", "RULE CORRELATION & THREAT INFERENCE", "ADMIRALTY RATING SYNTHESIS"]
+        )
 
-            # Yüksek seviyeli bulguları modül notu olarak kaydet
-            for finding in report.get("threat_findings", []):
-                self.add_note(
-                    text=f"Tehdit Tespiti ({finding.get('type')}): {finding.get('description')}",
-                    severity="high" if "exposure" in finding.get("type", "").lower() else "medium",
-                    confidence=finding.get("confidence", 1.0)
-                )
+        report = None
+        try:
+            with inv.phase(0):
+                self.status_step("Ingesting nodes, edges & notes from ContextManager graph")
+
+            with inv.phase(1):
+                def run_engine():
+                    nonlocal report
+                    self.logger.info("Executing Nexus Correlation Engine...")
+                    engine = NexusEngine(self.context)
+                    report = engine.generate_report()
+
+                self.status_step("Executing 11 threat correlation rules & pivot algorithms", work=run_engine)
+
+            with inv.phase(2):
+                self.status_step("Synthesizing Admiralty System credibility ratings & threat findings")
+                # Yüksek seviyeli bulguları modül notu olarak kaydet
+                for finding in report.get("threat_findings", []):
+                    self.add_note(
+                        text=f"Tehdit Tespiti ({finding.get('type')}): {finding.get('description')}",
+                        severity="high" if "exposure" in finding.get("type", "").lower() else "medium",
+                        confidence=finding.get("confidence", 1.0)
+                    )
+                    self.analyst_log(f"Threat finding [{finding.get('type')}]: {finding.get('description')}")
 
             self.logger.info("Nexus Correlation execution completed successfully.")
-            
-            # Add verbose flag to report data for output formatting
             report["verbose"] = verbose
             return self.success(target="context", data=report)
 

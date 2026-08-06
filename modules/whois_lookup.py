@@ -38,36 +38,50 @@ class WhoisLookupModule(BaseModule):
         target = args[0].strip()
         timeout = float(self.config.get("timeout", 3.0)) if self.config else 3.0
 
-        try:
-            iana_response = self._query_server("whois.iana.org", target, timeout)
-            referral_server = self._extract_referral_server(iana_response)
+        inv = self.begin_investigation(
+            f"Query authoritative WHOIS registry data & registrar records for {target}",
+            ["IANA REFERRAL", "REGISTRAR QUERY"]
+        )
 
-            final_server = referral_server or "whois.iana.org"
-            final_response = self._query_server(final_server, target, timeout)
+        final_response = None
+        final_server = "whois.iana.org"
+        with inv.phase(0):
+            def run_whois():
+                nonlocal final_response, final_server
+                iana_response = self._query_server("whois.iana.org", target, timeout)
+                referral_server = self._extract_referral_server(iana_response)
+                final_server = referral_server or "whois.iana.org"
+                final_response = self._query_server(final_server, target, timeout)
 
-            self.add_relation(
-                src_type="domain" if "." in target else "ip",
-                src_value=target,
-                relation="queried_via_whois",
-                dst_type="whois_server",
-                dst_value=final_server,
-                evidence="whois query"
-            )
+            try:
+                self.status_step(f"Querying WHOIS servers for {target}", work=run_whois)
+            except Exception as e:
+                return self.error(f"WHOIS lookup failed: {e}", target=target)
 
-            self.add_note(
-                text=f"WHOIS lookup completed for {target} using server {final_server}",
-                severity="info"
-            )
+        self.add_relation(
+            src_type="domain" if "." in target else "ip",
+            src_value=target,
+            relation="queried_via_whois",
+            dst_type="whois_server",
+            dst_value=final_server,
+            evidence="whois query"
+        )
 
-            return self.success(
-                target=target,
-                data={
-                    "query": target,
-                    "iana_server": "whois.iana.org",
-                    "referral_server": referral_server,
-                    "server_used": final_server,
-                    "raw": final_response.strip(),
-                },
-            )
-        except Exception as e:
-            return self.error(e, target=target)
+        self.add_note(
+            text=f"WHOIS lookup completed for {target} using server {final_server}",
+            severity="info"
+        )
+
+        if not final_response:
+            return self.error("WHOIS returned no data", target=target)
+
+        return self.success(
+            target=target,
+            data={
+                "query": target,
+                "iana_server": "whois.iana.org",
+                "referral_server": final_server,
+                "server_used": final_server,
+                "raw": final_response.strip(),
+            },
+        )

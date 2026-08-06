@@ -81,83 +81,100 @@ class SimpleCrawlerModule(BaseModule):
         base_url = self._normalize_target(raw_target)
         timeout = float(self.config.get("timeout", 3.0)) if self.config else 3.0
 
+        inv = self.begin_investigation(
+            f"Execute lightweight HTTP crawl, link extraction & form profiling for {base_url}",
+            ["HTTP FETCH & DOM PARSING", "FORM & LINK EXTRACTION"]
+        )
+
         last_error = None
         urls_to_try = [base_url]
         if base_url.startswith("http://"):
             urls_to_try.append("https://" + raw_target.strip().replace("http://", ""))
 
-        for url in urls_to_try:
-            try:
-                request = self._build_request(url)
-                with urllib.request.urlopen(request, timeout=timeout) as response:
-                    status_code = response.getcode()
-                    final_url = response.geturl()
-                    html = response.read(400000).decode("utf-8", errors="ignore")
+        html = ""
+        final_url = base_url
+        status_code = 200
+        with inv.phase(0):
+            def fetch_crawl():
+                nonlocal html, final_url, status_code, last_error
+                for url in urls_to_try:
+                    try:
+                        request = self._build_request(url)
+                        with urllib.request.urlopen(request, timeout=timeout) as response:
+                            status_code = response.getcode()
+                            final_url = response.geturl()
+                            html = response.read(400000).decode("utf-8", errors="ignore")
+                        break
+                    except Exception as e:
+                        last_error = e
 
-                parser = _SimplePageParser()
-                parser.feed(html)
+            self.status_step(f"Fetching HTTP payload & parsing DOM elements for {base_url}", work=fetch_crawl)
 
-                normalized_links = sorted(
-                    {urljoin(final_url, href) for href in parser.links if href}
+        with inv.phase(1):
+            if not html and last_error:
+                return self.error(f"Failed to fetch content: {last_error}", target=base_url)
+
+            parser = _SimplePageParser()
+            parser.feed(html)
+
+            normalized_links = sorted(
+                {urljoin(final_url, href) for href in parser.links if href}
+            )
+
+            normalized_forms = []
+            for form in parser.forms:
+                normalized_forms.append(
+                    {
+                        "action": urljoin(final_url, form.get("action") or ""),
+                        "method": form.get("method", "GET"),
+                        "inputs": form.get("inputs", []),
+                    }
                 )
 
-                normalized_forms = []
-                for form in parser.forms:
-                    normalized_forms.append(
-                        {
-                            "action": urljoin(final_url, form.get("action") or ""),
-                            "method": form.get("method", "GET"),
-                            "inputs": form.get("inputs", []),
-                        }
-                    )
+            title = parser.get_title()
+            self.status_step(
+                f"Extracted {len(normalized_links)} link(s) & {len(normalized_forms)} form(s)"
+            )
 
-                title = parser.get_title()
-                if title:
-                    self.add_relation(
-                        src_type="url",
-                        src_value=final_url,
-                        relation="has_title",
-                        dst_type="title",
-                        dst_value=title,
-                        evidence="web crawl"
-                    )
-
-                for link in normalized_links[:20]:
-                    self.add_relation(
-                        src_type="url",
-                        src_value=final_url,
-                        relation="links_to",
-                        dst_type="url",
-                        dst_value=link,
-                        evidence="web crawl"
-                    )
-
-                for form in normalized_forms:
-                    self.add_relation(
-                        src_type="url",
-                        src_value=final_url,
-                        relation="has_form",
-                        dst_type="form",
-                        dst_value=f"{form.get('method')} -> {form.get('action')}",
-                        evidence="web crawl"
-                    )
-
-                self.add_note(
-                    text=f"Web page crawl completed for {final_url}: status={status_code}, title='{title or ''}', discovered {len(normalized_links)} links & {len(normalized_forms)} forms",
-                    severity="info"
+            if title:
+                self.add_relation(
+                    src_type="url", src_value=final_url,
+                    relation="has_title",
+                    dst_type="title", dst_value=title,
+                    evidence="web crawl"
                 )
 
-                return self.success(
-                    target=raw_target,
-                    data={
-                        "url": final_url,
-                        "status_code": status_code,
-                        "title": parser.get_title(),
-                        "links": normalized_links,
-                        "forms": normalized_forms,
-                    },
+            for link in normalized_links[:20]:
+                self.add_relation(
+                    src_type="url", src_value=final_url,
+                    relation="links_to",
+                    dst_type="url", dst_value=link,
+                    evidence="web crawl"
                 )
-            except Exception as e:
-                last_error = e
 
-        return self.error(last_error or "crawl failed", target=raw_target)
+            for form in normalized_forms:
+                self.add_relation(
+                    src_type="url", src_value=final_url,
+                    relation="has_form",
+                    dst_type="form",
+                    dst_value=f"{form.get('method')} -> {form.get('action')}",
+                    evidence="web crawl"
+                )
+
+            self.add_note(
+                text=f"Web page crawl completed for {final_url}: status={status_code}, "
+                     f"title='{title or ''}', discovered {len(normalized_links)} links & {len(normalized_forms)} forms",
+                severity="info"
+            )
+
+        return self.success(
+            target=raw_target,
+            data={
+                "url": final_url,
+                "status_code": status_code,
+                "title": parser.get_title(),
+                "links": normalized_links,
+                "forms": normalized_forms,
+            },
+        )
+

@@ -81,6 +81,16 @@ class OutputManager:
                             lines.append(f"    {p.get('port'):<8} {p.get('service'):<12}")
                     else:
                         lines.append("    No open ports detected in the scanned range.")
+
+                    # --- Analyst Assessment ---
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if open_ports:
+                        open_p_names = [f"{p['port']}/{p['service']}" for p in open_ports[:5]]
+                        lines.append(f"      {C_CYAN}* Attack Surface Discovered: {len(open_ports)} exposed port(s) [{', '.join(open_p_names)}].{C_RESET}")
+                        if any(p['port'] in (21, 23, 3389, 5900) for p in open_ports):
+                            lines.append(f"      {C_RED}* High Risk Management Service: Remote administration/file transfer service exposed directly to network.{C_RESET}")
+                    else:
+                        lines.append(f"      {C_GREEN}* Minimal Surface Exposure: No open TCP services identified in scanned port profile.{C_RESET}")
                 
                 elif module == "netscan":
                     alive = data.get("alive_hosts", [])
@@ -165,6 +175,17 @@ class OutputManager:
                     lines.append(f"    {C_BOLD}Serial No.    :{C_RESET} {data.get('serial_number') or 'N/A'}")
                     lines.append(f"    {C_BOLD}SHA-256       :{C_RESET} {data.get('fingerprint', 'N/A')[:59]}...")
 
+                    # --- Analyst Assessment ---
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if is_wildcard:
+                        lines.append(f"      {C_CYAN}* Wildcard certificate detected ({', '.join(wildcards)}). Represents centralized TLS termination.{C_RESET}")
+                    if san_list and len(san_list) > 1:
+                        lines.append(f"      {C_CYAN}* Certificate exposes {len(san_list)} SAN endpoints. Excellent asset discovery footprint.{C_RESET}")
+                    if expired:
+                        lines.append(f"      {C_RED}* CRITICAL: Certificate is EXPIRED. Users face TLS trust warnings.{C_RESET}")
+                    elif days_rem < 30:
+                        lines.append(f"      {C_YELLOW}* WARNING: Certificate expires in {days_rem} days. Renewal required.{C_RESET}")
+
                 elif module == "dns":
                     domain = data.get("domain")
                     a_records = data.get("A", [])
@@ -217,6 +238,15 @@ class OutputManager:
                     
                     if caa_records:
                         lines.append(f"    {C_BOLD}CAA Records   :{C_RESET} {', '.join(caa_records)}")
+
+                    # --- Analyst Assessment ---
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if not spf or data.get("spf_weak"):
+                        lines.append(f"      {C_RED}* Vulnerable to Email Spoofing: SPF record is weak or unconfigured.{C_RESET}")
+                    if not dmarc or data.get("dmarc_weak"):
+                        lines.append(f"      {C_YELLOW}* Weak DMARC Policy: Threat actors can forge organization emails in targeted phishing.{C_RESET}")
+                    if mx_records:
+                        lines.append(f"      {C_CYAN}* Mail Routing: Handled by {mx_records[0]['host']}.{C_RESET}")
 
                 elif module == "headers":
                     h_data = data.get("headers", {})
@@ -341,6 +371,13 @@ class OutputManager:
                             col = C_GREEN if c == "HIGH" else (C_YELLOW if c == "MEDIUM" else C_RED)
                             lines.append(f"      [{col}{c:6}{C_RESET}] {fmt['format']}")
 
+                    # --- Analyst Assessment ---
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if pattern and pattern.get("is_personal_leak"):
+                        lines.append(f"      {C_RED}* Personal Email Exposure: DMARC reports route to personal inbox ({pattern.get('example_email')}). Target for spear-phishing.{C_RESET}")
+                    if pat_name:
+                        lines.append(f"      {C_CYAN}* Naming Standard: Target uses '{pat_name}' structure across corporate inboxes.{C_RESET}")
+
                 elif module == "metadata":
                     domain_name = data.get("domain")
                     robots      = data.get("robots") or {}
@@ -412,6 +449,15 @@ class OutputManager:
                     else:
                         lines.append(f"    {C_BOLD}favicon.ico   :{C_RESET} Not found")
 
+                    # --- Analyst Assessment ---
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if robots and robots.get("sensitive_paths"):
+                        lines.append(f"      {C_RED}* Sensitive Path Disclosure: {len(robots['sensitive_paths'])} path(s) exposed in robots.txt.{C_RESET}")
+                    if sec_txt and sec_txt.get("emails"):
+                        lines.append(f"      {C_GREEN}* Verified Security Contact: {', '.join(sec_txt['emails'])} extracted from security.txt.{C_RESET}")
+                    if favicon and favicon.get("shodan_hash"):
+                        lines.append(f"      {C_CYAN}* Favicon Hash Fingerprinted: Use Shodan query 'http.favicon.hash:{favicon['shodan_hash']}' to locate hidden origin servers.{C_RESET}")
+
                 elif module == "tech":
 
 
@@ -424,6 +470,17 @@ class OutputManager:
                         lines.append(f"    {C_BOLD}Frameworks  :{C_RESET} {', '.join(frameworks)}")
                     else:
                         lines.append(f"    {C_BOLD}Frameworks  :{C_RESET} None detected")
+
+                    # --- Analyst Assessment ---
+                    waf_cdn = data.get("waf_cdn", [])
+                    cms = data.get("cms", [])
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if waf_cdn:
+                        lines.append(f"      {C_CYAN}* Active WAF/CDN Protection: {', '.join(w['name'] for w in waf_cdn)} detected.{C_RESET}")
+                    if cms:
+                        lines.append(f"      {C_YELLOW}* CMS Fingerprinted: {', '.join(c['name'] for c in cms)}. Evaluate version against public CVE databases.{C_RESET}")
+                    if data.get("stack_profile"):
+                        lines.append(f"      {C_CYAN}* Stack Profile: {data.get('stack_profile')}{C_RESET}")
                 
                 elif module == "crawl":
                     links = data.get("links", [])

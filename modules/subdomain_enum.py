@@ -97,9 +97,13 @@ class SubdomainEnumModule(BaseModule):
         wordlist_path = args[1].strip() if len(args) > 1 else None
         
         config_timeout = float(self.config.get("timeout", 3.0)) if self.config else 3.0
-        # External passive OSINT lookups are slow. We enforce a minimum of 8.0s for stability.
         timeout = max(config_timeout, 8.0)
         user_agent = (self.config or {}).get("user_agent", "CorvusCorax/0.3")
+
+        inv = self.begin_investigation(
+            f"Enumerate passive certificate & DNS subdomains for {domain}",
+            ["CERTIFICATE TRANSPARENCY LOGS", "PASSIVE DNS APIS", "DEDUPLICATION & CONTEXT SYNC"]
+        )
 
         sources_status = {
             "crt_sh": {"success": False, "count": 0},
@@ -108,22 +112,35 @@ class SubdomainEnumModule(BaseModule):
             "wordlist": {"success": False, "count": 0}
         }
 
-        # 1. crt.sh
         crt_subdomains = []
-        crt_rows = self._fetch_crtsh(domain, timeout=timeout, user_agent=user_agent)
-        if crt_rows is not None:
-            crt_subdomains = self._normalize_crtsh_names(crt_rows, domain)
-            sources_status["crt_sh"] = {"success": True, "count": len(crt_subdomains)}
-        else:
-            self.add_note(f"Passive source crt.sh query timed out or failed for {domain}.", severity="warning")
+        with inv.phase(0):
+            def fetch_crt():
+                nonlocal crt_subdomains
+                crt_rows = self._fetch_crtsh(domain, timeout=timeout, user_agent=user_agent)
+                if crt_rows is not None:
+                    crt_subdomains = self._normalize_crtsh_names(crt_rows, domain)
+                    sources_status["crt_sh"] = {"success": True, "count": len(crt_subdomains)}
+                else:
+                    self.add_note(f"Passive source crt.sh query timed out or failed for {domain}.", severity="warning")
 
-        # 2. HackerTarget
+            self.status_step(f"Querying crt.sh certificate transparency logs for {domain}", work=fetch_crt)
+
         ht_subdomains = []
-        ht_rows = self._fetch_hackertarget(domain, timeout=timeout, user_agent=user_agent)
-        if ht_rows is not None:
-            ht_subdomains = ht_rows
-            sources_status["hackertarget"] = {"success": True, "count": len(ht_subdomains)}
-        else:
+        rapid_subdomains = []
+        with inv.phase(1):
+            def fetch_passive():
+                nonlocal ht_subdomains, rapid_subdomains
+                ht_rows = self._fetch_hackertarget(domain, timeout=timeout, user_agent=user_agent)
+                if ht_rows is not None:
+                    ht_subdomains = ht_rows
+                    sources_status["hackertarget"] = {"success": True, "count": len(ht_subdomains)}
+
+                rapid_rows = self._fetch_rapiddns(domain, timeout=timeout, user_agent=user_agent)
+                if rapid_rows is not None:
+                    rapid_subdomains = rapid_rows
+                    sources_status["rapiddns"] = {"success": True, "count": len(rapid_subdomains)}
+
+            self.status_step("Querying HackTarget & RapidDNS passive DNS APIs", work=fetch_passive)
             self.add_note(f"Passive source HackerTarget query timed out or failed for {domain}.", severity="warning")
 
         # 3. RapidDNS

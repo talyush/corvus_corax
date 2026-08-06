@@ -72,24 +72,35 @@ class CertIntelModule(BaseModule):
             return self.error("usage: cert <host> [port]")
 
         host = args[0].strip().lower()
-        try:
-            port = int(args[1]) if len(args) > 1 else 443
-        except ValueError:
-            return self.error(f"Invalid port: {args[1]}", target=host)
+        port = int(args[1]) if len(args) > 1 else 443
 
         config_timeout = float(self.config.get("timeout", 8.0)) if self.config else 8.0
         timeout = max(config_timeout, 5.0)
 
-        try:
-            der_cert, cert_dict = self._fetch_cert(host, port, timeout)
-        except ssl.SSLError as e:
-            return self.error(f"SSL error: {e}", target=host)
-        except socket.timeout:
-            return self.error(f"Connection timed out to {host}:{port}", target=host)
-        except ConnectionRefusedError:
-            return self.error(f"Connection refused to {host}:{port}", target=host)
-        except Exception as e:
-            return self.error(f"Failed to fetch certificate: {e}", target=host)
+        inv = self.begin_investigation(
+            f"Analyze TLS X.509 certificate & SAN extension footprint for {host}:{port}",
+            ["HANDSHAKE & FETCH", "X509 PARSING", "IDENTITY & EXPIRY ANALYSIS"]
+        )
+
+        der_cert, cert_dict = None, {}
+        with inv.phase(0):
+            def fetch_der():
+                nonlocal der_cert, cert_dict
+                der_cert, cert_dict = self._fetch_cert(host, port, timeout)
+
+            try:
+                self.status_step(f"Establishing TLS socket connection to {host}:{port}", work=fetch_der)
+            except ssl.SSLError as e:
+                return self.error(f"SSL error: {e}", target=host)
+            except socket.timeout:
+                return self.error(f"Connection timed out to {host}:{port}", target=host)
+            except ConnectionRefusedError:
+                return self.error(f"Connection refused to {host}:{port}", target=host)
+            except Exception as e:
+                return self.error(f"Failed to fetch certificate: {e}", target=host)
+
+        with inv.phase(1):
+            self.status_step("Computing SHA-256 fingerprint & SAN extensions")
 
         # --- Parse fields ---
         subject = cert_dict.get("subject", ())

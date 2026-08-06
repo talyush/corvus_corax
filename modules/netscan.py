@@ -55,17 +55,25 @@ class NetscanModule(BaseModule):
 
         network = args[0]
 
+        inv = self.begin_investigation(
+            f"Execute subnet host discovery & liveness sweep for network {network}",
+            ["SUBNET RANGE PARSING", "HOST DISCOVERY SWEEP"]
+        )
+
         net = ipaddress.ip_network(network, strict=False)
 
         threads = []
+        with inv.phase(1):
+            def run_sweep():
+                for ip in net.hosts():
+                    t = threading.Thread(target=self.scan_host, args=(ip,))
+                    t.start()
+                    threads.append(t)
 
-        for ip in net.hosts():
-            t = threading.Thread(target=self.scan_host, args=(ip,))
-            t.start()
-            threads.append(t)
+                for t in threads:
+                    t.join()
 
-        for t in threads:
-            t.join()
+            self.status_step(f"Probing active hosts on subnet {network}", work=run_sweep)
 
         # Context manager sync and relation mapping
         if self.context:

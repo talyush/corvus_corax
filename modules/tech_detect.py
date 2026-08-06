@@ -291,21 +291,34 @@ class TechDetectModule(BaseModule):
         raw_target = args[0]
         timeout = float(self.config.get("timeout", 8.0)) if self.config else 8.0
 
-        # Try HTTPS first, fallback to HTTP
+        inv = self.begin_investigation(
+            f"Fingerprint web server, CMS, WAF/CDN & JavaScript frameworks for {raw_target}",
+            ["HTTP FETCH", "SIGNATURE MATCHING", "STACK PROFILE SYNTHESIS"]
+        )
+
         urls_to_try = [self._normalize_target(raw_target)]
         if urls_to_try[0].startswith("https://"):
             urls_to_try.append("http://" + raw_target.strip().lstrip("https://").lstrip("http://"))
 
         status, headers, body = None, {}, ""
         final_url = urls_to_try[0]
-        for url in urls_to_try:
-            s, h, b = self._fetch(url, timeout)
-            if s and h:
-                status, headers, body, final_url = s, h, b, url
-                break
+
+        with inv.phase(0):
+            def fetch_target():
+                nonlocal status, headers, body, final_url
+                for url in urls_to_try:
+                    s, h, b = self._fetch(url, timeout)
+                    if s and h:
+                        status, headers, body, final_url = s, h, b, url
+                        break
+
+            self.status_step(f"Fetching HTTP headers & HTML body from {raw_target}", work=fetch_target)
 
         if not headers:
             return self.error(f"Could not reach {raw_target}", target=raw_target)
+
+        with inv.phase(1):
+            self.status_step("Fingerprinting 40+ technology signatures across response payload")
 
         # Extract domain for context key
         parsed = urllib.parse.urlparse(final_url)

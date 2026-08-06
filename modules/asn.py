@@ -120,10 +120,20 @@ class ASNModule(BaseModule):
             ipaddress.ip_address(ip)
         except ValueError:
             return self.error(f"Invalid IP address: {ip}", target=ip)
-        
-        # Perform ASN lookup
-        asn_data = self._lookup_asn_ipapi(ip)
-        
+
+        inv = self.begin_investigation(
+            f"Map Autonomous System Number (ASN), BGP prefixes & ISP network topology for {ip}",
+            ["BGP ROUTING QUERY", "PREFIX ALLOCATION"]
+        )
+
+        asn_data = None
+        with inv.phase(0):
+            def fetch_asn():
+                nonlocal asn_data
+                asn_data = self._lookup_asn_ipapi(ip)
+
+            self.status_step(f"Querying BGP routing table for IP {ip}", work=fetch_asn)
+
         if not asn_data:
             return self.error(f"ASN lookup failed for {ip}", target=ip)
         
