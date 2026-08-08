@@ -34,6 +34,12 @@ class ContextManager:
         self.data["meta"]["updated_at"] = self._now_iso()
         if event:
             self.data["meta"]["events"].append(event)
+            if len(self.data["meta"]["events"]) > 200:
+                self.data["meta"]["events"] = self.data["meta"]["events"][-200:]
+
+    def clear(self):
+        """Merkezi zekadaki toplanmış verileri sıfırlar."""
+        self.__init__()
 
     def add_ip(self, ip):
         """Merkezi zihne bir IP adresi ekler."""
@@ -124,12 +130,16 @@ class ContextManager:
         self._touch(event=f"asn_intel_added:{ip}")
 
     def add_note(self, text, source="system", severity="info", confidence=1.0):
-        """Yapisal not ekler (Nexus'ta yorumlanabilir)."""
+        """Yapisal not ekler (Nexus'ta yorumlanabilir). Duzenli mükerrer kayit engellenir."""
         if not text:
             return
+        text_str = str(text)
+        for existing in self.data["notes"]:
+            if existing.get("text") == text_str and existing.get("source") == source:
+                return
         self.data["notes"].append(
             {
-                "text": str(text),
+                "text": text_str,
                 "source": source,
                 "severity": severity,
                 "confidence": float(confidence),
@@ -139,7 +149,15 @@ class ContextManager:
         self._touch(event=f"note_added:{source}")
 
     def add_relation(self, src_type, src_value, relation, dst_type, dst_value, evidence=None, confidence=1.0):
-        """Varliklar arasi iliski ekler."""
+        """Varliklar arasi iliski ekler (Mukerrer kontrolu yapilir)."""
+        for existing in self.data["relations"]:
+            if isinstance(existing, dict):
+                src = existing.get("src", {})
+                dst = existing.get("dst", {})
+                if (isinstance(src, dict) and src.get("type") == src_type and src.get("value") == src_value and
+                    existing.get("relation") == relation and
+                    isinstance(dst, dict) and dst.get("type") == dst_type and dst.get("value") == dst_value):
+                    return
         rel = {
             "src": {"type": src_type, "value": src_value},
             "relation": relation,
@@ -148,12 +166,19 @@ class ContextManager:
             "confidence": float(confidence),
             "timestamp": self._now_iso(),
         }
-        if rel not in self.data["relations"]:
-            self.data["relations"].append(rel)
-            self._touch(event=f"relation_added:{src_type}->{dst_type}:{relation}")
+        self.data["relations"].append(rel)
+        self._touch(event=f"relation_added:{src_type}->{dst_type}:{relation}")
 
     def add_derived_relation(self, src_type, src_value, relation, dst_type, dst_value, evidence=None, confidence=1.0):
-        """Nexus Engine tarafindan turetilen iliskileri derived_relations alanina ekler."""
+        """Nexus Engine tarafindan turetilen iliskileri derived_relations alanina ekler (Mukerrer kontrolu yapilir)."""
+        for existing in self.data["derived_relations"]:
+            if isinstance(existing, dict):
+                src = existing.get("src", {})
+                dst = existing.get("dst", {})
+                if (isinstance(src, dict) and src.get("type") == src_type and src.get("value") == src_value and
+                    existing.get("relation") == relation and
+                    isinstance(dst, dict) and dst.get("type") == dst_type and dst.get("value") == dst_value):
+                    return
         rel = {
             "src": {"type": src_type, "value": src_value},
             "relation": relation,
@@ -162,9 +187,8 @@ class ContextManager:
             "confidence": float(confidence),
             "timestamp": self._now_iso(),
         }
-        if rel not in self.data["derived_relations"]:
-            self.data["derived_relations"].append(rel)
-            self._touch(event=f"derived_relation_added:{src_type}->{dst_type}:{relation}")
+        self.data["derived_relations"].append(rel)
+        self._touch(event=f"derived_relation_added:{src_type}->{dst_type}:{relation}")
 
     def query_relations(self, entity_type=None, entity_value=None, relation=None):
         """Sistemdeki hem ham hem de turetilen tum iliskileri sorgular."""

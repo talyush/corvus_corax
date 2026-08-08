@@ -34,15 +34,21 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.8.5 — Identity Update & Dynamic Analysis Flow**
+**v0.8.5-stable — Identity Update & Stability Patch**
 
-v0.8.5 overhauls Corvus Corax's identity, introducing interactive boot sequences, 3D title graphics, surveillance reticle art, phased investigation goal tracking, real-time dynamic work execution, and Cyber Sherlock narrative assessment commentary.
+v0.8.5-stable overhauls Corvus Corax's identity, introducing interactive boot sequences, 3D title graphics, surveillance reticle art, phased investigation goal tracking, real-time dynamic work execution, Cyber Sherlock narrative assessment commentary, and memory deduplication stability fixes.
 
 ---
 
 ## Changelog
 
-### v0.8.5 — Identity Update & Dynamic Analysis Flow
+### v0.8.5-stable — Identity Update & Stability Patch
+
+**Stability & Bug Fixes:**
+- **`core/context.py`** — Implemented tuple-based relationship and note deduplication. Capped event history buffer to prevent exponential memory bloat and performance slowdowns during long CLI sessions. Added `context.clear()` API.
+- **`main.py`** — Added `context clear` command to easily reset session memory on demand.
+- **`modules/metadata_intel.py`** — Resolved `NameError: name 'status' is not defined` bug by fixing variable scoping inside phase status steps.
+- **`modules/email_intel.py` & `output/output_manager.py`** — Added strict `isinstance(dict)` validation checks to resolve `'str' object has no attribute 'get'` and `NameError: pat_name` errors.
 
 **Visual Identity & Boot Experience:**
 - **`core/banner.py`** — Interactive boot sequence initialization routine (`[READY]`, `[INITIALIZED]`), ANSI 3D "Corvus Corax" title banner, and 67-character surveillance reticle ASCII artwork.

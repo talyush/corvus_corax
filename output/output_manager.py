@@ -373,10 +373,10 @@ class OutputManager:
 
                     # --- Analyst Assessment ---
                     lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
-                    if pattern and pattern.get("is_personal_leak"):
+                    if isinstance(pattern, dict) and pattern.get("is_personal_leak"):
                         lines.append(f"      {C_RED}* Personal Email Exposure: DMARC reports route to personal inbox ({pattern.get('example_email')}). Target for spear-phishing.{C_RESET}")
-                    if pat_name:
-                        lines.append(f"      {C_CYAN}* Naming Standard: Target uses '{pat_name}' structure across corporate inboxes.{C_RESET}")
+                    if pattern and isinstance(pattern, str):
+                        lines.append(f"      {C_CYAN}* Naming Standard: Target uses '{pattern}' structure across corporate inboxes.{C_RESET}")
 
                 elif module == "metadata":
                     domain_name = data.get("domain")

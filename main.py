@@ -70,7 +70,10 @@ def main():
                 break
 
             if command == "context":
-                if args and args[0] == "--admiralty":
+                if args and args[0] == "clear":
+                    context.clear()
+                    print("  [+] Intelligence context memory cleared.")
+                elif args and args[0] == "--admiralty":
                     # Show admiralty intelligence details
                     print(context.get_admiralty_summary())
                 elif args and len(args) >= 2 and args[1] == "--admiralty":

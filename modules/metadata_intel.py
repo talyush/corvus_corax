@@ -259,21 +259,19 @@ class MetadataIntelModule(BaseModule):
             "favicon": None,
         }
 
+        status, text = None, None
         with inv.phase(0):
             def harvest_metadata():
+                nonlocal status, text
                 status, text, _ = self._fetch(f"{base_url}/robots.txt", timeout)
                 if status == 200 and text:
                     robots = self._parse_robots(text)
                     result_data["robots"] = robots
                     if robots["sensitive_paths"]:
-                        for sp in robots["sensitive_paths"]:
-                            self.add_note(
-                                f"Sensitive path found in robots.txt for {domain}: {sp}",
-                                severity="warning"
-                            )
                         self.analyst_log(f"Robots.txt exposes {len(robots['sensitive_paths'])} sensitive path(s) on {domain}")
 
             self.status_step(f"Probing /robots.txt, /sitemap.xml & /security.txt for {domain}", work=harvest_metadata)
+
         if status == 200 and text:
             robots = self._parse_robots(text)
             result_data["robots"] = robots
@@ -295,7 +293,7 @@ class MetadataIntelModule(BaseModule):
                 severity="info"
             )
         else:
-            self.add_note(f"robots.txt not found for {domain} (HTTP {status})", severity="info")
+            self.add_note(f"robots.txt not found for {domain} (HTTP {status if status else 'N/A'})", severity="info")
 
         # ------------------------------------------------------------------
         # 2. sitemap.xml (also pick up URLs from robots if found)

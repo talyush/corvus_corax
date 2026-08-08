@@ -211,11 +211,12 @@ class EmailIntelModule(BaseModule):
         if self.context:
             dns_data = self.context.data.get("dns_records", {}).get(domain, {})
             for rel in self.context.data.get("relations", []):
-                dst = rel.get("dst", {})
-                if dst.get("type") == "email":
-                    val = dst.get("value", "").lower()
-                    if val.endswith(f"@{domain}"):
-                        existing_emails.add(val)
+                if isinstance(rel, dict):
+                    dst = rel.get("dst", {})
+                    if isinstance(dst, dict) and dst.get("type") == "email":
+                        val = str(dst.get("value", "")).lower()
+                        if val.endswith(f"@{domain}"):
+                            existing_emails.add(val)
 
         spf_record   = dns_data.get("spf")
         dmarc_record = dns_data.get("dmarc")
