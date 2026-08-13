@@ -1,0 +1,215 @@
+{
+  "evidence_weights": {
+    "certificate_match": 40,
+    "shared_favicon": 25,
+    "same_tech_stack": 20,
+    "same_asn": 15,
+    "same_provider": 15,
+    "same_email_pattern": 15,
+    "shared_subnet": 10,
+    "dns_record_match": 10,
+    "http_header_match": 8,
+    "cookie_pattern": 5,
+    "path_pattern": 5,
+    "metadata_match": 5,
+    "phone_verified": 30,
+    "breach_correlation": 25,
+    "social_profile_match": 20,
+    "person_email_match": 15,
+    "org_registry_match": 18,
+    "academic_affiliation": 12,
+    "location_correlation": 14,
+    "financial_trace": 10,
+    "personal_data_correlation": 8
+  },
+  "source_reliability": {
+    "cert_intel": "A",
+    "asn": "A",
+    "dns": "A",
+    "scan": "A",
+    "geoip": "B",
+    "tech": "B",
+    "http_headers": "B",
+    "subdomain": "B",
+    "phone_intel": "B",
+    "academic_intel": "B",
+    "org_intel": "B",
+    "geo_intel": "B",
+    "metadata": "C",
+    "email": "C",
+    "whois": "C",
+    "social_intel": "C",
+    "breach_intel": "C",
+    "financial_intel": "D",
+    "person": "D"
+  },
+  "relationship_policies": {
+    "phone_to_person": {
+      "type": "candidate",
+      "default_confidence": 0.4,
+      "evidence_required": true,
+      "description": "Telefon numarası kişiye aday olarak bağlanır — kesin sahiplik kanıtı yok"
+    },
+    "username_match": {
+      "type": "possible",
+      "base_confidence": 0.15,
+      "confidence_boost_per_platform": 0.1,
+      "max_confidence": 0.7,
+      "description": "Aynı kullanıcı adı farklı kişilere ait olabilir — olasılık modeli"
+    },
+    "email_to_person": {
+      "type": "candidate",
+      "dmarc_confidence": 0.3,
+      "breach_confidence": 0.2,
+      "staff_email_confidence": 0.5,
+      "description": "DMARC/breach/staff verisi tek başına kesin email sahipliği kanıtı değildir"
+    },
+    "org_to_domain": {
+      "type": "candidate",
+      "default_confidence": 0.6,
+      "evidence_required": true,
+      "description": "Organizasyon-domain bağlantısı aday — WHOIS/ASN verisi tek başına kesin değil"
+    },
+    "academic_affiliation": {
+      "type": "candidate",
+      "default_confidence": 0.7,
+      "evidence_required": true,
+      "description": "Akademik kurum bağlantısı — yayın/paper verisinden aday"
+    },
+    "wallet_to_person": {
+      "type": "candidate",
+      "default_confidence": 0.4,
+      "evidence_required": true,
+      "description": "Kripto cüzdan kişiye aday — cüzdanlar paylaşılabilir"
+    },
+    "github_email_correlation": {
+      "type": "possible",
+      "default_confidence": 0.6,
+      "evidence_required": true,
+      "description": "GitHub'da aynı email/kullanıcı adı — olası eşleşme"
+    },
+    "web_history_correlation": {
+      "type": "possible",
+      "default_confidence": 0.4,
+      "evidence_required": true,
+      "description": "Wayback geçmişi aynı domain — olası içerik ilişkisi"
+    }
+  },
+  "breach_sources": {
+    "firefox_monitor": {
+      "type": "public_api",
+      "api_key_required": false,
+      "description": "Firefox Monitor — HIBP verisini kullanır, API anahtarı gerekmez"
+    },
+    "hibp_pwned_passwords": {
+      "type": "k_anonymity",
+      "api_key_required": false,
+      "description": "HIBP Pwned Passwords — k-anonimlik, şifrenin tamamı asla gönderilmez"
+    },
+    "manual": {
+      "type": "user_provided",
+      "api_key_required": false,
+      "description": "Kullanıcı tarafından sağlanan breach listesi"
+    }
+  },
+  "geoint": {
+    "default_map_path": "logs/geo_map.html",
+    "default_graph_path": "logs/graph_viz.html",
+    "default_timeline_path": "logs/timeline",
+    "default_geojson_path": "logs/geoint.geojson",
+    "leaflet_use_cdn": true,
+    "d3_use_cdn": true,
+    "offline_mode": false,
+    "movement_tracking_enabled": true,
+    "heatmap_enabled": true,
+    "description": "GEOINT görselleştirme politikaları — CDN/offline mod, hareket takibi, heatmap"
+  },
+  "persistence": {
+    "default_state_path": "logs/state.json",
+    "auto_save": false,
+    "description": "Oturumlar arası veri kalıcılığı — The Machine hafızası"
+  },
+  "pol": {
+    "anomaly_threshold": 70,
+    "min_events_for_analysis": 5,
+    "timezone": "Europe/Istanbul",
+    "movement_vpn_warning": true,
+    "vault_dir": "vault",
+    "persist_confidence_threshold": 0.5,
+    "night_activity_hours": [0, 1, 2, 3, 4, 5],
+    "anomaly_zscore_threshold": 2.0,
+    "description": "Pattern of Life analiz politikaları — davranış deseni, anomali tespiti, vault"
+  },
+  "node_colors": {
+    "ip": "#06b6d4",
+    "domain": "#a855f7",
+    "person": "#ef4444",
+    "organization": "#3b82f6",
+    "phone": "#10b981",
+    "email": "#f59e0b",
+    "wallet": "#f97316",
+    "location": "#ec4899",
+    "social_profile": "#22c55e",
+    "username": "#14b8a6",
+    "certificate": "#8b5cf6",
+    "publication": "#f43f5e",
+    "default": "#64748b"
+  },
+  "operator_prefixes": {
+    "90": {
+      "532": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "533": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "534": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "535": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "536": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "537": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "538": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "539": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "541": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "551": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "552": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "553": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "554": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "555": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "559": {"operator": "Turkcell", "basis": "numbering_plan"},
+      "501": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "505": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "506": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "507": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "542": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "543": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "544": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "545": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "546": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "547": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "548": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "549": {"operator": "Vodafone", "basis": "numbering_plan"},
+      "530": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "531": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "540": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "541": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "542": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "543": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "544": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "545": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "546": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "547": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "548": {"operator": "Turk Telekom", "basis": "numbering_plan"},
+      "549": {"operator": "Turk Telekom", "basis": "numbering_plan"}
+    }
+  },
+  "social_platforms": {
+    "twitter": {"url_template": "https://twitter.com/{handle}", "weight": 1.0},
+    "github": {"url_template": "https://github.com/{handle}", "weight": 0.9},
+    "instagram": {"url_template": "https://instagram.com/{handle}", "weight": 1.0},
+    "linkedin": {"url_template": "https://linkedin.com/in/{handle}", "weight": 0.8},
+    "reddit": {"url_template": "https://reddit.com/user/{handle}", "weight": 0.9},
+    "telegram": {"url_template": "https://t.me/{handle}", "weight": 0.8},
+    "tiktok": {"url_template": "https://tiktok.com/@{handle}", "weight": 0.9},
+    "youtube": {"url_template": "https://youtube.com/@{handle}", "weight": 0.8},
+    "pinterest": {"url_template": "https://pinterest.com/{handle}", "weight": 0.6},
+    "steam": {"url_template": "https://steamcommunity.com/id/{handle}", "weight": 0.5},
+    "twitch": {"url_template": "https://twitch.tv/{handle}", "weight": 0.7},
+    "discord": {"url_template": "https://discord.com/users/{handle}", "weight": 0.5}
+  }
+}

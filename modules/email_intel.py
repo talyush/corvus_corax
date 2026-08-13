@@ -323,17 +323,19 @@ class EmailIntelModule(BaseModule):
         for email in role_emails:
             self.add_relation(
                 src_type="domain", src_value=domain,
-                relation="has_role_email",
+                relation="role_email_associated_with",
                 dst_type="email", dst_value=email,
-                evidence="Role-based/system mailbox alias detected"
+                evidence="Role-based/system mailbox alias detected — candidate association, not confirmed ownership",
+                confidence=0.5
             )
 
         for email in personal_emails:
             self.add_relation(
                 src_type="domain", src_value=domain,
-                relation="has_contact_email",
+                relation="email_associated_with",
                 dst_type="email", dst_value=email,
-                evidence="Personal contact mailbox alias identified"
+                evidence="Personal contact mailbox alias identified — candidate association, not confirmed ownership",
+                confidence=0.3
             )
 
         # ------------------------------------------------------------------

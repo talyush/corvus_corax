@@ -1,10 +1,18 @@
-# Corvus Corax v0.8 — Architecture Documentation
+# Corvus Corax v0.9 — Architecture Documentation
 
 This directory contains detailed technical documentation about the Corvus Corax system architecture, including component design, data flow, integration patterns, and implementation details.
 
 ## System Overview
 
 Corvus Corax is a modular reconnaissance and intelligence analysis framework built on a centralized intelligence graph architecture. The system is designed to collect, normalize, correlate, and export reconnaissance data through a unified intelligence flow with NATO-standard confidence scoring.
+
+**v0.9** transforms the system from a network-focused recon tool into a **human-centric intelligence platform** with:
+- Entity-agnostic intelligence graphs (persons, organizations, phones, emails, wallets, locations)
+- Temporal event stores for Pattern of Life (POL) analysis
+- Candidate/possible relationship modeling (not confirmed ownership)
+- Persistent Intelligence Vault (The Machine's long-term memory)
+- GEOINT map visualization and D3.js relationship graphs
+- Entity resolution, cross-entity pivoting, and confidence aggregation
 
 ## Core Components
 
@@ -34,58 +42,51 @@ class BaseModule:
 - Error handling and logging
 - Configuration-driven behavior
 
+**v0.9 Extensions**:
+- `add_entity()` — entity-agnostic entity creation
+- `add_person()`, `add_phone()`, `add_email()`, `add_social_profile()`, `add_wallet()`, `add_organization()`
+- `log_event()` — temporal event logging for POL analysis
+- `add_location()` — geographic location entities
+
 ### 2. Context Manager (`core/context.py`)
 
 The `ContextManager` maintains a centralized intelligence graph updated by every module.
 
-**Data Structure**:
+**v0.9 Data Structure**:
 ```python
 {
-    "ips": {
-        "ip_address": {
-            "ports": [...],
-            "geo": {...},
-            "hostname": "..."
-        }
+    "entities": {          # Entity-agnostic registry
+        "person:ahmet": {"type": "person", "value": "ahmet", "properties": {...}},
+        "ip:8.8.8.8": {"type": "ip", "value": "8.8.8.8", "properties": {...}},
+        "phone:+90532...": {"type": "phone", "value": "+90532...", "properties": {...}},
+        ...
     },
-    "domains": {
-        "domain": {
-            "ips": [...]
-        }
-    },
-    "certificates": {...},
-    "dns_records": {...},
-    "http_headers": {...},
-    "email_intel": {...},
-    "metadata_intel": {...},
-    "asn_intel": {...},
-    "tech_intel": {...},
+    "events": [            # Temporal event store (POL basis)
+        {"timestamp": "...", "entity": "person:ahmet", "action": "located_in", "source": "geoip", "metadata": {...}}
+    ],
+    "ips": {...},          # Legacy (backward compatible)
+    "domains": {...},      # Legacy
     "notes": [...],
     "relations": [...],
     "derived_relations": [...],
-    "meta": {
-        "created_at": "...",
-        "updated_at": "...",
-        "event_count": 0,
-        "recent_events": [...]
-    }
+    "meta": {...}
 }
 ```
 
 **Key Methods**:
-- `add_ip()`, `add_domain()`, `add_port()`
-- `add_certificate()`, `add_dns_record()`, `add_http_headers()`
-- `add_email_intel()`, `add_metadata_intel()`, `add_asn_intel()`
-- `add_tech_intel()`
+- `add_entity()`, `get_entity()`, `query_entities()` — entity-agnostic
+- `add_person()`, `add_organization()`, `add_phone()`, `add_email()`, `add_social_profile()`, `add_wallet()`, `add_location()`
+- `add_event()`, `query_events()`, `get_entity_events()` — temporal event store
+- `add_ip()`, `add_domain()`, `add_port()` — legacy
 - `add_note()`, `add_relation()`, `add_derived_relation()`
 - `get_clean_data()` for Nexus compatibility
-- `get_admiralty_summary()`, `get_entity_admiralty()`
+- `get_events_summary()`, `get_entities_summary()` — v0.9 views
 
 ### 3. Nexus Engine (`core/nexus.py`)
 
 The `NexusEngine` performs correlation and risk scoring using Admiralty confidence scoring.
 
-**Correlation Rules**:
+**Correlation Rules (v0.9 — Rule 1-20)**:
 - **RULE 1**: Subnet correlation (IPs in same /24)
 - **RULE 2**: Shared technology stack
 - **RULE 3**: Outdated software detection
@@ -98,6 +99,14 @@ The `NexusEngine` performs correlation and risk scoring using Admiralty confiden
 - **RULE 10**: Metadata contact mapping
 - **RULE 11**: Technology stack correlation
 - **RULE 12**: ASN intelligence correlation
+- **RULE 13**: Phone → Person candidate association (conflicting_phone_claim)
+- **RULE 14**: Username → Person possible match aggregation (likely_same_person)
+- **RULE 15**: Email → Person candidate association (multi_source_associated)
+- **RULE 16**: Organization → Domain ownership aggregation (owns_multiple_domains)
+- **RULE 17**: Academic affiliation correlation (same_affiliation)
+- **RULE 18**: Wallet multi-owner conflict detection
+- **RULE 19**: GitHub email correlation aggregation
+- **RULE 20**: Wayback web history correlation
 
 **Risk Calculation**:
 ```python
@@ -127,90 +136,112 @@ def calculate_risk(self, entity):
     }
 ```
 
-### 4. Nexus Exporter (`core/exporter.py`)
+### 4. Intelligence Vault (`core/db.py` — v0.9)
+
+The `IntelligenceVault` provides persistent, cross-session memory — The Machine's long-term memory.
+
+**Three-Layer Architecture**:
+```
+1. Session Context (RAM)     — temporary, lost on session end
+2. Intelligence Vault (Disk) — persistent, confirmed evidence
+3. POL Engine (Analysis)     — reads from vault, extracts behavior patterns
+```
+
+**Data Model**:
+```
+vault/
+├── events.log              # Append-only JSONL (each line = one event)
+├── index.json              # {entity: [line_numbers], action: [line_numbers]}
+├── state.json              # Entity inventory (entities, relations, notes)
+├── evidence/               # Confirmed evidence chains (case files)
+└── stats.json              # Vault statistics
+```
+
+**Key Methods**:
+- `append_event()` — append-only event logging with evidence threshold filter
+- `query_events()` — index-based event querying
+- `confirm_event()` — promote session event to persistent evidence
+- `save_state()` / `load_state()` — entity inventory persistence
+- `get_casefile()` / `save_casefile()` — investigation dossiers
+- `stats()` — vault statistics
+
+**Evidence Threshold Filter**:
+```python
+def should_persist(self, event):
+    # Test/keşif aşamasındaki olayları kalıcılaştırma
+    if source in ("help", "version", "test"):
+        return False
+    # Düşük güvenilirlikteki candidate/possible ilişkileri kalıcılaştırma
+    if confidence < 0.5 and any(k in action for k in ("candidate", "possible", "conflict")):
+        return False
+    return True
+```
+
+### 5. Pattern of Life Engine (`core/pol.py` — v0.9)
+
+The `PatternOfLifeEngine` analyzes temporal events to extract behavioral patterns.
+
+**Analysis Modules**:
+- **Activity Rhythm** — hourly/weekly activity distribution, peak hours, source breakdown
+- **Movement Pattern** — location history, routes, VPN warning (same-day multi-location)
+- **Communication Pattern** — entity connections and relationship types
+- **Anomaly Detection** — hybrid model (rule-based + statistical z-score)
+- **Case File** — full investigation dossier
+
+**Hybrid Anomaly Model**:
+```python
+# Rule-based (explainable)
+night_activity: +40  # 03:00-05:00 activity
+vpn_warning: +30     # same-day multi-location
+candidate_rels: +20  # many unverified candidate links
+
+# Statistical (adaptive)
+z_score > 2.0: +10   # deviation from normal activity distribution
+
+# Score: 0-100, Level: LOW/MEDIUM/HIGH
+```
+
+### 6. GEOINT Engine (`core/geoint.py` — v0.9)
+
+The `GeoIntEngine` generates interactive Leaflet.js + OpenStreetMap maps.
+
+**Features**:
+- IP/person/org markers with popup details
+- Movement routes (polyline) for entities with multiple locations
+- Heatmap for dense regions
+- CDN/offline mode support
+
+### 7. Graph Visualizer (`core/visualizer.py` — v0.9)
+
+The `GraphVisualizer` generates D3.js force-directed relationship graphs.
+
+**Features**:
+- Drag, zoom, hover tooltip, detail panel
+- Node colors by entity type (from `rules.json`)
+- Risk-score-based node sizing
+- Search box and legend
+
+### 8. Confidence Aggregation (`core/confidence.py` — v0.9)
+
+The confidence aggregation engine combines weak individual evidence into strong evidence.
+
+**Formula**: `combined = 1 - (1-c1)*(1-c2)*(1-c3)*...`
+
+**Key Functions**:
+- `combine_confidences()` — combine multiple confidence scores
+- `aggregate_entity_confidence()` — aggregate all candidate/possible links to a target
+- `find_identity_clusters()` — find entities belonging to the same person
+
+### 9. Nexus Exporter (`core/exporter.py`)
 
 The `NexusExporter` generates reports in multiple formats.
 
 **Export Formats**:
 - **HTML**: Interactive intelligence dossier with tabs
 - **Neo4j JSON**: Graph database import format
-- **Graph JSON**: AI/ML pipeline format
+- **Graph JSON**: AI/ML pipeline format (`corvus_graph_v2`)
 
-**HTML Export Features**:
-- Executive Summary tab
-- Risk Profiles tab with expandable cards
-- Graph Relations Explorer tab
-- Glassmorphism dark UI
-- No external dependencies
-
-**Neo4j JSON Format**:
-```json
-{
-  "nodes": [
-    {
-      "id": "ip:192.168.1.1",
-      "label": "IP",
-      "properties": {
-        "value": "192.168.1.1",
-        "risk_score": 75,
-        "risk_level": "High"
-      }
-    }
-  ],
-  "relationships": [
-    {
-      "id": "rel_1",
-      "type": "RESOLVES_TO",
-      "startNode": "domain:example.com",
-      "endNode": "ip:192.168.1.1",
-      "properties": {
-        "evidence": "A record",
-        "confidence": 1.0
-      }
-    }
-  ]
-}
-```
-
-**Graph JSON Format**:
-```json
-{
-  "metadata": {
-    "version": "0.8",
-    "format": "corvus_graph_v1",
-    "generated_at": "2024-01-01T00:00:00Z"
-  },
-  "nodes": [
-    {
-      "id": "ip:192.168.1.1",
-      "type": "ip",
-      "value": "192.168.1.1",
-      "properties": {
-        "risk_score": 75,
-        "admiralty_rating": "B2",
-        "evidence_count": 4,
-        "asn": "AS15169",
-        "organization": "Google Cloud"
-      }
-    }
-  ],
-  "edges": [
-    {
-      "id": "edge_1",
-      "source": "domain:example.com",
-      "target": "ip:192.168.1.1",
-      "relation": "resolves_to",
-      "properties": {
-        "evidence": "dns mapping",
-        "confidence": 1.0,
-        "derived": false
-      }
-    }
-  ]
-}
-```
-
-### 5. Output Manager (`output/output_manager.py`)
+### 10. Output Manager (`output/output_manager.py`)
 
 The `OutputManager` handles terminal presentation and formatting.
 
@@ -221,34 +252,42 @@ The `OutputManager` handles terminal presentation and formatting.
 **Module-Specific Formatting**:
 - Each module has custom formatting logic
 - Nexus supports verbose mode for detailed evidence chains
+- GEOINT visualization export formatting
 - Color-coded severity indicators
-- Structured section dividers
 
-### 6. Configuration System (`config/config.json`)
+### 11. Configuration System (`config/config.json` + `config/rules.json`)
 
 Runtime configuration for all components.
 
-**Configuration Structure**:
+**`config/config.json`** — Runtime settings:
 ```json
 {
   "log_level": "INFO",
   "threads": 20,
   "timeout": 3.0,
-  "user_agent": "CorvusCorax/0.8",
+  "user_agent": "CorvusCorax/0.9",
   "output_mode": "text",
-  "scan_defaults": {
-    "connect_timeout": 1.0,
-    "banner_timeout": 2.0,
-    "host_probe_ports": [80, 22],
-    "host_probe_timeout": 0.3,
-    "slow_scan_delay": 0.3,
-    "normal_port_range": [1, 1024],
-    "max_threads": 200
-  }
+  "scan_defaults": {...}
 }
 ```
 
-### 7. Module Loader (`core/loader.py`)
+**`config/rules.json`** — Centralized rules (v0.9):
+```json
+{
+  "evidence_weights": {"phone_verified": 30, "breach_correlation": 25, ...},
+  "source_reliability": {"phone_intel": "B", "social_intel": "C", ...},
+  "relationship_policies": {
+    "phone_to_person": {"type": "candidate", "default_confidence": 0.4},
+    "username_match": {"type": "possible", "base_confidence": 0.15, "boost_per_platform": 0.1, "max": 0.7},
+    ...
+  },
+  "geoint": {"default_map_path": "logs/geo_map.html", ...},
+  "pol": {"anomaly_threshold": 70, "vault_dir": "vault", ...},
+  "node_colors": {"ip": "#06b6d4", "person": "#ef4444", ...}
+}
+```
+
+### 12. Module Loader (`core/loader.py`)
 
 Dynamic module loading system.
 
@@ -259,7 +298,7 @@ Dynamic module loading system.
 4. Store in dictionary keyed by module name
 5. Handle duplicate module names
 
-### 8. Logger (`core/logger.py`)
+### 13. Logger (`core/logger.py`)
 
 File-based logging system.
 
@@ -285,10 +324,35 @@ ContextManager              OutputManager
 │                                   │
 ├─ Add Notes                       ├─ Format Output
 ├─ Add Relations                   ├─ Display Terminal
-├─ Add Domain Data                 └─ Log Summary
-├─ Add IP Data
-├─ Add Tech Intel
-└─ Add ASN Intel
+├─ Add Temporal Events             └─ Log Summary
+├─ Add Entities
+└─ Add Domain Data
+```
+
+### v0.9 Intelligence Flow
+
+```
+Module Execution
+    ↓
+ContextManager (Session)
+    ├─ entities
+    ├─ events (temporal)
+    └─ relations
+    ↓
+Intelligence Vault (Persistent)
+    ├─ events.log (append-only)
+    ├─ index.json
+    └─ state.json
+    ↓
+Pattern of Life Engine
+    ├─ Activity Rhythm
+    ├─ Movement Pattern
+    ├─ Communication Pattern
+    └─ Anomaly Detection
+    ↓
+GEOINT / Visualizer
+    ├─ Interactive Map
+    └─ D3.js Graph
 ```
 
 ### Nexus Correlation Flow
@@ -298,7 +362,7 @@ ContextManager.get_clean_data()
     ↓
 NexusEngine.correlate()
     ↓
-Apply 12 Correlation Rules
+Apply 20 Correlation Rules
     ↓
 Generate Derived Relations
     ↓
@@ -324,6 +388,7 @@ Modules integrate with `ContextManager` through:
 1. **Direct Data**: Domain-specific data structures
 2. **Notes**: Structured observations with confidence
 3. **Relations**: Entity-to-entity connections
+4. **Temporal Events**: Timestamped events for POL analysis
 
 **Example**:
 ```python
@@ -346,23 +411,27 @@ self.context.add_relation(
     evidence="Server header",
     confidence=0.9
 )
+
+# Temporal events (v0.9)
+self.log_event("phone_analyzed", entity="phone:+905321234567", metadata={...})
 ```
 
-### Nexus-Context Integration
+### Vault-Context Integration
 
-Nexus Engine reads from and writes to `ContextManager`:
+The Intelligence Vault reads from and writes to `ContextManager`:
 
 1. **Read**: `get_clean_data()` for normalized data
-2. **Write**: `add_derived_relation()` for inferred relationships
-3. **Read**: Risk profiles for export
+2. **Write**: `append_event()` for persistent event logging
+3. **Confirm**: `confirm_event()` for manual evidence promotion
+4. **Load**: `load_state()` for session restoration
 
-### Exporter-Context Integration
+### POL-Vault Integration
 
-Nexus Exporter reads from both `ContextManager` and Nexus report:
+The POL Engine reads from both Vault and Session:
 
-1. **Context Data**: Raw intelligence data
-2. **Nexus Report**: Risk profiles and derived relations
-3. **Output**: Formatted export files
+1. **Vault events**: Confirmed, persistent evidence
+2. **Session events**: Temporary, current-session data
+3. **Source labeling**: `_source: vault` vs `_source: session`
 
 ## Design Patterns
 
@@ -408,6 +477,14 @@ ContextManager uses Observer Pattern for event tracking:
 - Recent events tracking
 - Event count monitoring
 
+### 6. Three-Layer Architecture (v0.9)
+
+The system uses a three-layer intelligence architecture:
+
+- **Session Context (RAM)**: Temporary, fast, lost on session end
+- **Intelligence Vault (Disk)**: Persistent, confirmed, survives sessions
+- **POL Engine (Analysis)**: Reads from vault, extracts behavior patterns
+
 ## Performance Considerations
 
 ### Module Performance
@@ -423,6 +500,12 @@ ContextManager uses Observer Pattern for event tracking:
 - **Indexing**: Build lookup indices for fast correlation
 - **Lazy Evaluation**: Only calculate risk when needed
 
+### Vault Performance
+
+- **Append-only log**: O(1) append, no file rewriting
+- **Index-based querying**: `index.json` for fast entity/action lookup
+- **Line-number addressing**: Direct file seek for specific events
+
 ### Export Performance
 
 - **Streaming**: Large exports use streaming
@@ -437,6 +520,14 @@ ContextManager uses Observer Pattern for event tracking:
 - **Public APIs Only**: Only use public APIs
 - **No Authentication**: No credentials stored
 - **Log Sanitization**: Sensitive data not logged
+
+### Ethical Design (v0.9)
+
+- **Candidate/possible model**: Phone/email/username/org/wallet links are CANDIDATE, not confirmed ownership
+- **Breach meta-data only**: No raw credentials, credit cards, or personal content stored
+- **k-anonymity**: HIBP Pwned Passwords — full password never transmitted, only 5-char SHA-1 prefix
+- **Public OSINT only**: All data from publicly available sources
+- **VPN warning**: Movement analysis always warns about possible VPN/recording errors
 
 ### Input Validation
 
@@ -476,6 +567,13 @@ ContextManager uses Observer Pattern for event tracking:
 3. Add CLI command in `nexus.py`
 4. Update help documentation
 
+### Adding New Entity Types
+
+1. Use `add_entity()` with new type
+2. Add to `node_colors` in `rules.json`
+3. Add to `EvidenceType` in `admiralty.py` (if needed)
+4. Update documentation
+
 ## Testing Strategy
 
 ### Unit Testing
@@ -489,7 +587,8 @@ ContextManager uses Observer Pattern for event tracking:
 
 - Test module-context integration
 - Test nexus-context integration
-- Test exporter-context integration
+- Test vault-context integration
+- Test POL-vault integration
 - Test full workflow
 
 ### End-to-End Testing
@@ -498,6 +597,7 @@ ContextManager uses Observer Pattern for event tracking:
 - Test export functionality
 - Test CLI interface
 - Test error handling
+- Test persistence (save/load)
 
 ## Deployment
 
@@ -518,10 +618,15 @@ python main.py
 ### Configuration
 
 Edit `config/config.json` for custom settings.
+Edit `config/rules.json` for centralized rules (v0.9).
 
 ### Logging
 
 Logs stored in `logs/corvus.log`.
+
+### Persistence
+
+Intelligence Vault stored in `vault/` directory (v0.9).
 
 ## Future Architecture Enhancements
 
@@ -559,3 +664,9 @@ Logs stored in `logs/corvus.log`.
 - Real-time updates
 - Interactive graphs
 - Report generation
+
+### 6. Real-time Monitoring
+
+- Live data streams for continuous POL analysis
+- Real-time anomaly detection
+- Alerting system

@@ -1,7 +1,7 @@
 # Context Manager Documentation
 
 **Module**: `core/context.py`  
-**Version**: v0.8  
+**Version**: v0.9  
 **Purpose**: Centralized intelligence graph management and query interface
 
 ## Overview
@@ -16,6 +16,11 @@ The `ContextManager` is the core intelligence graph component of Corvus Corax. I
 class ContextManager:
     def __init__(self):
         self.data = {
+            # v0.9: Entity-agnostic registry
+            "entities": {},   # "{type}:{value}" -> {"type", "value", "properties", "created_at", "updated_at"}
+            "events": [],     # Temporal event store (POL basis)
+            
+            # Legacy (backward compatible)
             "ips": {},
             "domains": {},
             "certificates": {},
@@ -44,6 +49,100 @@ class ContextManager:
 3. **Event Tracking**: All data changes are logged as events
 4. **Query Interface**: Standardized methods for data retrieval
 5. **Nexus Compatibility**: Clean data interface for correlation engine
+6. **Entity-Agnostic**: All entity types (ip, domain, person, org, phone, email, wallet) in unified registry (v0.9)
+7. **Temporal Events**: Timestamped events for Pattern of Life analysis (v0.9)
+
+## v0.9 Additions
+
+### Entity Registry (`entities`)
+
+Unified entity-agnostic registry for all entity types:
+
+```python
+{
+    "person:ahmet": {
+        "type": "person",
+        "value": "ahmet",
+        "properties": {"job": "engineer"},
+        "created_at": "2026-08-12T00:00:00Z",
+        "updated_at": "2026-08-12T00:00:00Z"
+    },
+    "phone:+905321234567": {
+        "type": "phone",
+        "value": "+905321234567",
+        "properties": {"number_type": "mobile", "operator": {...}},
+        "created_at": "...",
+        "updated_at": "..."
+    },
+    "wallet:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa": {
+        "type": "wallet",
+        "value": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+        "properties": {"chain": "btc"},
+        "created_at": "...",
+        "updated_at": "..."
+    }
+}
+```
+
+**Supported entity types** (v0.9):
+- `ip`, `domain` — legacy
+- `person`, `organization` — human-centric
+- `phone`, `email`, `social_profile`, `username` — contact
+- `wallet`, `location`, `certificate`, `publication`, `identity` — assets
+
+### Temporal Event Store (`events`)
+
+Timestamped events for Pattern of Life analysis:
+
+```python
+[
+    {
+        "timestamp": "2026-08-12T00:00:00+00:00",
+        "entity": "person:ahmet",
+        "action": "located_in",
+        "source": "geoip",
+        "location": "Istanbul, Turkey",
+        "metadata": {"lat": 41.01, "lon": 28.98}
+    }
+]
+```
+
+**Event actions**: `located_in`, `traveled`, `phone_analyzed`, `profile_found`, `breach_found`, `publication_found`, `wallet_identified`, `org_identified`, etc.
+
+### v0.9 API Methods
+
+```python
+# Entity-agnostic
+def add_entity(self, entity_type, value, properties=None):
+    """Add or update any entity type."""
+def get_entity(self, entity_type, value):
+    """Get specific entity."""
+def query_entities(self, entity_type=None, search=None):
+    """Query entities by type and/or search text."""
+
+# Typed helpers
+def add_person(self, name, properties=None):
+def add_organization(self, name, properties=None):
+def add_phone(self, number, properties=None):
+def add_email(self, email, properties=None):
+def add_social_profile(self, platform, handle, properties=None):
+def add_wallet(self, address, chain="btc", properties=None):
+def add_location(self, lat, lon, label=None, properties=None):
+
+# Temporal events
+def add_event(self, entity, action, source="system", location=None, metadata=None):
+    """Add timestamped event for POL analysis."""
+def query_events(self, entity=None, action=None, entity_type=None, time_range=None):
+    """Query temporal events."""
+def get_entity_events(self, entity, limit=100):
+    """Get all events for a specific entity."""
+
+# Views
+def get_events_summary(self, entity=None, limit=50):
+    """Human-readable event stream."""
+def get_entities_summary(self, entity_type=None):
+    """Human-readable entity registry."""
+```
 
 ## Data Structure
 
@@ -791,6 +890,8 @@ context.add_note(..., confidence=-1.0)  # Clamped to 0.0
 ## Future Enhancements
 
 ### 1. Persistence Layer
+
+Already implemented in v0.9 via `core/db.py` `IntelligenceVault` (JSONL append-only log + state.json).
 
 - SQLite/PostgreSQL backend
 - Automatic context persistence

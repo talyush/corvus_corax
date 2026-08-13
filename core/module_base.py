@@ -97,6 +97,70 @@ class BaseModule:
                 evidence=evidence, confidence=confidence,
             )
 
+    def log_event(self, action, entity=None, source=None, location=None, metadata=None):
+        """
+        v0.9 — Temporal olay kaydı (Pattern of Life altyapısı).
+        Modül sırasında gerçekleşen bir olayı merkezi context'in event store'una ekler.
+        entity: "{type}:{value}" formatinda varlik referansi.
+                Belirtilmezse module target'ından entity otomatik türetilir.
+        """
+        if not self.context:
+            return None
+        if entity is None and self.target:
+            target = self.target if isinstance(self.target, str) else " ".join(self.target)
+            entity = f"module:{target}"
+        return self.context.add_event(
+            entity=entity,
+            action=action,
+            source=source or self.name,
+            location=location,
+            metadata=metadata,
+        )
+
+    def add_entity(self, entity_type, value, properties=None):
+        """
+        v0.9 — Merkezi context'e entity-agnostic varlık ekler.
+        person, organization, phone, email, social_profile, wallet, location vb.
+        tüm varlık tipleri bu metodla eklenebilir.
+        """
+        if self.context:
+            return self.context.add_entity(entity_type, value, properties)
+        return None
+
+    def add_person(self, name, properties=None):
+        """v0.9 — Kişi varlığı ekler (merkezi intelligence graph'a)."""
+        return self.add_entity("person", name, properties)
+
+    def add_phone(self, number, properties=None):
+        """v0.9 — Telefon varlığı ekler."""
+        return self.add_entity("phone", number, properties)
+
+    def add_email(self, email, properties=None):
+        """v0.9 — Email varlığı ekler."""
+        return self.add_entity("email", email, properties)
+
+    def add_social_profile(self, platform, handle, properties=None):
+        """v0.9 — Sosyal medya profili varlığı ekler."""
+        if self.context:
+            return self.context.add_social_profile(platform, handle, properties)
+        return None
+
+    def add_wallet(self, address, chain="btc", properties=None):
+        """v0.9 — Kripto cüzdan varlığı ekler."""
+        if self.context:
+            return self.context.add_wallet(address, chain, properties)
+        return None
+
+    def add_organization(self, name, properties=None):
+        """v0.9 — Organizasyon/şirket varlığı ekler."""
+        return self.add_entity("organization", name, properties)
+
+    def add_location(self, lat, lon, label=None, properties=None):
+        """v0.9 — Coğrafi konum varlığı ekler."""
+        if self.context:
+            return self.context.add_location(lat, lon, label, properties)
+        return None
+
     def success(self, target="local", data=None):
         """Return a normalized success payload for all modules."""
         if self._investigation:

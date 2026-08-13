@@ -507,6 +507,267 @@ class OutputManager:
                         if len(links) > 10:
                             lines.append(f"      ... and {len(links) - 10} more links")
 
+                elif module == "phone":
+                    phone = data.get("phone")
+                    country_code = data.get("country_code")
+                    local_number = data.get("local_number")
+                    number_type = data.get("number_type")
+                    operator_info = data.get("operator_prefix") or {}
+                    person_candidate = data.get("person_candidate")
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Phone Intelligence — {phone}:{C_RESET}")
+                    lines.append(f"    {C_BOLD}E.164         :{C_RESET} {phone}")
+                    lines.append(f"    {C_BOLD}Country Code  :{C_RESET} {country_code or 'Unknown'}")
+                    lines.append(f"    {C_BOLD}Local Number  :{C_RESET} {local_number}")
+                    lines.append(f"    {C_BOLD}Number Type   :{C_RESET} {number_type}")
+
+                    # Operatör prefix (candidate — kesin değil)
+                    possible_op = operator_info.get("possible_operator")
+                    prefix = operator_info.get("prefix_detected")
+                    basis = operator_info.get("basis")
+                    op_conf = operator_info.get("confidence", 0)
+                    if possible_op and possible_op != "Unknown":
+                        lines.append(f"    {C_BOLD}Operator      :{C_RESET} {possible_op}")
+                        lines.append(f"      {C_BOLD}Prefix Detected:{C_RESET} {prefix}")
+                        lines.append(f"      {C_BOLD}Basis          :{C_RESET} {basis}")
+                        lines.append(f"      {C_BOLD}Confidence     :{C_RESET} {op_conf} {C_YELLOW}(candidate — MNP may apply){C_RESET}")
+                    else:
+                        lines.append(f"    {C_BOLD}Operator      :{C_RESET} {C_YELLOW}Unknown prefix (no match){C_RESET}")
+
+                    # Kişi adayı (candidate_link)
+                    if person_candidate:
+                        lines.append(f"    {C_BOLD}Person Candidate:{C_RESET} {person_candidate} {C_YELLOW}(candidate — unverified ownership){C_RESET}")
+
+                    # Temporal event note
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if number_type == "mobile":
+                        lines.append(f"      {C_CYAN}* Mobile number classified ({number_type}).{C_RESET}")
+                    if possible_op and possible_op != "Unknown":
+                        lines.append(f"      {C_YELLOW}* Operator '{possible_op}' is a PREFIX-BASED estimate (basis: {basis}).{C_RESET}")
+                        lines.append(f"        Number portability (MNP) may mean actual operator differs.{C_RESET}")
+                    if person_candidate:
+                        lines.append(f"      {C_YELLOW}* Phone linked to {person_candidate} as CANDIDATE — requires verification.{C_RESET}")
+
+                elif module == "social":
+                    username = data.get("username")
+                    platforms_found = data.get("platforms_found", [])
+                    platforms_checked = data.get("platforms_checked", 0)
+                    confidence = data.get("correlation_confidence", 0)
+                    person_candidate = data.get("person_candidate")
+                    verified_profiles = data.get("verified_profiles", [])
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Social Media Intelligence — {username}:{C_RESET}")
+                    lines.append(f"    {C_BOLD}Platforms Checked :{C_RESET} {platforms_checked}")
+
+                    if platforms_found:
+                        lines.append(f"    {C_BOLD}Platforms Found   :{C_RESET} {', '.join(platforms_found)}")
+                        lines.append(f"    {C_BOLD}Correlation Conf  :{C_RESET} {confidence:.2f} {C_YELLOW}(possible match — not confirmed){C_RESET}")
+                    else:
+                        lines.append(f"    {C_BOLD}Platforms Found   :{C_RESET} {C_YELLOW}None (offline or blocked){C_RESET}")
+
+                    # Doğrulanmış profiller
+                    if verified_profiles:
+                        lines.append(f"\n    {C_BOLD}Verified Profiles:{C_RESET}")
+                        for pr in verified_profiles:
+                            lines.append(f"      - {C_GREEN}{pr.get('platform')}:{C_RESET} {pr.get('url')}")
+                    else:
+                        lines.append(f"\n    {C_BOLD}Verified Profiles:{C_RESET} None")
+
+                    # Kişi adayı
+                    if person_candidate:
+                        lines.append(f"    {C_BOLD}Person Candidate :{C_RESET} {person_candidate} {C_YELLOW}(possible — username may belong to different person){C_RESET}")
+
+                    # Analyst Assessment
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if len(platforms_found) >= 2:
+                        lines.append(f"      {C_YELLOW}* Same username on {len(platforms_found)} platforms suggests POSSIBLE same person.{C_RESET}")
+                        lines.append(f"        Not confirmed — different people may use the same handle.{C_RESET}")
+                    elif len(platforms_found) == 1:
+                        lines.append(f"      {C_CYAN}* Username found on 1 platform only — low correlation confidence.{C_RESET}")
+                    else:
+                        lines.append(f"      {C_YELLOW}* No verified profiles found — username may not exist or platform blocks bots.{C_RESET}")
+
+                elif module == "org":
+                    org_name = data.get("organization")
+                    domain = data.get("domain")
+                    person = data.get("person")
+                    parent = data.get("parent")
+                    infra = data.get("infra_correlations", [])
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Organization Intelligence — {org_name}:{C_RESET}")
+                    if domain:
+                        lines.append(f"    {C_BOLD}Domain (candidate):{C_RESET} {domain} {C_YELLOW}(conf: 0.6){C_RESET}")
+                    if person:
+                        lines.append(f"    {C_BOLD}Person (candidate):{C_RESET} {person} {C_YELLOW}(conf: 0.4){C_RESET}")
+                    if parent:
+                        lines.append(f"    {C_BOLD}Parent Company   :{C_RESET} {parent}")
+                    if infra:
+                        lines.append(f"    {C_BOLD}Infra Correlations ({len(infra)}):{C_RESET}")
+                        for match in infra[:10]:
+                            lines.append(f"      - {match}")
+                    else:
+                        lines.append(f"    {C_BOLD}Infra Correlations:{C_RESET} None in current context")
+
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if domain:
+                        lines.append(f"      {C_YELLOW}* Domain ownership is CANDIDATE — verify via WHOIS/ASN records.{C_RESET}")
+                    if person:
+                        lines.append(f"      {C_YELLOW}* Employment is CANDIDATE — requires verification.{C_RESET}")
+
+                elif module == "wallet":
+                    address = data.get("address")
+                    chain = data.get("chain")
+                    explorer = data.get("explorer_url")
+                    balance = data.get("balance_btc")
+                    person_candidate = data.get("person_candidate")
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Wallet Intelligence — {address[:16]}...:{C_RESET}")
+                    lines.append(f"    {C_BOLD}Chain     :{C_RESET} {chain.upper()}")
+                    lines.append(f"    {C_BOLD}Explorer  :{C_RESET} {explorer}")
+                    if balance is not None:
+                        lines.append(f"    {C_BOLD}Balance   :{C_RESET} {C_GREEN}{balance} BTC{C_RESET}")
+                    if person_candidate:
+                        lines.append(f"    {C_BOLD}Person    :{C_RESET} {person_candidate} {C_YELLOW}(candidate — wallets may be shared){C_RESET}")
+
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    lines.append(f"      {C_YELLOW}* Wallet ownership is CANDIDATE — wallets can be shared or multi-sig.{C_RESET}")
+
+                elif module == "academic":
+                    person = data.get("person")
+                    author_info = data.get("author_info") or {}
+                    publications = data.get("publications", [])
+                    university = data.get("university")
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Academic Intelligence — {person}:{C_RESET}")
+                    if author_info:
+                        lines.append(f"    {C_BOLD}Name      :{C_RESET} {author_info.get('name')}")
+                        lines.append(f"    {C_BOLD}ORCID     :{C_RESET} {author_info.get('orcid') or 'N/A'}")
+                        lines.append(f"    {C_BOLD}h-index   :{C_RESET} {author_info.get('h_index') or 'N/A'}")
+                        lines.append(f"    {C_BOLD}Works     :{C_RESET} {author_info.get('works_count', 0)}")
+                        affs = author_info.get("affiliations", [])
+                        if affs:
+                            lines.append(f"    {C_BOLD}Affiliation:{C_RESET} {', '.join(affs[:3])}")
+                    if university:
+                        lines.append(f"    {C_BOLD}University :{C_RESET} {university} {C_YELLOW}(candidate — from email domain){C_RESET}")
+                    if publications:
+                        lines.append(f"    {C_BOLD}Publications ({len(publications)}):{C_RESET}")
+                        for pub in publications[:5]:
+                            year = pub.get("year")
+                            title = pub.get("title", "Untitled")[:60]
+                            lines.append(f"      - [{year}] {title}")
+                        if len(publications) > 5:
+                            lines.append(f"      ... and {len(publications) - 5} more")
+
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if university:
+                        lines.append(f"      {C_YELLOW}* Academic affiliation is CANDIDATE — verify via ORCID/OpenAlex.{C_RESET}")
+
+                elif module == "breach":
+                    email = data.get("email")
+                    sources = data.get("breach_sources", [])
+                    count = data.get("breach_count", 0)
+                    risk = data.get("risk_level", "Low")
+                    pwned = data.get("password_pwned_count", 0)
+
+                    risk_color = C_GREEN
+                    if risk == "Critical": risk_color = C_RED + C_BOLD
+                    elif risk == "High": risk_color = C_RED
+                    elif risk == "Medium": risk_color = C_YELLOW
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Data Breach Intelligence — {email}:{C_RESET}")
+                    lines.append(f"    {C_BOLD}Breach Sources :{C_RESET} {count}")
+                    lines.append(f"    {C_BOLD}Risk Level     :{C_RESET} {risk_color}{risk}{C_RESET}")
+                    if sources:
+                        lines.append(f"    {C_BOLD}Sources        :{C_RESET} {', '.join(sources[:8])}")
+                    if pwned:
+                        lines.append(f"    {C_BOLD}Password Pwned :{C_RESET} {C_RED}Yes ({pwned} breaches){C_RESET} {C_YELLOW}(k-anonymity check){C_RESET}")
+
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    lines.append(f"      {C_YELLOW}* Meta-data only — no raw credentials stored or displayed.{C_RESET}")
+                    if risk != "Low":
+                        lines.append(f"      {C_RED}* Email exposed in {count} breaches — identity theft risk elevated.{C_RESET}")
+
+                elif module == "github":
+                    username = data.get("username")
+                    user_info = data.get("user_info") or {}
+                    repos = data.get("repos", [])
+                    emails = data.get("commit_emails", [])
+                    secrets = data.get("secret_findings", [])
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}GitHub Intelligence — {username}:{C_RESET}")
+                    lines.append(f"    {C_BOLD}Name      :{C_RESET} {user_info.get('name') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}Company   :{C_RESET} {user_info.get('company') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}Location  :{C_RESET} {user_info.get('location') or 'N/A'}")
+                    lines.append(f"    {C_BOLD}Repos     :{C_RESET} {len(repos)}")
+                    lines.append(f"    {C_BOLD}Followers :{C_RESET} {user_info.get('followers', 0)}")
+                    if repos:
+                        lines.append(f"    {C_BOLD}Top Repos :{C_RESET}")
+                        for repo in repos[:5]:
+                            lang = repo.get('language') or 'N/A'
+                            stars = repo.get('stars', 0)
+                            lines.append(f"      - {repo.get('name')} [{lang}] ⭐{stars}")
+                    if emails:
+                        lines.append(f"    {C_BOLD}Emails    :{C_RESET} {', '.join(emails[:5])} {C_YELLOW}(candidate){C_RESET}")
+                    if secrets:
+                        lines.append(f"    {C_BOLD}Secrets   :{C_RESET} {C_RED}{len(secrets)} potential exposure(s){C_RESET}")
+                        for s in secrets[:3]:
+                            lines.append(f"      - {s.get('repo')}: {s.get('type')} {s.get('value')}")
+
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if secrets:
+                        lines.append(f"      {C_RED}* Potential secret exposure in public repos — investigate.{C_RESET}")
+                    if emails:
+                        lines.append(f"      {C_YELLOW}* Emails from commits are CANDIDATE associations.{C_RESET}")
+
+                elif module == "wayback":
+                    url = data.get("url")
+                    snapshot = data.get("snapshot") or {}
+                    records = data.get("historical_records", [])
+                    count = data.get("record_count", 0)
+
+                    lines.append(f"  {C_CYAN}{C_BOLD}Wayback Machine Intelligence — {url}:{C_RESET}")
+                    if snapshot and snapshot.get("available"):
+                        lines.append(f"    {C_BOLD}Snapshot   :{C_RESET} {C_GREEN}Available{C_RESET}")
+                        lines.append(f"    {C_BOLD}Timestamp  :{C_RESET} {snapshot.get('timestamp')}")
+                        lines.append(f"    {C_BOLD}Snapshot URL:{C_RESET} {snapshot.get('url')}")
+                        lines.append(f"    {C_BOLD}Status     :{C_RESET} {snapshot.get('status')}")
+                    else:
+                        lines.append(f"    {C_BOLD}Snapshot   :{C_RESET} {C_YELLOW}Not archived{C_RESET}")
+                    lines.append(f"    {C_BOLD}History    :{C_RESET} {count} CDX records")
+                    if records:
+                        lines.append(f"    {C_BOLD}Recent Records:{C_RESET}")
+                        for rec in records[:5]:
+                            ts = rec[0] if len(rec) > 0 else ""
+                            status = rec[1] if len(rec) > 1 else ""
+                            lines.append(f"      - {ts} (HTTP {status})")
+
+                    lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
+                    if snapshot and snapshot.get("available"):
+                        lines.append(f"      {C_CYAN}* Web history preserved — useful for content evolution analysis.{C_RESET}")
+
+                elif module == "geoint":
+                    export_type = data.get("export_type")
+                    filepath = data.get("filepath")
+                    message = data.get("message", "")
+
+                    lines.append(f"  {C_MAGENTA}{C_BOLD}GEOINT VISUALIZATION — {export_type.upper()}{C_RESET}")
+                    lines.append(f"  {'='*52}")
+                    lines.append(f"  {C_GREEN}{C_BOLD}[+] {message}{C_RESET}")
+                    lines.append(f"    {C_BOLD}File Path  :{C_RESET} {filepath}")
+
+                    if export_type == "map":
+                        lines.append(f"  {C_CYAN}Open the HTML file in a browser to view the interactive map.{C_RESET}")
+                    elif export_type == "graph":
+                        lines.append(f"  {C_CYAN}Open the HTML file in a browser to view the D3.js graph.{C_RESET}")
+                    elif export_type == "timeline":
+                        event_count = data.get("event_count", 0)
+                        lines.append(f"    {C_BOLD}Events     :{C_RESET} {event_count}")
+                        lines.append(f"  {C_CYAN}Timeline format is POL-ready (Pattern of Life).{C_RESET}")
+                    elif export_type == "geojson":
+                        feature_count = data.get("feature_count", 0)
+                        lines.append(f"    {C_BOLD}Features   :{C_RESET} {feature_count}")
+                        lines.append(f"  {C_CYAN}GeoJSON ready for QGIS/D3/other tools.{C_RESET}")
+
                 elif module == "help":
                     lines.append(str(data))
                 

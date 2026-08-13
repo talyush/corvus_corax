@@ -15,6 +15,8 @@ Combined with evidence weights, this produces a 0-100 confidence score.
 from enum import Enum
 from typing import Dict, List, Tuple, Optional
 
+from core.config import load_rules
+
 
 class SourceReliability(Enum):
     """NATO Source Reliability Classification (A-F)"""
@@ -37,7 +39,7 @@ class InformationReliability(Enum):
 
 
 class EvidenceType(Enum):
-    """Evidence types with base weights"""
+    """Evidence types with base weights — ağırlıklar config/rules.json'dan okunur."""
     CERTIFICATE_MATCH = 40
     SHARED_FAVICON = 25
     SAME_TECH_STACK = 20
@@ -50,6 +52,53 @@ class EvidenceType(Enum):
     COOKIE_PATTERN = 5
     PATH_PATTERN = 5
     METADATA_MATCH = 5
+    # --- v0.9: İnsan/Otganizasyon Varlık Kanıtları ---
+    PHONE_VERIFIED = 30         # Telefon doğrulandı (WhatsApp/Telegram/operatör tespiti)
+    BREACH_CORRELATION = 25     # Aynı email/şifre breach veritabanında ortak
+    SOCIAL_PROFILE_MATCH = 20   # Aynı kullanıcı adı birden çok platformda
+    PERSON_EMAIL_MATCH = 15     # Kişi-email eşleşmesi
+    ORG_REGISTRY_MATCH = 18     # Resmi şirket kaydı doğrulaması
+    ACADEMIC_AFFILIATION = 12   # Akademik kurum bağlantısı
+    LOCATION_CORRELATION = 14   # Konum tabanlı korelasyon
+    FINANCIAL_TRACE = 10        # Finansal iz (kripto cüzdan vb.)
+    PERSONAL_DATA_CORRELATION = 8  # Kişisel veri çapraz doğrulama
+
+    @classmethod
+    def from_rules(cls):
+        """
+        Evidence ağırlıklarını config/rules.json'dan yükleyerek
+        Enum değerlerini dinamik olarak günceller.
+        Farklı kurallar/config profilleri için doğrusal ağırlık eşlemesi.
+        """
+        rules = load_rules()
+        weights = rules.get("evidence_weights", {})
+        mapping = {
+            "certificate_match": "CERTIFICATE_MATCH",
+            "shared_favicon": "SHARED_FAVICON",
+            "same_tech_stack": "SAME_TECH_STACK",
+            "same_asn": "SAME_ASN",
+            "same_provider": "SAME_PROVIDER",
+            "same_email_pattern": "SAME_EMAIL_PATTERN",
+            "shared_subnet": "SHARED_SUBNET",
+            "dns_record_match": "DNS_RECORD_MATCH",
+            "http_header_match": "HTTP_HEADER_MATCH",
+            "cookie_pattern": "COOKIE_PATTERN",
+            "path_pattern": "PATH_PATTERN",
+            "metadata_match": "METADATA_MATCH",
+            "phone_verified": "PHONE_VERIFIED",
+            "breach_correlation": "BREACH_CORRELATION",
+            "social_profile_match": "SOCIAL_PROFILE_MATCH",
+            "person_email_match": "PERSON_EMAIL_MATCH",
+            "org_registry_match": "ORG_REGISTRY_MATCH",
+            "academic_affiliation": "ACADEMIC_AFFILIATION",
+            "location_correlation": "LOCATION_CORRELATION",
+            "financial_trace": "FINANCIAL_TRACE",
+            "personal_data_correlation": "PERSONAL_DATA_CORRELATION",
+        }
+        for rule_key, enum_name in mapping.items():
+            if rule_key in weights and hasattr(cls, enum_name):
+                setattr(cls, enum_name, int(weights[rule_key]))
+        return cls
 
 
 class AdmiraltyScorer:
@@ -80,19 +129,39 @@ class AdmiraltyScorer:
         InformationReliability.UNVERIFIABLE: 0.1,
     }
     
-    # Default source reliability by data source type
+    # Source reliability by data source type — config/rules.json'dan yüklenir
+    # Kaynak eşlemesi: rules["source_reliability"] dict'i.
+    _RULES_SOURCE_RELIABILITY = None
+
+    @classmethod
+    def _get_rules_source_reliability(cls):
+        """Kaynak güvenilirlik eşlemesini config/rules.json'dan yükler (cache'lenmiş)."""
+        if cls._RULES_SOURCE_RELIABILITY is None:
+            rules = load_rules()
+            cls._RULES_SOURCE_RELIABILITY = rules.get("source_reliability", {})
+        return cls._RULES_SOURCE_RELIABILITY
+
+    # Default source reliability by data source type (fallback — rules.json tercih edilir)
     DEFAULT_SOURCE_RELIABILITY = {
         "cert_intel": SourceReliability.A,      # Certificate data is cryptographically verified
-        "asn": SourceReliability.A,             # ASN data from authoritative registries
-        "dns": SourceReliability.A,             # DNS records from authoritative servers
-        "geoip": SourceReliability.B,           # GeoIP databases are generally accurate
-        "tech": SourceReliability.B,            # Tech fingerprinting is probabilistic
-        "http_headers": SourceReliability.B,    # HTTP headers are directly observable
-        "metadata": SourceReliability.C,         # Metadata can be manipulated
-        "email": SourceReliability.C,           # Email patterns are inferential
-        "subdomain": SourceReliability.B,       # Certificate transparency logs are reliable
-        "scan": SourceReliability.A,            # Direct port scanning is authoritative
-        "whois": SourceReliability.C,           # WHOIS data can be outdated/inaccurate
+        "asn": SourceReliability.A,
+        "dns": SourceReliability.A,
+        "scan": SourceReliability.A,
+        "geoip": SourceReliability.B,
+        "tech": SourceReliability.B,
+        "http_headers": SourceReliability.B,
+        "subdomain": SourceReliability.B,
+        "phone_intel": SourceReliability.B,
+        "academic_intel": SourceReliability.B,
+        "org_intel": SourceReliability.B,
+        "geo_intel": SourceReliability.B,
+        "metadata": SourceReliability.C,
+        "email": SourceReliability.C,
+        "whois": SourceReliability.C,
+        "social_intel": SourceReliability.C,
+        "breach_intel": SourceReliability.C,
+        "financial_intel": SourceReliability.D,
+        "person": SourceReliability.D,
     }
     
     def __init__(self):
@@ -116,9 +185,14 @@ class AdmiraltyScorer:
         """
         # Use default source reliability if not specified
         if source_reliability is None:
-            source_reliability = self.DEFAULT_SOURCE_RELIABILITY.get(
-                source, SourceReliability.C
-            )
+            # Önce rules.json'dan, sonra fallback olarak DEFAULT_SOURCE_RELIABILITY'dan
+            rules_src = self._get_rules_source_reliability().get(source)
+            if rules_src:
+                source_reliability = SourceReliability(rules_src)
+            else:
+                source_reliability = self.DEFAULT_SOURCE_RELIABILITY.get(
+                    source, SourceReliability.C
+                )
         
         # Calculate weighted score
         base_weight = evidence_type.value

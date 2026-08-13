@@ -19,371 +19,86 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 [ OutputManager ]                           [ ContextManager ]
 (Terminal Presentation)                     (Centralized Intelligence Graph)
   │                                           │
-  ├─► Render formatted terminal output        ├─► Map IPs / Domains
-  ├─► Summarize discoveries                   ├─► Record Notes w/ Confidence
-  └─► Display Notes & Nexus alerts            └─► Graph Entity Relationships
-                                                    │
-                                             [ NexusEngine ]
-                                             (Correlation & Admiralty Scoring)
-                                                    │
-                                             [ NexusExporter ]
-                                             (HTML / Neo4j JSON / Graph JSON)
-```
-
----
-
-## Current Version
-
-**v0.8.5-stable — Identity Update & Stability Patch**
-
-v0.8.5-stable overhauls Corvus Corax's identity, introducing interactive boot sequences, 3D title graphics, surveillance reticle art, phased investigation goal tracking, real-time dynamic work execution, Cyber Sherlock narrative assessment commentary, and memory deduplication stability fixes.
-
----
-
-## Changelog
-
-### v0.8.5-stable — Identity Update & Stability Patch
-
-**Stability & Bug Fixes:**
-- **`core/context.py`** — Implemented tuple-based relationship and note deduplication. Capped event history buffer to prevent exponential memory bloat and performance slowdowns during long CLI sessions. Added `context.clear()` API.
-- **`main.py`** — Added `context clear` command to easily reset session memory on demand.
-- **`modules/metadata_intel.py`** — Resolved `NameError: name 'status' is not defined` bug by fixing variable scoping inside phase status steps.
-- **`modules/email_intel.py` & `output/output_manager.py`** — Added strict `isinstance(dict)` validation checks to resolve `'str' object has no attribute 'get'` and `NameError: pat_name` errors.
-
-**Visual Identity & Boot Experience:**
-- **`core/banner.py`** — Interactive boot sequence initialization routine (`[READY]`, `[INITIALIZED]`), ANSI 3D "Corvus Corax" title banner, and 67-character surveillance reticle ASCII artwork.
-- **Mottos & Branding** — *See The Unseen* and *>> From Evidence to Intelligence <<*.
-- **Exit Animation** — Typing typewriter animation effect on `exit`/`quit` or `Ctrl+C` session end ("*The crow returns to the shadows...*").
-
-**Analyst Experience & Real-Time Dynamic Execution:**
-- **`core/investigation_flow.py`** — High-contrast `[INVESTIGATION GOAL]` header rendering and multi-phase progression tracker (`>> Phase 1/3 -- TARGET ACQUISITION`).
-- **`core/module_base.py`** — Live work-wrapped `status_step()` execution. Status steps dynamically transition from `[~] RUNNING` to `[OK]` during actual network & socket tasks.
-- **`output/output_manager.py`** — `[Analyst Assessment]` Cyber Sherlock narrative synthesis blocks highlighting critical security findings.
-- **`core/analyst_advisor.py` & `core/analyst_runtime.py`** — Context-aware preflight commentary and intelligent next-step investigative suggestions after module execution.
-- **Full Module Coverage** — Integrated phased investigation flows across all 18 platform modules (`dns`, `scan`, `cert`, `headers`, `metadata`, `email`, `tech`, `subdomain`, `geoip`, `whois`, `asn`, `netscan`, `footprint`, `crawl`, `nexus`, `help`, `version`).
-
----
-
-### v0.8 — Intelligence Expansion
-
-**New Intelligence Modules:**
-
-- **`modules/cert_intel.py`** — Certificate Intelligence Module
-  - Deep TLS certificate analysis with fingerprint extraction
-  - Subject Alternative Names (SAN) parsing and wildcard detection
-  - Certificate transparency integration for shared cert detection
-  - Expiration analysis and issuer intelligence
-  - Nexus correlation support for certificate-based entity relationships
-
-- **`modules/dns_intel.py`** — DNS Intelligence Module
-  - Comprehensive DNS record enumeration (A, AAAA, MX, NS, TXT, CAA)
-  - Security-specific record analysis (SPF, DMARC, DKIM)
-  - Email infrastructure profiling and spoofing vulnerability assessment
-  - Custom resolver configuration with public DNS fallback
-  - Timeout handling for unreliable DNS servers
-
-- **`modules/http_headers.py`** — HTTP Header Intelligence Module
-  - Detailed HTTP header extraction and analysis
-  - Security header evaluation (CSP, HSTS, X-Frame-Options, etc.)
-  - CORS policy analysis and cookie security assessment
-  - Technology fingerprinting from header signatures
-  - WAF/CDN detection via header patterns
-
-- **`modules/email_intel.py`** — Email Pattern Discovery Module
-  - Email provider identification via SPF/MX fingerprints
-  - DMARC reporting address extraction
-  - Email naming convention detection from sample addresses
-  - Role-based mailbox vs personal email distinction
-  - Likely email format generation for target domains
-
-- **`modules/metadata_intel.py`** — Metadata Collection Module
-  - Robots.txt and sitemap.xml parsing
-  - Favicon hash calculation (Shodan-compatible MurmurHash3)
-  - Security.txt discovery and analysis
-  - Generator meta tag extraction
-  - Nexus correlation support for shared infrastructure detection
-
-- **`modules/asn.py`** — ASN Intelligence Module
-  - ASN lookup with organization and ISP identification
-  - CIDR block extraction and related IP enumeration
-  - Country-level geolocation intelligence
-  - Nexus correlation support for ASN-based entity relationships
-
-**NATO Admiralty Scoring System:**
-
-- **`core/admiralty.py`** — NATO Admiralty Intelligence Scoring
-  - `SourceReliability` (A-F): Kaynak güvenilirlik sınıflandırması
-  - `InformationReliability` (1-6): Bilgi doğruluk sınıflandırması
-  - `EvidenceType`: Kanıt tipleri ve ağırlıkları (CERTIFICATE_MATCH=40, SHARED_FAVICON=25, vb.)
-  - `AdmiraltyScorer`: Kanıt zinciri ve confidence hesaplama (0-100 puan)
-  - Default source reliability mapping for data source types
-
-**Nexus Engine Integration:**
-
-- **`core/nexus.py`** — Enhanced Risk Calculation
-  - `calculate_risk()` integrated with Admiralty scoring
-  - Risk profiles now include `admiralty_rating`, `evidence_count`, `evidence_chain`
-  - Evidence-based risk scoring for admin ports, outdated software, ASN intelligence
-  - RULE 12: ASN Intelligence Correlation (shares_asn, same_provider, same_prefix)
-
-**Hybrid Output System:**
-
-- **`modules/nexus.py`** — Verbose Flag Support
-  - `--verbose` / `-v` flag for detailed evidence chains
-  - Summary mode: Risk score + Admiralty rating + evidence count
-  - Verbose mode: Full evidence chain with admiralty codes, weighted scores, source info
-
-- **`output/output_manager.py`** — Enhanced Nexus Dashboard
-  - Conditional formatting based on verbose flag
-  - Admiralty rating display in risk profiles
-  - Evidence chain expansion in verbose mode
-
-**Context Command Integration:**
-
-- **`core/context.py`** — Admiralty Intelligence Display
-  - `context --admiralty`: ASN and tech intelligence summary
-  - `context <entity> --admiralty`: Detailed entity evidence chains
-  - ASN intel, tech intel, derived relations Admiralty correlations
-
-- **`main.py`** — Context Command Enhancement
-  - Admiralty flag support for context command
-  - Entity-specific intelligence queries
-
-**Generic Graph Export Format:**
-
-- **`core/exporter.py`** — AI/ML Pipeline Support
-  - `generate_graph_data()`: Generic graph format (nodes + edges + metadata)
-  - `export_graph_json()`: Graph data export to disk
-  - IP nodes: Admiralty rating, evidence_count, ASN, geo, ports
-  - Domain nodes: Tech stack, frameworks, CMS, WAF/CDN
-  - Edges: Full metadata (evidence, confidence, timestamp, derived flag)
-
-- **`modules/nexus.py`** — Graph Export Command
-  - `nexus export graph [filepath]` command
-  - Default path: `logs/nexus_graph.json`
-  - Format: `corvus_graph_v1` for AI/ML pipeline compatibility
-
-**Pipeline Architecture:**
-
-- Machine → graph.json → AI → neo4j → visualization
-- Three export formats: HTML (interactive), Neo4j JSON (graph database), Graph JSON (AI/ML)
-
-**Help Documentation:**
-
-- **`modules/help.py`** — Comprehensive Command Reference
-  - All new modules documented
-  - Verbose flag usage explained
-  - Admiralty context commands documented
-  - Graph export format explained
-  - Default export paths updated
-
-### v0.7.2 — Subdomain Stability Patch
-
-- **`modules/subdomain_enum.py`**:
-  - Added **HackerTarget** API and **RapidDNS** parsing lookups to run alongside `crt.sh`.
-  - Configured minimum `8.0 seconds` timeout for all passive OSINT resources to prevent premature timeouts on slower servers.
-  - Isolated connection/timeout errors per source so that one flaky source (like `crt.sh`) does not fail the entire module execution.
-  - Consolidated subdomains across all active sources and updated intelligence relations with consolidated evidence names.
-- **`output/output_manager.py`**:
-  - Dynamically formats subdomain results to list the specific active sources (e.g. `Active Sources: hackertarget, rapiddns`).
-  - Supports backwards-compatible data structures for legacy count values.
-- **Branding updates**:
-  - Version updated to `v0.7.2-stability-patch` in `core/banner.py`, `modules/version.py`, and `modules/help.py`.
-
-### v0.7.1 — Stability & Polish
-
-- **`core/logger.py`:** Removed `StreamHandler` (console output). Logger now writes to file only — no more raw log lines appearing in the terminal after commands like `help`.
-- **`output/output_manager.py`:**
-  - `to_log()`: Changed from dumping the full JSON payload to logging a brief summary (`[module] status=X target=Y`).
-  - `to_text()`: `help` and `version` modules now skip the `[+] SUCCESS / Target / Time` header block — clean output only.
-- **`main.py`:**
-  - Added `exit_animation()`: typewriter-style *"The crow returns to the shadows..."* on `exit`, `quit`, or `Ctrl+C`.
-  - Removed noisy `[*] Running module` / `[+] Module finished` prints.
-  - Improved unknown command message to show what was typed.
-
-## Architecture Overview
-
-```
-                     [ Module Executions ]
-                               │
-                 (Generates Standardized Payload)
-                               │
-         ┌─────────────────────┴──────────────────────┐
-         ▼                                            ▼
-[ OutputManager ]                           [ ContextManager ]
-(Terminal Presentation)                     (Centralized Intelligence Graph)
-  │                                           │
-  ├─► Render formatted terminal output        ├─► Map IPs / Domains
+  ├─► Render formatted terminal output        ├─► Map IPs / Domains / Persons
   ├─► Summarize discoveries                   ├─► Record Notes w/ Confidence
   └─► Display Notes & Nexus alerts            ├─► Graph Entity Relationships
                                                     │
                                              [ NexusEngine ]
                                              (Correlation & Admiralty Scoring)
                                                     │
-                                             [ NexusExporter ]
-                                             (HTML / Neo4j JSON / Graph JSON)
+                                             [ Intelligence Vault ]
+                                             (Persistent Memory — The Machine)
+                                                    │
+                                             [ Pattern of Life Engine ]
+                                             (Behavioral Analysis & Anomaly Detection)
+                                                    │
+                                             [ GEOINT / Visualizer ]
+                                             (Interactive Map & Graph)
 ```
 
 ---
 
-## What's New in v0.8 (Intelligence Expansion)
+## Current Version
 
-### Deep Intelligence Modules
+**v0.9.0-alpha — Intelligence Collection Expansion**
 
-**Certificate Intelligence (`modules/cert_intel.py`)**:
-- Deep TLS certificate analysis with SHA-256 fingerprint extraction
-- Subject Alternative Names (SAN) parsing for wildcard and multi-domain certificates
-- Certificate transparency integration for shared certificate detection across entities
-- Expiration timeline analysis and issuer intelligence extraction
-- Nexus correlation support for certificate-based entity relationships
-
-**DNS Intelligence (`modules/dns_intel.py`)**:
-- Comprehensive DNS record enumeration (A, AAAA, MX, NS, TXT, CAA)
-- Security-specific record analysis (SPF, DMARC, DKIM) for email spoofing assessment
-- Email infrastructure profiling and mail server identification
-- Custom resolver configuration with public DNS fallback (Google, Cloudflare)
-- Graceful timeout handling for unreliable DNS servers
-
-**HTTP Header Intelligence (`modules/http_headers.py`)**:
-- Detailed HTTP header extraction and security evaluation
-- Security header analysis (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)
-- CORS policy analysis and cross-origin request assessment
-- Cookie security evaluation (HttpOnly, Secure, SameSite attributes)
-- Technology fingerprinting from header signatures
-- WAF/CDN detection via header patterns (Cloudflare, Akamai, Sucuri, etc.)
-
-**Email Pattern Discovery (`modules/email_intel.py`)**:
-- Email provider identification via SPF/MX fingerprints (Google Workspace, Microsoft 365, etc.)
-- DMARC reporting address extraction for abuse contact discovery
-- Email naming convention detection from sample addresses
-- Role-based mailbox vs personal email distinction (admin@, support@, etc.)
-- Likely email format generation for target domains
-
-**Metadata Collection (`modules/metadata_intel.py`)**:
-- Robots.txt parsing for crawler directives and hidden paths
-- Sitemap.xml extraction for content structure analysis
-- Favicon hash calculation using Shodan-compatible MurmurHash3 algorithm
-- Security.txt discovery and security policy analysis
-- Generator meta tag extraction for CMS identification
-- Nexus correlation support for shared infrastructure detection
-
-**ASN Intelligence (`modules/asn.py`)**:
-- ASN lookup with organization and ISP identification
-- CIDR block extraction and related IP enumeration
-- Country-level geolocation intelligence
-- Network infrastructure profiling
-- Nexus correlation support for ASN-based entity relationships
-
-### NATO Admiralty Scoring System
-
-**Admiralty Intelligence (`core/admiralty.py`)**:
-- `SourceReliability` (A-F): Kaynak güvenilirlik sınıflandırması (A=Completely Reliable, F=Cannot Be Judged)
-- `InformationReliability` (1-6): Bilgi doğruluk sınıflandırması (1=Confirmed, 6=Unverifiable)
-- `EvidenceType`: Kanıt tipleri ve ağırlıkları (CERTIFICATE_MATCH=40, SHARED_FAVICON=25, SAME_TECH_STACK=20, SAME_ASN=15)
-- `AdmiraltyScorer`: Kanıt zinciri ve confidence hesaplama (0-100 puan)
-- Default source reliability mapping for data source types (cert_intel=A, asn=A, tech=B, etc.)
-- Admiralty code generation (e.g., A1, B2, C3) based on confidence percentage
-
-### Nexus Engine Integration
-
-**Enhanced Risk Calculation (`core/nexus.py`)**:
-- `calculate_risk()` integrated with Admiralty scoring
-- Risk profiles now include `admiralty_rating`, `evidence_count`, `evidence_chain`
-- Evidence-based risk scoring for admin ports, outdated software, ASN intelligence
-- RULE 12: ASN Intelligence Correlation (shares_asn, same_provider, same_prefix)
-- Weighted evidence accumulation with source and information reliability factors
-
-### Hybrid Output System
-
-**Verbose Flag Support (`modules/nexus.py`)**:
-- `--verbose` / `-v` flag for detailed evidence chains
-- Summary mode: Risk score + Admiralty rating + evidence count
-- Verbose mode: Full evidence chain with admiralty codes, weighted scores, source info
-
-**Enhanced Nexus Dashboard (`output/output_manager.py`)**:
-- Conditional formatting based on verbose flag
-- Admiralty rating display in risk profiles
-- Evidence chain expansion in verbose mode
-- Color-coded confidence indicators
-
-### Context Command Integration
-
-**Admiralty Intelligence Display (`core/context.py`)**:
-- `context --admiralty`: ASN and tech intelligence summary
-- `context <entity> --admiralty`: Detailed entity evidence chains
-- ASN intel, tech intel, derived relations Admiralty correlations
-
-**Context Command Enhancement (`main.py`)**:
-- Admiralty flag support for context command
-- Entity-specific intelligence queries
-
-### Generic Graph Export Format
-
-**AI/ML Pipeline Support (`core/exporter.py`)**:
-- `generate_graph_data()`: Generic graph format (nodes + edges + metadata)
-- `export_graph_json()`: Graph data export to disk
-- IP nodes: Admiralty rating, evidence_count, ASN, geo, ports
-- Domain nodes: Tech stack, frameworks, CMS, WAF/CDN
-- Edges: Full metadata (evidence, confidence, timestamp, derived flag)
-
-**Graph Export Command (`modules/nexus.py`)**:
-- `nexus export graph [filepath]` command
-- Default path: `logs/nexus_graph.json`
-- Format: `corvus_graph_v1` for AI/ML pipeline compatibility
-
-### Pipeline Architecture
-
-- Machine → graph.json → AI → neo4j → visualization
-- Three export formats: HTML (interactive), Neo4j JSON (graph database), Graph JSON (AI/ML)
+v0.9 transforms Corvus Corax from a network-focused recon tool into a **human-centric intelligence platform**. It introduces entity-agnostic intelligence graphs, temporal event stores, candidate/possible relationship modeling, deep OSINT modules (phone, social, organization, academic, wallet, breach, GitHub, Wayback), GEOINT map visualization, D3.js relationship graphs, persistent intelligence vault, and a Pattern of Life (POL) behavioral analysis engine.
 
 ---
 
-## What's New in v0.7 (Nexus Intelligence)
+## Changelog
 
-### `core/exporter.py` — Intelligence Export Engine *(New)*
+### v0.9.0-alpha — Intelligence Collection Expansion (5.5 Phases)
 
-- **`export_html(filepath)`** — Generates a standalone, single-file interactive HTML intelligence dossier.
-  - **Executive Summary** tab: Threat alerts, confidence scores, and audit event log.
-  - **Risk Profiles** tab: Expandable entity cards with risk score progress bars and evidence chains.
-  - **Graph Relations Explorer** tab: Searchable table of all raw and Nexus-inferred relationships.
-  - Glassmorphism dark UI, Google Fonts, smooth tab transitions — no external dependencies.
+#### Phase 1 — Core Transformation
+- **`core/context.py`** — Entity-agnostic intelligence graph: all entities (ip, domain, person, organization, phone, email, social_profile, wallet, location, certificate...) stored in a unified `entities` registry.
+- **Temporal Event Store** — `events` buffer for Pattern of Life (POL) analysis. Every module logs timestamped events automatically.
+- **New APIs** — `add_entity()`, `add_person()`, `add_organization()`, `add_phone()`, `add_email()`, `add_social_profile()`, `add_wallet()`, `add_location()`, `add_event()`, `query_events()`.
+- **Backward compatibility** — Legacy `ips`, `domains`, `certificates` fields preserved; all existing modules work unchanged.
 
-- **`export_neo4j_json(filepath)`** — Exports the full intelligence graph as a Neo4j-ready JSON schema.
-  - Nodes: `IP`, `Domain`, `Port`, `Location`, `Server`, `Tech`, etc.
-  - Relationships: All raw recon relations + Nexus-inferred derived relations.
-  - Ready for `LOAD CSV` or `APOC` import.
+#### Phase 2 — Entity Expansion: Phone & Social Intelligence
+- **`modules/phone_intel.py`** — Phone analysis: E.164 normalization, operator prefix detection (with MNP warning), number type classification, candidate person linking.
+- **`modules/social_intel.py`** — Username OSINT: 12-platform sweep, correlation probability model (base 0.15 + 0.1/platform, max 0.7).
+- **`config/rules.json`** — Centralized rule system: evidence weights, source reliability, relationship policies, operator prefixes, social platforms.
+- **`core/admiralty.py`** — Evidence weights and source reliability now loaded from `rules.json` (no more hardcoding).
+- **Candidate/possible model** — Phone/email/username links are CANDIDATE, not confirmed ownership.
 
-- **`generate_neo4j_data()`** — Transforms the `ContextManager` graph into a flat `{ nodes, relationships }` dictionary.
+#### Phase 3 — Deepening: Organization, Academic, Wallet, Breach, GitHub, Wayback
+- **`modules/org_intel.py`** — Organization intelligence: domain ownership (candidate), personnel mapping, infrastructure correlation.
+- **`modules/academic_intel.py`** — Academic intelligence: OpenAlex API (free, no key), ORCID, publications, university detection from email domain.
+- **`modules/financial_intel.py`** — Wallet intelligence: BTC/ETH/SOL format validation, chain detection, live BTC balance (blockchain.info, no key).
+- **`modules/breach_intel.py`** — Breach intelligence: Firefox Monitor (no key), HIBP Pwned Passwords (k-anonymity), manual sources. **Ethical design: meta-data only — no raw credentials stored.**
+- **`modules/github_intel.py`** — GitHub intelligence: profile, repos, commit email correlation, secret scanning.
+- **`modules/wayback_intel.py`** — Wayback Machine: snapshot history, CDX records, web history correlation.
+- **Nexus Rule 16-20** — Organization, academic, wallet, GitHub, Wayback correlation rules.
 
-### `modules/nexus.py` — CLI Routing Extended
+#### Phase 4 — Visualization: GEOINT Map, D3.js Graph, Persistence
+- **`core/geoint.py`** — Leaflet.js + OpenStreetMap interactive map: IP/person/org markers, movement routes, heatmap.
+- **`core/visualizer.py`** — D3.js force-directed graph: drag, zoom, hover tooltip, detail panel, search, legend.
+- **`modules/geoint.py`** — CLI: `geoint map`, `geoint graph`, `geoint timeline`, `geoint export` (GeoJSON).
+- **`modules/netscan.py`** — Extended: `--ports`, `--geo`, `--map` flags for deep network discovery.
+- **`core/db.py`** — Persistence: `save_state()`, `load_state()`, `save_geoint()`, `save_timeline()`.
+- **`main.py`** — `context save/load` commands for session persistence.
 
-New subcommands added:
+#### Phase 5 — Pattern of Life (POL) Engine + Intelligence Vault
+- **`core/db.py` — `IntelligenceVault`** — Three-layer architecture:
+  - **Session Context (RAM)** — temporary, lost on session end
+  - **Intelligence Vault (Disk)** — persistent, confirmed evidence (JSONL append-only log + index.json)
+  - **POL Engine (Analysis)** — reads from vault, extracts behavior patterns
+- **Evidence threshold filter** — `confidence >= 0.5` auto-persists; low-confidence candidate/possible links filtered.
+- **`core/pol.py`** — Pattern of Life engine:
+  - **Activity Rhythm** — hourly/weekly activity distribution, peak hours
+  - **Movement Pattern** — location history, routes, VPN warning
+  - **Communication Pattern** — entity connections
+  - **Anomaly Detection** — hybrid (rule-based + statistical z-score)
+  - **Case File** — full investigation dossier
+- **`modules/pol.py`** — CLI: `pol analyze`, `pol compare`, `pol casefile`, `pol timeline`.
+- **`main.py`** — `vault show/events/confirm/stats` commands.
 
-| Command | Description |
-|---|---|
-| `nexus` / `nexus analyze` | Run Nexus Correlation Engine, print terminal dashboard |
-| `nexus export html [path]` | Export interactive HTML dossier (default: `logs/nexus_report.html`) |
-| `nexus export json [path]` | Export Neo4j graph JSON (default: `logs/nexus_neo4j.json`) |
-
-### `output/output_manager.py` — Redesigned Nexus Dashboard
-
-- Aligned column layout with `#` bar charts for risk distribution.
-- Separate terminal formatters for `analyze`, `export html`, and `export json` result types.
-- Improved readability with structured section dividers.
-
-### `modules/help.py` — Fully Updated
-
-- All nexus subcommands (`nexus analyze`, `nexus export html`, `nexus export json`) documented.
-- Notes section added explaining prerequisites and default export paths.
-- Version header updated to v0.7.
-
----
-
-## What's New in v0.6.1 (Optimized Scanning)
-
-- **Multi-threaded Port Scanning:** `ThreadPoolExecutor` for concurrent port probes.
-- **Predefined Top Ports (`TOP_PORTS`):** Default quick scan covers 20+ common security services, finishing in ~1 second.
-- **Stealth Slow Mode:** Sequential scanning with configurable delays remains fully supported.
+#### Phase 5.5 — Intelligence Deepening: Entity Resolution, Pivoting, Confidence
+- **`core/confidence.py`** — Confidence aggregation: `1 - (1-c1)*(1-c2)*...` formula. Weak individual evidence combines into strong evidence.
+- **`modules/resolve.py`** — Entity resolution: identity clustering. `resolve ahmet` finds all entities belonging to the same person (phone, email, GitHub, org).
+- **`modules/pivot.py`** — Cross-entity pivoting: BFS graph traversal. `pivot ahmet --depth=3` discovers the entire company infrastructure from a single phone number.
 
 ---
 
@@ -391,15 +106,17 @@ New subcommands added:
 
 ```
 ================================================================================
-  CORVUS CORAX v0.8 — INTELLIGENCE EXPANSION  |  Modular Recon Framework
+  CORVUS CORAX v0.9 — INTELLIGENCE COLLECTION EXPANSION  |  Modular Recon Framework
 ================================================================================
   Command               | Arguments                    | Description
 --------------------------------------------------------------------------------
   help                  |                              | Show commands
   version               |                              | Show tool version
   context               | [--admiralty]                | Show collected context (use --admiralty for intelligence details)
+  context               | [--events] [--entities]      | Show temporal event stream / entity registry (v0.9)
+  context               | save|load [file]             | Persist / restore intelligence state (v0.9)
   scan                  | <ip> <mode> ...              | Port scan (normal/slow/banner/subnet)
-  netscan               | <ip/network>                 | Scan a network/subnet
+  netscan               | <ip/network> [--ports] [--geo] [--map] | Network discovery with port/geo/map (v0.9)
   footprint             | <domain>                     | Get IP and hostname info
   geoip                 | <ip>                         | Get geolocation info
   whois                 | <domain|ip>                  | Run WHOIS lookup
@@ -412,6 +129,19 @@ New subcommands added:
   cert                  | <host> [port]                | Fetch & analyze TLS certificate intelligence
   headers               | <url_or_host>                | Fetch & analyze HTTP headers, security & cookies
   metadata              | <url_or_host>                | Collect robots.txt, sitemap, favicon hash & security.txt
+  phone                 | <number> [person]            | Phone analysis: format, operator prefix & candidate link (v0.9)
+  social                | <username> [person]          | Username OSINT: multi-platform correlation (v0.9)
+  org                   | <company> [domain] [person]  | Organization intelligence: domain/personnel mapping (v0.9)
+  academic              | <name_or_email>              | Academic intelligence: OpenAlex, ORCID, publications (v0.9)
+  wallet                | <address> [chain] [person]   | Crypto wallet analysis: format, chain, balance (v0.9)
+  breach                | <email> [--sources=X,Y]      | Breach intelligence: Firefox Monitor + k-anonymity (v0.9)
+  github                | <username> [person]          | GitHub intelligence: profile, repos, email correlation (v0.9)
+  wayback               | <url>                        | Wayback Machine: web history & snapshots (v0.9)
+  geoint                | map|graph|timeline|export    | Geographical map / relationship graph visualization (v0.9)
+  resolve               | <name_or_entity>             | Entity resolution: identity clustering (v0.9)
+  pivot                 | <entity> [--depth=N]         | Cross-entity pivoting: BFS graph traversal (v0.9)
+  pol                   | analyze|compare|casefile|timeline | Pattern of Life behavioral analysis (v0.9)
+  vault                 | show|events|confirm|stats    | Intelligence vault: persistent memory (v0.9)
   nexus                 | [analyze] [--verbose]        | Run Nexus Correlation Engine
   nexus analyze         | [--verbose]                  | Correlate & score all collected data
   nexus export html     | [filepath]                   | Export HTML intelligence dossier
@@ -423,131 +153,15 @@ New subcommands added:
     - Use 'nexus analyze --verbose' for detailed Admiralty evidence chains
     - Use 'context --admiralty' for intelligence summary
     - Use 'context <entity> --admiralty' for detailed entity evidence
+    - Use 'context --events' for temporal event stream (Pattern of Life basis)
+    - Use 'context --entities [type]' for entity registry summary
+    - Use 'context save/load' for session persistence
+    - Use 'geoint map/graph' for visualization (open HTML in browser)
+    - Use 'pol analyze <entity>' for behavioral analysis
+    - Use 'vault show' for persistent memory stats
     - Default export path: logs/nexus_report.html | logs/nexus_neo4j.json | logs/nexus_graph.json
+    - phone/social/org/wallet module relations are CANDIDATE — not confirmed ownership (v0.9)
 ================================================================================
-```
-
----
-
-## Standard Output Schema
-
-All modules return normalized JSON-style payloads:
-
-```json
-{
-  "module": "scan",
-  "target": "192.168.1.10",
-  "status": "success",
-  "data": {
-    "ip": "192.168.1.10",
-    "mode": "normal",
-    "open_ports": [
-      {"port": 22, "service": "SSH"},
-      {"port": 80, "service": "HTTP"}
-    ]
-  },
-  "notes": [
-    {
-      "text": "Port 22 (SSH) discovered open on 192.168.1.10",
-      "source": "scan",
-      "severity": "info",
-      "confidence": 1.0,
-      "timestamp": "2026-06-13T00:00:00Z"
-    }
-  ],
-  "relationships": [
-    {
-      "src": {"type": "ip", "value": "192.168.1.10"},
-      "relation": "has_open_port",
-      "dst": {"type": "port", "value": "22/SSH"},
-      "evidence": "port scan",
-      "confidence": 1.0,
-      "timestamp": "2026-06-13T00:00:00Z"
-    }
-  ],
-  "timestamp": "2026-06-13T00:00:00Z"
-}
-```
-
-Error form:
-
-```json
-{
-  "module": "geoip",
-  "target": "invalid-ip",
-  "status": "error",
-  "error": "Lookup failed",
-  "notes": [],
-  "relationships": [],
-  "timestamp": "2026-06-13T00:00:00Z"
-}
-```
-
----
-
-## Context Structure
-
-The `ContextManager` maintains a live intelligence graph updated by every module:
-
-```json
-{
-  "ips": {
-    "8.8.8.8": {
-      "ports": [{"port": 80, "service": "http"}],
-      "geo": {
-        "country": "United States",
-        "city": "Mountain View",
-        "isp": "Google LLC"
-      },
-      "hostname": "dns.google"
-    }
-  },
-  "domains": {
-    "dns.google": {"ips": ["8.8.8.8"]}
-  },
-  "notes": [...],
-  "relations": [
-    {
-      "src": {"type": "ip", "value": "8.8.8.8"},
-      "relation": "located_in",
-      "dst": {"type": "location", "value": "Mountain View, United States"},
-      "evidence": "geoip lookup",
-      "confidence": 1.0
-    }
-  ],
-  "derived_relations": [...],
-  "meta": {
-    "created_at": "...",
-    "updated_at": "...",
-    "event_count": 5,
-    "recent_events": ["ip_added:8.8.8.8", "geo_updated:8.8.8.8"]
-  }
-}
-```
-
----
-
-## Configuration
-
-Runtime config lives in `config/config.json`:
-
-```json
-{
-  "log_level": "INFO",
-  "threads": 20,
-  "timeout": 3.0,
-  "user_agent": "CorvusCorax/0.7",
-  "output_mode": "text",
-  "scan_defaults": {
-    "connect_timeout": 1.0,
-    "banner_timeout": 2.0,
-    "host_probe_ports": [80, 22],
-    "host_probe_timeout": 0.3,
-    "slow_scan_delay": 0.3,
-    "normal_port_range": [1, 1024],
-    "max_threads": 200
-  }
-}
 ```
 
 ---
@@ -570,31 +184,150 @@ corvus > headers example.com
 corvus > metadata example.com
 corvus > crawl example.com
 
-# 2. Inspect the live graph
+# 2. Human-centric intelligence (v0.9)
+corvus > phone +905321234567 ahmet
+corvus > social johndoe
+corvus > org "Acme Corp" acme.com ahmet
+corvus > academic ahmet@itu.edu.tr
+corvus > wallet 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa ahmet
+corvus > breach ahmet@example.com --sources=LinkedIn,Adobe
+corvus > github octocat
+corvus > wayback example.com
+
+# 3. Entity resolution & pivoting (v0.9)
+corvus > resolve ahmet
+corvus > pivot ahmet --depth=3
+
+# 4. Inspect the live graph
 corvus > context
-corvus > context --admiralty              # Admiralty intelligence summary
-corvus > context 192.168.1.10 --admiralty # Entity-specific evidence
+corvus > context --admiralty
+corvus > context --events
+corvus > context --entities
 
-# 3. Run Nexus correlation & risk analysis
-corvus > nexus analyze                   # Summary mode
-corvus > nexus analyze --verbose         # Detailed evidence chains
+# 5. Run Nexus correlation & risk analysis
+corvus > nexus analyze
+corvus > nexus analyze --verbose
 
-# 4. Export results
-corvus > nexus export html               # -> logs/nexus_report.html
-corvus > nexus export json               # -> logs/nexus_neo4j.json
-corvus > nexus export graph              # -> logs/nexus_graph.json (AI/ML ready)
-corvus > nexus export html reports/my_report.html   # custom path
+# 6. Visualize (v0.9)
+corvus > geoint map
+corvus > geoint graph
+corvus > geoint timeline ahmet
+corvus > geoint export
+
+# 7. Pattern of Life analysis (v0.9)
+corvus > pol analyze ahmet
+corvus > pol compare ahmet 8.8.8.8
+corvus > pol casefile ahmet
+
+# 8. Persist intelligence (v0.9)
+corvus > context save
+corvus > vault show
+corvus > vault confirm ahmet
+
+# 9. Export results
+corvus > nexus export html
+corvus > nexus export json
+corvus > nexus export graph
 ```
+
+---
+
+## Three-Layer Intelligence Architecture (v0.9)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. SESSION CONTEXT (RAM — temporary)                      │
+│  ┌─────────────────────────────────────────────┐            │
+│  │  context.data                              │            │
+│  │  • entities (session entities)              │            │
+│  │  • events (buffer, max 10.000)              │            │
+│  │  • relations / notes                        │            │
+│  │  Lost on session end.                       │            │
+│  └──────────────────┬──────────────────────────┘            │
+│                     │ context save/load                     │
+│                     ▼                                       │
+│  2. INTELLIGENCE VAULT (Disk — persistent)                  │
+│  ┌─────────────────────────────────────────────┐            │
+│  │  vault/events.log      (append-only JSONL)   │            │
+│  │  vault/index.json      (entity/action index) │            │
+│  │  vault/state.json      (entity inventory)    │            │
+│  │  vault/evidence/       (case files)          │            │
+│  │  Survives sessions — The Machine's memory.   │            │
+│  └──────────────────┬──────────────────────────┘            │
+│                     ▼                                       │
+│  3. POL ENGINE (Analysis — reads from vault)                │
+│  ┌─────────────────────────────────────────────┐            │
+│  │  core/pol.py                               │            │
+│  │  • Activity rhythm                          │            │
+│  │  • Movement pattern                         │            │
+│  │  • Communication pattern                    │            │
+│  │  • Anomaly detection (hybrid)               │            │
+│  └─────────────────────────────────────────────┘            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Configuration
+
+Runtime config lives in `config/config.json`:
+
+```json
+{
+  "log_level": "INFO",
+  "threads": 20,
+  "timeout": 3.0,
+  "user_agent": "CorvusCorax/0.9",
+  "output_mode": "text",
+  "scan_defaults": {
+    "connect_timeout": 1.0,
+    "banner_timeout": 2.0,
+    "host_probe_ports": [80, 22],
+    "host_probe_timeout": 0.3,
+    "slow_scan_delay": 0.3,
+    "normal_port_range": [1, 1024],
+    "max_threads": 200
+  }
+}
+```
+
+Centralized rules live in `config/rules.json` (v0.9):
+
+```json
+{
+  "evidence_weights": { "phone_verified": 30, "breach_correlation": 25, ... },
+  "source_reliability": { "phone_intel": "B", "social_intel": "C", ... },
+  "relationship_policies": {
+    "phone_to_person": {"type": "candidate", "default_confidence": 0.4},
+    "username_match": {"type": "possible", "base_confidence": 0.15, "boost_per_platform": 0.1, "max": 0.7},
+    ...
+  },
+  "geoint": { "default_map_path": "logs/geo_map.html", ... },
+  "pol": { "anomaly_threshold": 70, "vault_dir": "vault", ... },
+  "node_colors": { "ip": "#06b6d4", "person": "#ef4444", ... }
+}
+```
+
+---
+
+## Ethical Design (v0.9)
+
+- **Candidate/possible model** — Phone/email/username/org/wallet links are CANDIDATE, not confirmed ownership. Confidence scores reflect uncertainty.
+- **Breach meta-data only** — No raw credentials, credit cards, or personal content stored. Only "which breach lists this email appears in."
+- **k-anonymity** — HIBP Pwned Passwords: full password never transmitted, only 5-char SHA-1 prefix.
+- **Public OSINT only** — All data from publicly available sources (geoip, social media, certificate transparency, GitHub, Wayback, OpenAlex).
+- **VPN warning** — Movement analysis always warns about possible VPN/recording errors.
+- **Educational purpose** — For authorized security research and learning only.
 
 ---
 
 ## Roadmap
 
-- **Interactive Analyst Layer:** LLM-guided threat reasoning and natural language context queries.
-- **Dynamic Visualizer Graph:** Interactive network relationship visualizer (D3.js / Cytoscape).
-- **Neo4j Integration:** Direct push to a running Neo4j instance via Bolt protocol.
-- **PDF Export:** Printable intelligence dossier alongside the HTML version.
-- **Admiralty AI Integration:** Machine learning models for automated evidence weighting and confidence prediction.
+- **Real-time monitoring** — Live data streams for continuous POL analysis.
+- **Neo4j integration** — Direct push to a running Neo4j instance via Bolt protocol.
+- **Machine learning** — Automated evidence weighting and confidence prediction.
+- **PDF export** — Printable intelligence dossier alongside HTML.
+- **Multi-user collaboration** — Shared intelligence vaults.
 
 ---
 

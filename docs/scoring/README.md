@@ -1,7 +1,7 @@
 # NATO Admiralty Intelligence Scoring System
 
 **Module**: `core/admiralty.py`  
-**Version**: v0.8  
+**Version**: v0.9  
 **Purpose**: NATO-standard confidence scoring for intelligence assessment
 
 ## Overview
@@ -252,6 +252,69 @@ def _generate_admiralty_code(self, source_reliability, info_reliability, score):
 - **Info Reliability**: PROBABLY_TRUE (Pattern matching)
 - **Use Case**: Email enumeration
 
+#### Phone Verified (Weight: 30 — v0.9)
+
+- **Description**: Phone number format/operator verification
+- **Source Reliability**: B (Phone analysis)
+- **Info Reliability**: PROBABLY_TRUE (Format validation)
+- **Use Case**: Human identity verification
+
+#### Breach Correlation (Weight: 25 — v0.9)
+
+- **Description**: Same email/password appears in breach databases
+- **Source Reliability**: C (Breach databases vary in reliability)
+- **Info Reliability**: POSSIBLY_TRUE (Breach data may be stale)
+- **Use Case**: Identity risk assessment
+
+#### Social Profile Match (Weight: 20 — v0.9)
+
+- **Description**: Same username across multiple platforms
+- **Source Reliability**: C (Social media data)
+- **Info Reliability**: POSSIBLY_TRUE (Different people may share usernames)
+- **Use Case**: Identity correlation
+
+#### Person Email Match (Weight: 15 — v0.9)
+
+- **Description**: Person-email association
+- **Source Reliability**: C (Email patterns are inferential)
+- **Info Reliability**: POSSIBLY_TRUE (Email may not be personal)
+- **Use Case**: Human identity resolution
+
+#### Organization Registry Match (Weight: 18 — v0.9)
+
+- **Description**: Official company registry verification
+- **Source Reliability**: B (Official registries)
+- **Info Reliability**: PROBABLY_TRUE (Registry data is reliable)
+- **Use Case**: Organization verification
+
+#### Academic Affiliation (Weight: 12 — v0.9)
+
+- **Description**: Academic institution affiliation
+- **Source Reliability**: B (Academic records)
+- **Info Reliability**: PROBABLY_TRUE (ORCID/publications)
+- **Use Case**: Professional background analysis
+
+#### Location Correlation (Weight: 14 — v0.9)
+
+- **Description**: Location-based correlation
+- **Source Reliability**: B (Geo data)
+- **Info Reliability**: POSSIBLY_TRUE (VPN may obscure location)
+- **Use Case**: Movement analysis
+
+#### Financial Trace (Weight: 10 — v0.9)
+
+- **Description**: Financial footprint (crypto wallets, etc.)
+- **Source Reliability**: D (Financial data can be speculative)
+- **Info Reliability**: POSSIBLY_TRUE (Wallet ownership unverified)
+- **Use Case**: Financial intelligence
+
+#### Personal Data Correlation (Weight: 8 — v0.9)
+
+- **Description**: Cross-verification of personal data
+- **Source Reliability**: C (Mixed reliability)
+- **Info Reliability**: POSSIBLY_TRUE
+- **Use Case**: Identity resolution support
+
 ## Default Source Reliability Mapping
 
 Each data source has a default source reliability based on its inherent trustworthiness:
@@ -272,6 +335,66 @@ DEFAULT_SOURCE_RELIABILITY = {
     "whois": SourceReliability.C,          # WHOIS data accuracy varies
 }
 ```
+
+## v0.9 — Centralized Rules (`config/rules.json`)
+
+Evidence weights and source reliability are now loaded from `config/rules.json` instead of hardcoding:
+
+```json
+{
+  "evidence_weights": {
+    "certificate_match": 40,
+    "shared_favicon": 25,
+    "same_tech_stack": 20,
+    "same_asn": 15,
+    "phone_verified": 30,
+    "breach_correlation": 25,
+    "social_profile_match": 20,
+    "org_registry_match": 18,
+    "location_correlation": 14,
+    "financial_trace": 10,
+    "personal_data_correlation": 8
+  },
+  "source_reliability": {
+    "phone_intel": "B",
+    "social_intel": "C",
+    "breach_intel": "C",
+    "academic_intel": "B",
+    "org_intel": "B",
+    "financial_intel": "D",
+    "geo_intel": "B"
+  }
+}
+```
+
+**Key benefits**:
+- No more hardcoded values in `core/admiralty.py`
+- Users can customize evidence weights without code changes
+- Future intelligence modules can define their own reliability profiles
+
+## v0.9 — Confidence Aggregation (`core/confidence.py`)
+
+Weak individual evidence combines into strong evidence:
+
+**Formula**: `combined = 1 - (1-c1)*(1-c2)*(1-c3)*...`
+
+```python
+from core.confidence import combine_confidences, aggregate_entity_confidence
+
+# Example: 3 weak candidate links (0.4, 0.3, 0.6)
+combined = combine_confidences([0.4, 0.3, 0.6])
+# Result: 0.832 — strong evidence from weak individual links
+
+# Aggregate all candidate/possible links to a target entity
+result = aggregate_entity_confidence(context, "ahmet")
+# {
+#   "combined_confidence": 0.8992,
+#   "evidence_count": 4,
+#   "evidence_list": [...]
+# }
+```
+
+This enables **entity resolution** — determining that `phone:+90532...`, `email:ahmet@example.com`, and `social_profile:github/ahmet` all belong to the same person.
 
 ## Integration with Nexus Engine
 

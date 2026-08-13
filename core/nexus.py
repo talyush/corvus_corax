@@ -525,6 +525,249 @@ class NexusEngine:
                             confidence=0.85
                         )
 
+        # ============================================================
+        # v0.9 — İNSAN/ORGANİZASYON KORELASYON KURALLARI (Rule 13-15)
+        # Candidate/possible modeli: kesin sahiplik değil, olasılık esaslı.
+        # ============================================================
+
+        # --- RULE 13: Phone → Person Candidate Association ---
+        # Kullanıcı tarafından sağlanan 'phone_candidate_for' ilişkileri zaten
+        # modül tarafından raw relation olarak eklenir. Burada, aynı telefonun
+        # birden çok kişiye aday gösterilmesi durumunda çakışma analizi yapılır.
+        raw_relations_all = self.context_manager.data.get("relations", [])
+        phone_person_links = {}  # phone -> [(person, confidence)]
+        for rel in raw_relations_all:
+            src = rel.get("src", {})
+            dst = rel.get("dst", {})
+            if (src.get("type") == "phone" and dst.get("type") == "person"
+                    and rel.get("relation") == "phone_candidate_for"):
+                phone = src.get("value")
+                person = dst.get("value")
+                conf = rel.get("confidence", 0.4)
+                phone_person_links.setdefault(phone, []).append((person, conf))
+
+        for phone, person_links in phone_person_links.items():
+            if len(person_links) > 1:
+                # Çakışma tespiti — aynı telefon birden çok kişiye aday
+                persons = [p for p, _ in person_links]
+                self.context_manager.add_derived_relation(
+                    src_type="phone",
+                    src_value=phone,
+                    relation="conflicting_phone_claim",
+                    dst_type="person",
+                    dst_value=", ".join(persons),
+                    evidence=f"Phone {phone} is a candidate for multiple persons: {', '.join(persons)} — "
+                             f"ownership unverified, requires additional evidence",
+                    confidence=0.2
+                )
+
+        # --- RULE 14: Username → Person Possible Match Aggregation ---
+        # Username correlation: aynı username birden çok platformda bulunduğunda
+        # olası aynı kişi olduğuna dair korelasyon ilişkisi türet.
+        # Politikalar config/rules.json'dan okunur.
+        from core.config import load_rules as _load_rules
+        _rules = _load_rules()
+        _username_policy = _rules.get("relationship_policies", {}).get("username_match", {})
+
+        # Username varlıklarından platform sayısını topla
+        entities = self.context_manager.data.get("entities", {})
+        username_platforms = {}  # username -> {platform: url}
+        for ent_key, ent in entities.items():
+            if ent.get("type") == "social_profile":
+                props = ent.get("properties", {})
+                platform = props.get("platform")
+                handle = props.get("handle")
+                if platform and handle:
+                    username_platforms.setdefault(handle, {})[platform] = props.get("url", "")
+
+        # Aynı username'in birden çok platformda bulunduğu durumlar
+        for handle, platforms in username_platforms.items():
+            if len(platforms) >= 2:
+                base = _username_policy.get("base_confidence", 0.15)
+                boost = _username_policy.get("confidence_boost_per_platform", 0.1)
+                max_conf = _username_policy.get("max_confidence", 0.7)
+                conf = min(base + boost * (len(platforms) - 1), max_conf)
+
+                platform_str = ", ".join(sorted(platforms.keys()))
+                self.context_manager.add_derived_relation(
+                    src_type="username",
+                    src_value=handle,
+                    relation="likely_same_person",
+                    dst_type="username",
+                    dst_value=handle,
+                    evidence=f"Username '{handle}' present on {len(platforms)} platforms "
+                             f"({platform_str}) — suggests possible same person (correlation, not confirmed)",
+                    confidence=conf
+                )
+
+        # --- RULE 15: Email → Person Candidate Association ---
+        # DMARC rapor email'i, breach kaydı veya staff email'i tek başına
+        # kesin email sahipliği kanıtı değildir. Candidate ilişki olarak kurulur.
+        # Bu ilişkiler zaten modüller tarafından raw relation olarak eklenir;
+        # burada, email'lerin hangi kişi/domain ile ilişkili olduğuna dair
+        # korelasyon güçlendirme yapılır.
+        _email_policy = _rules.get("relationship_policies", {}).get("email_to_person", {})
+        email_links = {}  # email -> [(source_type, confidence)]
+        for rel in raw_relations_all:
+            src = rel.get("src", {})
+            dst = rel.get("dst", {})
+            # security_contact / staff_email_exposure / personal_email_leak ilişkileri
+            if dst.get("type") == "email" and rel.get("relation") in (
+                "security_contact", "staff_email_exposure", "personal_email_leak"
+            ):
+                email = dst.get("value")
+                src_type = rel.get("relation")
+                # Politika eşlemesi
+                conf_map = {
+                    "security_contact": _email_policy.get("dmarc_confidence", 0.3),
+                    "staff_email_exposure": _email_policy.get("staff_email_confidence", 0.5),
+                    "personal_email_leak": _email_policy.get("breach_confidence", 0.2),
+                }
+                email_links.setdefault(email, []).append((src.get("value"), src_type, conf_map.get(rel.get("relation"), 0.3)))
+
+        for email, links in email_links.items():
+            # Email'in birden çok kaynakla ilişkili olması güveni artırır
+            if len(links) >= 2:
+                sources = [f"{st} ({typ})" for _, st, typ in links][:5]
+                # Ortalama güven — çoklu kaynak güveni artırsa da kesin sahiplik vermez
+                avg_conf = sum(c for _, _, c in links) / len(links)
+                self.context_manager.add_derived_relation(
+                    src_type="email",
+                    src_value=email,
+                    relation="multi_source_associated",
+                    dst_type="person",
+                    dst_value=", ".join([s for s, _, _ in links]),
+                    evidence=f"Email {email} associated with multiple sources: {', '.join(sources)} — "
+                             f"candidate association, ownership unverified",
+                    confidence=min(avg_conf + 0.1, 0.7)
+                )
+
+        # ============================================================
+        # v0.9 — FAZ 3 KORELASYON KURALLARI (Rule 16-20)
+        # Organization / Academic / Wallet / GitHub / Wayback
+        # ============================================================
+
+        # --- RULE 16: Organization → Domain Ownership Aggregation ---
+        # 'org_owns_domain' raw ilişkilerini topla ve aynı org'a ait domainlerin
+        # altyapı örtüşmesini türet.
+        org_domains = {}  # org -> [domain, ...]
+        for rel in raw_relations_all:
+            src = rel.get("src", {})
+            dst = rel.get("dst", {})
+            if (src.get("type") == "organization" and dst.get("type") == "domain"
+                    and rel.get("relation") == "org_owns_domain"):
+                org = src.get("value")
+                dom = dst.get("value")
+                org_domains.setdefault(org, []).append(dom)
+
+        for org, domains in org_domains.items():
+            if len(domains) >= 2:
+                # Aynı org'a ait domainler arasında altyapı örtüşmesi olasılığı
+                self.context_manager.add_derived_relation(
+                    src_type="organization",
+                    src_value=org,
+                    relation="owns_multiple_domains",
+                    dst_type="organization",
+                    dst_value=org,
+                    evidence=f"Organization {org} is candidate owner of {len(domains)} domains: {', '.join(domains[:5])}",
+                    confidence=0.6
+                )
+
+        # --- RULE 17: Academic Affiliation Correlation (same_affiliation) ---
+        # Aynı üniversiteye bağlı kişiler arasında korelasyon türet.
+        affiliation_index = {}  # university -> [person, ...]
+        for rel in raw_relations_all:
+            src = rel.get("src", {})
+            dst = rel.get("dst", {})
+            if (src.get("type") == "person" and dst.get("type") == "organization"
+                    and rel.get("relation") == "academic_affiliated_with"):
+                person = src.get("value")
+                university = dst.get("value")
+                affiliation_index.setdefault(university, []).append(person)
+
+        for university, persons in affiliation_index.items():
+            if len(persons) >= 2:
+                for i in range(len(persons)):
+                    for j in range(i + 1, len(persons)):
+                        p1, p2 = persons[i], persons[j]
+                        self.context_manager.add_derived_relation(
+                            src_type="person",
+                            src_value=p1,
+                            relation="same_affiliation",
+                            dst_type="person",
+                            dst_value=p2,
+                            evidence=f"Both {p1} and {p2} are candidate affiliates of {university}",
+                            confidence=0.5
+                        )
+
+        # --- RULE 18: Wallet Multi-Owner Conflict Detection ---
+        # Aynı cüzdan birden çok kişiye aday gösterildiyse çakışma tespit et.
+        wallet_person_links = {}  # wallet -> [person, ...]
+        for rel in raw_relations_all:
+            src = rel.get("src", {})
+            dst = rel.get("dst", {})
+            if (src.get("type") == "person" and dst.get("type") == "wallet"
+                    and rel.get("relation") == "wallet_candidate_for"):
+                person = src.get("value")
+                wallet = dst.get("value")
+                wallet_person_links.setdefault(wallet, []).append(person)
+
+        for wallet, persons in wallet_person_links.items():
+            if len(persons) > 1:
+                self.context_manager.add_derived_relation(
+                    src_type="wallet",
+                    src_value=wallet,
+                    relation="wallet_multi_owner_conflict",
+                    dst_type="person",
+                    dst_value=", ".join(persons),
+                    evidence=f"Wallet {wallet} is candidate for multiple persons: {', '.join(persons)} — "
+                             f"ownership unverified, wallets may be shared",
+                    confidence=0.2
+                )
+
+        # --- RULE 19: GitHub Email Correlation Aggregation ---
+        # GitHub commit'lerinden bulunan email'lerin kişi/domain ile ilişkisini güçlendir.
+        github_email_links = {}  # email -> [github_username, ...]
+        for rel in raw_relations_all:
+            src = rel.get("src", {})
+            dst = rel.get("dst", {})
+            if (src.get("type") == "social_profile" and dst.get("type") == "email"
+                    and rel.get("relation") == "github_email_correlation"):
+                profile = src.get("value")  # github/username
+                email = dst.get("value")
+                github_email_links.setdefault(email, []).append(profile)
+
+        for email, profiles in github_email_links.items():
+            if len(profiles) >= 1:
+                self.context_manager.add_derived_relation(
+                    src_type="email",
+                    src_value=email,
+                    relation="github_associated",
+                    dst_type="social_profile",
+                    dst_value=", ".join(profiles),
+                    evidence=f"Email {email} found in GitHub commit history of: {', '.join(profiles)}",
+                    confidence=0.6
+                )
+
+        # --- RULE 20: Wayback Web History Correlation ---
+        # Aynı domain'in Wayback geçmişi varsa web_history_correlation ilişkisini
+        # derived relations'a yükselt (zaten raw olarak eklenmiş olabilir).
+        for rel in raw_relations_all:
+            src = rel.get("src", {})
+            dst = rel.get("dst", {})
+            if (src.get("type") == "domain" and dst.get("type") == "web_snapshot"
+                    and rel.get("relation") == "web_history_correlation"):
+                # Zaten raw olarak eklenmiş — derived olarak da işaretle
+                self.context_manager.add_derived_relation(
+                    src_type="domain",
+                    src_value=src.get("value"),
+                    relation="web_history_correlation",
+                    dst_type="web_snapshot",
+                    dst_value=dst.get("value"),
+                    evidence=rel.get("evidence", "Web history preserved"),
+                    confidence=rel.get("confidence", 0.4)
+                )
+
     def calculate_risk(self):
         """
         NATO Admiralty Code tabanlı kanıta dayalı risk modeli hesaplar.
@@ -542,6 +785,23 @@ class NexusEngine:
             entities.append(("ip", ip))
         for dom in domains:
             entities.append(("domain", dom))
+
+        # --- v0.9: Entity-agnostic genişletme ---
+        # Merkezi entity havuzundaki person/organization/phone/email vb. varlıkları da
+        # risk değerlendirmesine dahil et.
+        entity_registry = self.context_manager.data.get("entities", {})
+        for key, ent in entity_registry.items():
+            ent_type_reg = ent.get("type")
+            ent_val_reg = ent.get("value")
+            if not ent_type_reg or not ent_val_reg:
+                continue
+            # IP/domain zaten eklendi — tekrar ekleme
+            if ent_type_reg in ("ip", "domain") and (ent_type_reg, ent_val_reg) in entities:
+                continue
+            # Module-tipi geçici entity'leri atla (module:... formatında olanlar)
+            if ent_type_reg == "module":
+                continue
+            entities.append((ent_type_reg, ent_val_reg))
 
         for ent_type, ent_val in entities:
             # Admiralty Scorer başlat

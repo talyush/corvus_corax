@@ -9,13 +9,13 @@ class VersionModule(BaseModule):
             ["VERSION VERIFICATION", "BUILD VERIFICATION"]
         )
         with inv.phase(0):
-            self.status_step("Reading system build metadata v0.8.5-stable")
+            self.status_step("Reading system build metadata v0.9.0-alpha")
         self.add_note("Version information queried", severity="info")
         return self.success(
             target="local",
             data={
                 "name": "Corvus Corax",
-                "version": "v0.8.5-stable",
+                "version": "v0.9.0-alpha",
                 "motto": "Seeing the unseen systems.",
             },
         )

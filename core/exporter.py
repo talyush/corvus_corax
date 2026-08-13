@@ -181,6 +181,37 @@ class NexusExporter:
                 }
             }
             nodes[node_id] = node
+
+        # --- v0.9: Entity-agnostic node expansion ---
+        # Merkezi entity registry'deki person, organization, phone, email,
+        # social_profile, wallet, location gibi tüm varlıkları da node'lar olarak ekle.
+        entity_registry = self.context_manager.data.get("entities", {})
+        for key, ent in entity_registry.items():
+            ent_type = ent.get("type")
+            ent_val = ent.get("value")
+            if not ent_type or not ent_val:
+                continue
+            node_id = f"{ent_type}:{ent_val}"
+            # IP/domain zaten eklendi — atla
+            if node_id in nodes:
+                continue
+            # Module-tipi geçici varlıkları atla
+            if ent_type == "module":
+                continue
+            profile = profiles.get(ent_val, {})
+            props = dict(ent.get("properties", {}))
+            props.update({
+                "risk_score": profile.get("score", 0),
+                "risk_level": profile.get("level", "Low"),
+                "admiralty_rating": profile.get("admiralty_rating", "N/A"),
+                "evidence_count": profile.get("evidence_count", 0),
+            })
+            nodes[node_id] = {
+                "id": node_id,
+                "type": ent_type,
+                "value": ent_val,
+                "properties": props
+            }
         
         # 3. Extract all relationships with full metadata
         all_rels = (self.context_manager.data.get("relations", []) + 
@@ -238,12 +269,13 @@ class NexusExporter:
         
         # 4. Add metadata for AI/ML context
         graph_metadata = {
-            "version": "0.8",
-            "format": "corvus_graph_v1",
+            "version": "0.9",
+            "format": "corvus_graph_v2",
             "generated_at": datetime.now().isoformat(),
             "stats": self.report_data.get("stats", {}),
             "risk_distribution": self.report_data.get("risk_distribution", {}),
-            "threat_findings": self.report_data.get("threat_findings", [])
+            "threat_findings": self.report_data.get("threat_findings", []),
+            "temporal_events": len(self.context_manager.data.get("events", []))
         }
         
         return {
@@ -729,7 +761,7 @@ class NexusExporter:
         <header>
             <div class="logo">
                 <h1>CORVUS CORAX</h1>
-                <span>v0.7</span>
+                <span>v0.9</span>
             </div>
             <div class="meta-info">
                 <p>NEXUS INTELLIGENCE REPORT</p>
