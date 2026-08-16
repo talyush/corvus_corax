@@ -297,14 +297,59 @@ class AutonomousStrategyEngine:
         })
 
         # -------------------------------------------------------------
-        # Phase 4: Correlation, Synthesis & Final Report
+        # Phase 4: Correlation, Synthesis & Honest Assessment
         # -------------------------------------------------------------
         if status_callback:
-            status_callback("Phase 4: Synthesizing entity relationships & finalizing strategy report")
+            status_callback("Phase 4: Synthesizing entity relationships & honest intelligence assessment")
 
         entities = self.context.data.get("entities", {})
+        verified_evidence = {}
+        candidate_permutations = {}
+
+        for k, ent in entities.items():
+            provenance = ent.get("provenance", {})
+            if provenance.get("status") == "candidate" or provenance.get("source") == "identity_capability":
+                candidate_permutations[k] = ent
+            else:
+                verified_evidence[k] = ent
+
+        verified_count = len(verified_evidence)
+        candidate_count = len(candidate_permutations)
+        has_meaningful_findings = (verified_count > 0 or len(report["pivots"]) > 0 or len(discovered_from_search) > 0)
+
         report["discovered_entities"] = entities
+        report["verified_evidence"] = verified_evidence
+        report["candidate_permutations"] = candidate_permutations
+        report["verified_count"] = verified_count
+        report["candidate_count"] = candidate_count
+        report["has_meaningful_findings"] = has_meaningful_findings
         report["total_entities"] = len(entities)
         report["total_relations"] = len(self.context.data.get("relations", []))
+
+        if not has_meaningful_findings:
+            report["honest_assessment"] = {
+                "status": "NO_VERIFIED_FINDINGS",
+                "summary": f"No confirmed digital footprint or verified profiles found for target '{seed_value}'.",
+                "reasons": [
+                    f"Generated {len(handles)} candidate handles & {len(emails)} candidate emails, but probes yielded 0 confirmed matches.",
+                    "Target may operate under a pseudonym or unrelated online alias.",
+                    "Target maintains a low public digital footprint or strict privacy settings.",
+                ],
+                "recommendations": [
+                    f"Try running 'discover' with target's exact phone number or corporate domain if known.",
+                    f"If target's specific username/alias is known, execute 'social <handle>' or 'github <handle>' directly.",
+                    f"Check corporate WHOIS or organizational registries via 'whois' or 'org'.",
+                ]
+            }
+        else:
+            report["honest_assessment"] = {
+                "status": "VERIFIED_INTELLIGENCE_FOUND",
+                "summary": f"Verified intelligence gathered: {verified_count} confirmed evidence entity(ies) identified.",
+                "reasons": [],
+                "recommendations": [
+                    f"Explore verified entities via 'resolve {seed_value}' for identity clustering.",
+                    "Run 'geoint map' or 'geoint graph' to visualize geographic & network relationships."
+                ]
+            }
 
         return report

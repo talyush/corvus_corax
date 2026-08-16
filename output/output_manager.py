@@ -776,6 +776,9 @@ class OutputManager:
                     actions = data.get("strategy_actions", [])
                     pivots = data.get("pivots", [])
                     entities = data.get("discovered_entities", {})
+                    verified_ev = data.get("verified_evidence", {})
+                    candidate_p = data.get("candidate_permutations", {})
+                    honest_assessment = data.get("honest_assessment", {})
                     total = data.get("total_entities", len(entities))
                     relations = data.get("total_relations", 0)
 
@@ -808,11 +811,39 @@ class OutputManager:
                             lines.append(f"    ! {C_RED}{p}{C_RESET}")
                         lines.append("")
 
-                    # Intelligence Graph Summary
-                    lines.append(f"  {C_GREEN}{C_BOLD}[Intelligence Synthesis]{C_RESET}")
-                    lines.append(f"    [+] Graph Entities Discovered : {C_BOLD}{total}{C_RESET}")
-                    lines.append(f"    [+] Total Graph Relationships : {C_BOLD}{relations}{C_RESET}")
-                    lines.append(f"    [+] Intelligence Status       : {C_GREEN}Active & Enriched in Central Context{C_RESET}\n")
+                    # Detailed Entity Breakdown (Transparent Output)
+                    lines.append(f"  {C_GREEN}{C_BOLD}[Discovered Intelligence & Entities]{C_RESET}")
+                    if verified_ev:
+                        lines.append(f"    {C_GREEN}{C_BOLD}Verified Evidence ({len(verified_ev)}):{C_RESET}")
+                        for k, v in list(verified_ev.items())[:10]:
+                            lines.append(f"      - {C_GREEN}[VERIFIED]{C_RESET} {v.get('type', 'entity').upper()}: {C_BOLD}{v.get('value')}{C_RESET}")
+                    else:
+                        lines.append(f"    {C_RED}Verified Evidence: None confirmed (0){C_RESET}")
+
+                    if candidate_p:
+                        lines.append(f"    {C_YELLOW}{C_BOLD}Candidate Probes & Permutations ({len(candidate_p)}):{C_RESET}")
+                        for k, v in list(candidate_p.items())[:6]:
+                            lines.append(f"      - {C_YELLOW}[PROBED]{C_RESET} {v.get('type', 'entity').upper()}: {v.get('value')}")
+                        if len(candidate_p) > 6:
+                            lines.append(f"      {C_DIM}... and {len(candidate_p) - 6} more candidate permutations{C_RESET}")
+                    lines.append("")
+
+                    # Honest Intelligence Assessment
+                    lines.append(f"  {C_YELLOW}{C_BOLD}[Honest Intelligence Assessment]{C_RESET}")
+                    status_st = honest_assessment.get("status", "")
+                    if status_st == "NO_VERIFIED_FINDINGS":
+                        lines.append(f"    {C_RED}{C_BOLD}[!] {honest_assessment.get('summary')}{C_RESET}")
+                        lines.append(f"    {C_YELLOW}Likely Reasons:{C_RESET}")
+                        for r in honest_assessment.get("reasons", []):
+                            lines.append(f"      - {r}")
+                        lines.append(f"    {C_CYAN}Recommended Next Steps:{C_RESET}")
+                        for rec in honest_assessment.get("recommendations", []):
+                            lines.append(f"      -> {rec}")
+                    else:
+                        lines.append(f"    {C_GREEN}{C_BOLD}[+] {honest_assessment.get('summary')}{C_RESET}")
+                        for rec in honest_assessment.get("recommendations", []):
+                            lines.append(f"      -> {rec}")
+                    lines.append("")
 
                 elif module == "help":
                     lines.append(str(data))
