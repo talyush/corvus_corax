@@ -40,13 +40,26 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.9.0-alpha — Intelligence Collection Expansion**
+**v0.9.1-autonomous — Autonomous Intelligence Strategy & Capability Engine**
 
-v0.9 transforms Corvus Corax from a network-focused recon tool into a **human-centric intelligence platform**. It introduces entity-agnostic intelligence graphs, temporal event stores, candidate/possible relationship modeling, deep OSINT modules (phone, social, organization, academic, wallet, breach, GitHub, Wayback), GEOINT map visualization, D3.js relationship graphs, persistent intelligence vault, and a Pattern of Life (POL) behavioral analysis engine.
+v0.9.1 transforms Corvus Corax into an **autonomous, hypothesis-driven intelligence agent**. It introduces goal decomposition, hypothesis generation, failure-aware strategy pivoting, and an internal Capability Layer (Web Search Dorking, Handle Permutations, Gravatar/Avatar Hash Enrichment, and Identity Normalization).
 
 ---
 
 ## Changelog
+
+### v0.9.1-autonomous — Autonomous Intelligence Strategy & Capability Engine
+
+**Autonomous Strategy Engine:**
+- **`core/strategy.py`** — Goal Decomposition (`GoalDecomposer`), Hypothesis Formulation (`HypothesisEngine`), Action Selection (`ActionPlanner`), and Failure Awareness & Dynamic Pivoting (`FailureEvaluator`).
+- **`core/discovery.py` & `modules/discover.py`** — Dynamic investigation orchestration replacing static module chains. Automatically evaluates target seeds, tests hypotheses, handles probe failures, and executes fallback dorking/pivots.
+
+**Corvus Capability Layer (`core/capabilities/`):**
+- **`core/capabilities/identity_capability.py`** — Turkish character normalization (`ç, ğ, ı, ö, ş, ü` -> `c, g, i, o, s, u`), name & username handle permutations (`firstlast`, `f.last`, `first_last`), and candidate email generation.
+- **`core/capabilities/search_capability.py`** — Kamuya açık arama motoru OSINT dorking (DuckDuckGo HTML / public probing) for target names, handles, emails, and corporate documents.
+- **`core/capabilities/enrichment_capability.py`** — Gravatar MD5 avatar hash checking & profile discovery.
+
+---
 
 ### v0.9.0-alpha — Intelligence Collection Expansion (5.5 Phases)
 

@@ -1,15 +1,14 @@
 from core.module_base import BaseModule
+from colorama import Fore, Style
 
 
 class DiscoverModule(BaseModule):
     """
-    v0.9/Faz 6 — Discovery Semantics.
+    v0.9.1-autonomous — Autonomous Strategy & Discovery.
 
-    Kullanıcının verdiği seed'den başlayarak otomatik keşif zinciri başlatır.
-    Kullanıcının bilmediği yeni entity'ler, evidence'ler ve bağlantılar üretir.
-    Novelty Score hesaplar (Corvus'un başarısı = kaç YENİ bağlantı buldu).
-
-    Seed ≠ Evidence: Kullanıcı verisi seed'dir, Corvus'un bulduğu evidence'dır.
+    Kullanıcının verdiği seed'den başlayarak otonom strateji motorunu çalıştırır.
+    Hipotezler üretir, hedefleri ayrıştırır (Goal Decomposition), başarısızlıkları
+    yönetir (Failure Awareness) ve dinamik yön değiştirmelerle (Pivoting) istihbarat toplar.
     """
     name = "discover"
 
@@ -19,43 +18,35 @@ class DiscoverModule(BaseModule):
             return self.error("usage: discover <seed> [--depth=N]")
 
         seed = args[0]
-        depth = 3
-        for arg in args[1:]:
-            if arg.startswith("--depth="):
-                try:
-                    depth = int(arg.split("=", 1)[1])
-                except ValueError:
-                    pass
 
         from core.discovery import DiscoveryEngine
+        from core.loader import load_modules
 
-        # Modül registry'sini al
-        module_registry = None
+        module_registry = {}
         try:
-            from core.loader import load_modules
             module_registry = load_modules()
         except Exception:
-            module_registry = {}
+            pass
+
+        inv = self.begin_investigation(
+            f"Autonomous Investigation Strategy & Capability Probing for '{seed}'",
+            ["HYPOTHESIS FORMULATION", "PUBLIC SEARCH PROBING", "PIVOTING & CORRELATION"]
+        )
+
+        def status_cb(msg):
+            self.status_step(msg)
 
         engine = DiscoveryEngine(self.context, self.config, self.logger, module_registry)
-        report = engine.investigate(seed, max_depth=depth)
+
+        with inv.phase(0):
+            report = engine.investigate(seed_value=seed, status_callback=status_cb)
+
+        total_entities = report.get("total_entities", 0)
+        total_relations = report.get("total_relations", 0)
 
         self.add_note(
-            f"Discovery for {seed}: {report['discovered_count']} new entities "
-            f"(novelty: {report['novelty_score']:.2f})",
+            f"Autonomous Strategy finished for '{seed}': {total_entities} entities, {total_relations} relations in graph",
             severity="info",
         )
 
-        # İnsan okunabilir raporu üret
-        report_text = engine.print_report(report) if hasattr(engine, "print_report") else str(report)
-
-        data = {
-            "seed": seed,
-            "novelty_score": report["novelty_score"],
-            "total_entities": report["total_entities"],
-            "discovered_count": report["discovered_count"],
-            "unexpected_connections": len(report["unexpected_connections"]),
-            "discovered_path": report["discovered_path"],
-            "report_text": report_text,
-        }
-        return self.success(target=seed, data=data)
+        return self.success(target=seed, data=report)

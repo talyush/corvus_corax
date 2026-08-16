@@ -43,6 +43,7 @@ class OutputManager:
         C_RED = "\033[31m"
         C_MAGENTA = "\033[35m"
         C_BOLD = "\033[1m"
+        C_DIM = "\033[2m"
         C_RESET = "\033[0m"
 
         # UI-only modules that manage their own output — no status header
@@ -770,24 +771,48 @@ class OutputManager:
 
                 elif module == "discover":
                     seed = data.get("seed")
-                    novelty = data.get("novelty_score", 0)
-                    total = data.get("total_entities", 0)
-                    discovered = data.get("discovered_count", 0)
-                    unexpected = data.get("unexpected_connections", 0)
-                    report_text = data.get("report_text", "")
+                    seed_type = data.get("seed_type", "person")
+                    hypotheses = data.get("hypotheses", [])
+                    actions = data.get("strategy_actions", [])
+                    pivots = data.get("pivots", [])
+                    entities = data.get("discovered_entities", {})
+                    total = data.get("total_entities", len(entities))
+                    relations = data.get("total_relations", 0)
 
-                    lines.append(f"  {C_MAGENTA}{C_BOLD}DISCOVERY ENGINE — Seed: {seed}{C_RESET}")
-                    lines.append(f"  {C_MAGENTA}{'='*52}{C_RESET}")
+                    lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}")
+                    lines.append(f"  {C_MAGENTA}{C_BOLD}  AUTONOMOUS INVESTIGATION STRATEGY — Target: '{seed}' ({seed_type.upper()}){C_RESET}")
+                    lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}\n")
 
-                    if report_text:
-                        for line in report_text.splitlines():
-                            lines.append(f"  {line}")
-                    else:
-                        lines.append(f"  {C_CYAN}Seed: {seed} [source=user_input, status=seed]{C_RESET}")
-                        lines.append(f"  {C_GREEN}[+] Novelty Score: {novelty:.2f} ({discovered} new / {total} total){C_RESET}")
-                        lines.append(f"  [.] Unexpected Connections: {unexpected}")
+                    # Hypotheses
+                    if hypotheses:
+                        lines.append(f"  {C_YELLOW}{C_BOLD}[Hypothesis Formulation]{C_RESET}")
+                        for hyp in hypotheses:
+                            h_dict = hyp.to_dict() if hasattr(hyp, "to_dict") else hyp
+                            st = h_dict.get("status", "UNTESTED")
+                            col = C_GREEN if st == "CONFIRMED" else (C_RED if st == "REFUTED" else C_YELLOW)
+                            lines.append(f"    - [{col}{h_dict.get('id')}: {st}{C_RESET}] {h_dict.get('statement')}")
+                            lines.append(f"      {C_DIM}Rationale: {h_dict.get('rationale')}{C_RESET}")
+                        lines.append("")
 
-                    lines.append("")
+                    # Strategy Actions
+                    if actions:
+                        lines.append(f"  {C_CYAN}{C_BOLD}[Strategy Execution History & Failure Awareness]{C_RESET}")
+                        for act in actions:
+                            lines.append(f"    * Phase {act.get('phase')} -- {act.get('action').upper()}: {C_GREEN}{act.get('output')}{C_RESET}")
+                        lines.append("")
+
+                    # Dynamic Pivots
+                    if pivots:
+                        lines.append(f"  {C_RED}{C_BOLD}[Failure Fallback & Dynamic Pivots]{C_RESET}")
+                        for p in pivots:
+                            lines.append(f"    ! {C_RED}{p}{C_RESET}")
+                        lines.append("")
+
+                    # Intelligence Graph Summary
+                    lines.append(f"  {C_GREEN}{C_BOLD}[Intelligence Synthesis]{C_RESET}")
+                    lines.append(f"    [+] Graph Entities Discovered : {C_BOLD}{total}{C_RESET}")
+                    lines.append(f"    [+] Total Graph Relationships : {C_BOLD}{relations}{C_RESET}")
+                    lines.append(f"    [+] Intelligence Status       : {C_GREEN}Active & Enriched in Central Context{C_RESET}\n")
 
                 elif module == "help":
                     lines.append(str(data))
