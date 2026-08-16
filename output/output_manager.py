@@ -768,6 +768,27 @@ class OutputManager:
                         lines.append(f"    {C_BOLD}Features   :{C_RESET} {feature_count}")
                         lines.append(f"  {C_CYAN}GeoJSON ready for QGIS/D3/other tools.{C_RESET}")
 
+                elif module == "discover":
+                    seed = data.get("seed")
+                    novelty = data.get("novelty_score", 0)
+                    total = data.get("total_entities", 0)
+                    discovered = data.get("discovered_count", 0)
+                    unexpected = data.get("unexpected_connections", 0)
+                    report_text = data.get("report_text", "")
+
+                    lines.append(f"  {C_MAGENTA}{C_BOLD}DISCOVERY ENGINE — Seed: {seed}{C_RESET}")
+                    lines.append(f"  {C_MAGENTA}{'='*52}{C_RESET}")
+
+                    if report_text:
+                        for line in report_text.splitlines():
+                            lines.append(f"  {line}")
+                    else:
+                        lines.append(f"  {C_CYAN}Seed: {seed} [source=user_input, status=seed]{C_RESET}")
+                        lines.append(f"  {C_GREEN}[+] Novelty Score: {novelty:.2f} ({discovered} new / {total} total){C_RESET}")
+                        lines.append(f"  [.] Unexpected Connections: {unexpected}")
+
+                    lines.append("")
+
                 elif module == "help":
                     lines.append(str(data))
                 

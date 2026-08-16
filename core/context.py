@@ -57,11 +57,16 @@ class ContextManager:
     # ENTITY-AGNOSTIC API (v0.9)
     # ============================================================
 
-    def add_entity(self, entity_type, value, properties=None):
+    def add_entity(self, entity_type, value, properties=None, provenance=None, status=None):
         """
         Genel varlık ekleme/güncelleme — tüm varlık tipleri buradan geçer.
         Varlık zaten varsa properties güncellenir; yoksa oluşturulur.
         Geriye dönük uyumluluk için legacy tür bazlı alanlara da senkronize edilir.
+
+        v0.9/Faz 6 — Provenance:
+          - provenance: {source, discovered_by, method, timestamp}
+          - status: 'seed' (kullanıcı verisi) | 'discovered' (corvus buldu) | 'verified'
+          - source='user' olan veri ASLA evidence değildir.
         """
         if not value:
             return None
@@ -69,11 +74,27 @@ class ContextManager:
         props = dict(properties or {})
         now = self._now_iso()
 
+        # Provenance varsayılanı
+        if provenance is None:
+            provenance = {"source": "user_input", "status": "seed"}
+        else:
+            provenance = dict(provenance)
+            provenance.setdefault("source", "user_input")
+            provenance.setdefault("status", "seed")
+        if status:
+            provenance["status"] = status
+
         if entity_key not in self.data["entities"]:
             self.data["entities"][entity_key] = {
                 "type": entity_type,
                 "value": value,
                 "properties": props,
+                "provenance": {
+                    "source": provenance.get("source", "user_input"),
+                    "status": provenance.get("status", "seed"),
+                    "discovered_by": provenance.get("discovered_by"),
+                    "timestamp": provenance.get("timestamp", now),
+                },
                 "created_at": now,
                 "updated_at": now,
             }
@@ -82,6 +103,14 @@ class ContextManager:
             if props:
                 self.data["entities"][entity_key]["properties"].update(props)
             self.data["entities"][entity_key]["updated_at"] = now
+            # Provenance durumunu koru — seed overwrite edilmez
+            if "provenance" not in self.data["entities"][entity_key]:
+                self.data["entities"][entity_key]["provenance"] = {
+                    "source": provenance.get("source", "user_input"),
+                    "status": provenance.get("status", "seed"),
+                    "discovered_by": provenance.get("discovered_by"),
+                    "timestamp": now,
+                }
 
         self._sync_entity_to_legacy(entity_type, value)
         return entity_key
@@ -867,6 +896,7 @@ class ContextManager:
                 "type": ent.get("type"),
                 "value": ent.get("value"),
                 "properties": ent.get("properties", {}),
+                "provenance": ent.get("provenance", {"source": "user_input", "status": "seed"}),
                 "created_at": ent.get("created_at"),
             }
 

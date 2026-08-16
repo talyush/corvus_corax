@@ -117,14 +117,25 @@ class BaseModule:
             metadata=metadata,
         )
 
-    def add_entity(self, entity_type, value, properties=None):
+    def add_entity(self, entity_type, value, properties=None, provenance=None):
         """
-        v0.9 — Merkezi context'e entity-agnostic varlık ekler.
+        v0.9/Faz 6 — Merkezi context'e entity-agnostic varlık ekler.
         person, organization, phone, email, social_profile, wallet, location vb.
         tüm varlık tipleri bu metodla eklenebilir.
+
+        Faz 6 — Seed ≠ Evidence:
+        - Modüller tarafından eklenen varlıklar otomatik 'discovered' statüsü alır.
+        - 'discovered_by' alanı modülün kendi adıyla (self.name) set edilir.
+        - Kullanıcı tarafından explicit seed verilmediği sürece bu geçerlidir.
         """
         if self.context:
-            return self.context.add_entity(entity_type, value, properties)
+            if provenance is None:
+                provenance = {
+                    "source": "corvus",
+                    "status": "discovered",
+                    "discovered_by": self.name,
+                }
+            return self.context.add_entity(entity_type, value, properties, provenance=provenance)
         return None
 
     def add_person(self, name, properties=None):
