@@ -40,13 +40,26 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.9.1-autonomous — Autonomous Intelligence Strategy & Capability Engine**
+**v0.9.5-evidence-engine — Evidence Processing Pipeline, Lineage & Intelligence Gaps**
 
-v0.9.1 transforms Corvus Corax into an **autonomous, hypothesis-driven intelligence agent**. It introduces goal decomposition, hypothesis generation, failure-aware strategy pivoting, and an internal Capability Layer (Web Search Dorking, Handle Permutations, Gravatar/Avatar Hash Enrichment, and Identity Normalization).
+v0.9.5 introduces the **Evidence Engine Pipeline**: Observation -> Evidence Extraction -> Validation -> Cross-Source Corroboration -> Conflict Detection -> Derived Evidence -> Provenance Lineage -> KEY FINDING Cards & WHAT CORVUS DOES NOT KNOW (Intelligence Gaps Reporting).
 
 ---
 
 ## Changelog
+
+### v0.9.5-evidence-engine — Evidence Engine Pipeline
+
+**Evidence Processing Pipeline (`core/evidence/`):**
+- **`model.py`** — `Observation` (sequential observation IDs `#12`), `Evidence` (atomic GUIDs, SHA-256 raw hashes, NATO codes), `KeyFinding` cards, and `IntelligenceGaps`.
+- **`extractor.py`** — Normalizes raw module outputs into structured observations and atomic evidence objects.
+- **`validator.py`** — Validates format, syntax, IP ranges, domain regex, and TLS cert dates.
+- **`corroboration.py`** — Independent cross-source corroboration confidence boosts and multi-source conflict detection.
+- **`derived.py`** — Higher-level intelligence derivation and `KEY FINDING` card creation.
+- **`lineage.py`** — Parent-to-child provenance lineage tree tracking (`evidence lineage <id>`) and institutional-grade **WHAT CORVUS DOES NOT KNOW** intelligence gaps reporting (`evidence gaps <target>`).
+- **`modules/evidence.py`** — CLI Evidence command suite (`evidence list`, `evidence findings`, `evidence gaps`, `evidence lineage`).
+
+---
 
 ### v0.9.1-autonomous — Autonomous Intelligence Strategy & Capability Engine
 

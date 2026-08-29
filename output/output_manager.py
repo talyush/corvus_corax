@@ -845,6 +845,40 @@ class OutputManager:
                             lines.append(f"      -> {rec}")
                     lines.append("")
 
+                elif module == "evidence":
+                    action = data.get("action", "list")
+                    if action == "gaps":
+                        target = data.get("target", "Target")
+                        gaps = data.get("gaps", [])
+                        lines.append(f"  {C_YELLOW}{C_BOLD}WHAT CORVUS DOES NOT KNOW — Target: '{target}'{C_RESET}")
+                        lines.append(f"  {C_YELLOW}--------------------------------------------------{C_RESET}")
+                        for g in gaps:
+                            lines.append(f"  {C_RED}! {g}{C_RESET}")
+                        lines.append("")
+                    elif action == "findings":
+                        key_findings = data.get("key_findings", [])
+                        lines.append(f"  {C_CYAN}{C_BOLD}KEY FINDINGS & EVIDENCE PIPELINE{C_RESET}")
+                        lines.append(f"  {C_CYAN}--------------------------------------------------{C_RESET}")
+                        for kf in key_findings:
+                            lines.append(f"  {C_BOLD}KEY FINDING:{C_RESET} {kf.get('relationship')}")
+                            lines.append(f"  {C_DIM}--------------------{C_RESET}")
+                            lines.append(f"  Status: {C_GREEN if kf.get('status') == 'VERIFIED' else C_YELLOW}{kf.get('status')}{C_RESET}")
+                            lines.append(f"  Confidence: {kf.get('confidence'):.2f}")
+                            lines.append(f"  Independent corroboration: {kf.get('corroboration_count')}")
+                            lines.append(f"  Supporting evidence:")
+                            for src in kf.get("supporting_sources", []):
+                                lines.append(f"   {C_GREEN}+{C_RESET} {src}")
+                            if kf.get("derived_from_observations"):
+                                obs_str = ", ".join(kf.get("derived_from_observations"))
+                                lines.append(f"  Derived from: {C_CYAN}{obs_str}{C_RESET}")
+                            lines.append("")
+                    else:
+                        lines.append(f"  {C_GREEN}{C_BOLD}EVIDENCE PIPELINE SUMMARY{C_RESET}")
+                        lines.append(f"  Total Evidence Records : {data.get('total_evidence', 0)}")
+                        lines.append(f"  Validated Evidence     : {data.get('validated_count', 0)}")
+                        lines.append(f"  Conflicts Detected     : {data.get('conflict_count', 0)}")
+                        lines.append("")
+
                 elif module == "help":
                     lines.append(str(data))
                 
