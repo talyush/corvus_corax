@@ -40,15 +40,33 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v0.9.5-evidence-engine — Evidence Processing Pipeline, Lineage & Intelligence Gaps**
+**v1.0.0-nexus-intelligence — Graph Service Layer, CQRS Event Bus & Nexus Reasoning**
 
-v0.9.5 introduces the **Evidence Engine Pipeline**: Observation -> Evidence Extraction -> Validation -> Cross-Source Corroboration -> Conflict Detection -> Derived Evidence -> Provenance Lineage -> KEY FINDING Cards & WHAT CORVUS DOES NOT KNOW (Intelligence Gaps Reporting).
+v1.0 introduces **Nexus Intelligence**: Decoupled Graph Service Layer (`Neo4j` with automatic In-Memory fallback), CQRS + Event Sourcing (`EventBus`), Graph Reasoning Engine, Temporal Timelines, Asset Intelligence Modeling, and Intelligence-Level Queries (`nexus query paths`, `nexus query clusters`, `nexus query timeline`).
 
 ---
 
 ## Changelog
 
-### v0.9.5-evidence-engine — Evidence Engine Pipeline
+### v1.0.0-nexus-intelligence — Nexus Reasoning & Graph Architecture
+
+**CQRS & Event Sourcing (`core/events/`):**
+- **`types.py`** & **`bus.py`** — Typed Event System (`EntityDiscovered`, `RelationshipCreated`, `EvidenceCorroborated`, `ConflictDetected`, `AssetBound`) and Observer pattern `EventBus`.
+
+**Graph Service Abstraction Layer (`core/graph/`):**
+- **`interface.py`** — `AbstractGraphService` interface separating Commands and Intelligence-Level Queries.
+- **`providers/neo4j_provider.py`** — Docker Neo4j (`bolt://localhost:7687`) Cypher driver mapping intelligence queries to graph patterns.
+- **`providers/memory_provider.py`** — Dahili In-Memory fallback graph service ensuring 100% zero downtime.
+
+**Nexus Intelligence Engine (`core/nexus/`):**
+- **`reasoning.py`** — **Graph Reasoning Engine**: Generates human-readable analytical reasoning statements ("X relationship observed between A and B, supported by N evidences...").
+- **`timeline.py`** — **Temporal Timeline Engine**: Event sequences and chronological order (`nexus timeline`).
+- **`assets.py`** — **Asset Intelligence**: Treats owned resources (Certificates, DNS records, subnets) as distinct first-class intelligence assets.
+- **`modules/nexus.py`** — CLI Nexus Intelligence commands (`nexus summary`, `nexus query paths`, `nexus query clusters`, `nexus timeline`, `nexus correlation`).
+
+---
+
+### v0.9.5-evidence-engine — Evidence Processing Pipeline, Lineage & Intelligence Gaps
 
 **Evidence Processing Pipeline (`core/evidence/`):**
 - **`model.py`** — `Observation` (sequential observation IDs `#12`), `Evidence` (atomic GUIDs, SHA-256 raw hashes, NATO codes), `KeyFinding` cards, and `IntelligenceGaps`.

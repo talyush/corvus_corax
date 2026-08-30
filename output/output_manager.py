@@ -887,28 +887,71 @@ class OutputManager:
                     lines.append(f"  Motto: {data.get('motto') or ''}")
 
                 elif module == "nexus":
-                    export_type = data.get("export_type")
-                    verbose = data.get("verbose", False)
+                    action = data.get("action", "summary")
+                    target = data.get("target", "Target")
 
-                    # --- Export Sonucu Çıktısı ---
-                    if export_type == "html":
-                        lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE DOSSIER — HTML EXPORT{C_RESET}")
-                        lines.append(f"  {'='*52}")
-                        lines.append(f"  {C_GREEN}{C_BOLD}[+] Report generated successfully.{C_RESET}")
-                        lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")
-                        lines.append(f"    {C_BOLD}Entities       :{C_RESET} {data.get('entities', 0)}")
-                        lines.append(f"    {C_BOLD}Raw Relations  :{C_RESET} {data.get('relations', 0)}")
-                        lines.append(f"    {C_BOLD}Nexus Derived  :{C_RESET} {data.get('derived_relations', 0)}")
-                        lines.append(f"  {C_CYAN}Open the file in a browser to view the interactive dashboard.{C_RESET}")
+                    if action == "summary":
+                        reasoning = data.get("reasoning", {})
+                        summary = data.get("summary", {})
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}  NEXUS INTELLIGENCE REASONING SUMMARY — '{target}'{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}\n")
 
-                    elif export_type == "neo4j_json":
-                        lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE — NEO4J JSON EXPORT{C_RESET}")
-                        lines.append(f"  {'='*52}")
-                        lines.append(f"  {C_GREEN}{C_BOLD}[+] Graph schema exported successfully.{C_RESET}")
-                        lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")
-                        lines.append(f"    {C_BOLD}Graph Nodes    :{C_RESET} {data.get('nodes', 0)}")
-                        lines.append(f"    {C_BOLD}Graph Edges    :{C_RESET} {data.get('relationships', 0)}")
-                        lines.append(f"  {C_CYAN}Ready for LOAD CSV or APOC import into Neo4j.{C_RESET}")
+                        lines.append(f"  {C_CYAN}{C_BOLD}[Synthesized Reasoning & Graph Deduction]{C_RESET}")
+                        lines.append(f"    Assessment : {C_GREEN if reasoning.get('overall_assessment') == 'CONFIRMED' else C_YELLOW}{reasoning.get('overall_assessment')}{C_RESET}")
+                        lines.append(f"    Verified   : {reasoning.get('verified_relationships', 0)} relationship(s)")
+                        lines.append(f"    Assets     : {reasoning.get('total_assets', 0)} asset(s)\n")
+
+                        lines.append(f"  {C_YELLOW}{C_BOLD}[Analytical Statements]{C_RESET}")
+                        for st in reasoning.get("reasoning_statements", []):
+                            lines.append(f"    * {st}")
+                        lines.append("")
+
+                    elif action == "timeline":
+                        timeline = data.get("timeline", [])
+                        lines.append(f"  {C_CYAN}{C_BOLD}TEMPORAL TIMELINE SEQUENCE — Target: '{target}'{C_RESET}")
+                        lines.append(f"  {C_CYAN}--------------------------------------------------{C_RESET}")
+                        if not timeline:
+                            lines.append(f"  {C_DIM}No temporal events recorded for target.{C_RESET}")
+                        else:
+                            for t in timeline:
+                                lines.append(f"  {C_BOLD}#{t.get('sequence_num')}{C_RESET} [{C_DIM}{t.get('timestamp')}{C_RESET}] {t.get('event')} (conf: {t.get('confidence'):.2f})")
+                        lines.append("")
+
+                    elif action == "paths":
+                        paths = data.get("paths", [])
+                        lines.append(f"  {C_CYAN}{C_BOLD}INTELLIGENCE GRAPH PATHS — '{data.get('src')}' -> '{data.get('dst')}'{C_RESET}")
+                        lines.append(f"  {C_CYAN}--------------------------------------------------{C_RESET}")
+                        if not paths:
+                            lines.append(f"  {C_YELLOW}No direct multi-hop graph path found.{C_RESET}")
+                        else:
+                            for idx, p in enumerate(paths, 1):
+                                path_str = " -> ".join(p)
+                                lines.append(f"  Path #{idx}: {C_GREEN}{path_str}{C_RESET}")
+                        lines.append("")
+
+                    elif action == "correlation":
+                        corr = data.get("correlation", {})
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}CROSS-ENTITY CORRELATION — '{corr.get('entity1')}' <-> '{corr.get('entity2')}'{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}--------------------------------------------------{C_RESET}")
+                        lines.append(f"  Shared Infrastructure Nodes: {corr.get('shared_nodes_count', 0)}")
+                        for n in corr.get("shared_nodes", []):
+                            lines.append(f"    - {C_GREEN}[SHARED]{C_RESET} {n}")
+                        lines.append("")
+
+                    # Fallback for export formats
+                    elif "export_type" in data:
+                        export_type = data.get("export_type")
+                        if export_type == "html":
+                            lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE DOSSIER — HTML EXPORT{C_RESET}")
+                            lines.append(f"  {'='*52}")
+                            lines.append(f"  {C_GREEN}{C_BOLD}[+] Report generated successfully.{C_RESET}")
+                            lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")
+                        elif export_type == "neo4j_json":
+                            lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE — NEO4J JSON EXPORT{C_RESET}")
+                            lines.append(f"  {'='*52}")
+                            lines.append(f"  {C_GREEN}{C_BOLD}[+] Graph schema exported successfully.{C_RESET}")
+                            lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")
 
                     elif export_type == "graph_json":
                         lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE — GENERIC GRAPH JSON EXPORT{C_RESET}")
