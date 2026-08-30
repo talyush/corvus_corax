@@ -46,7 +46,21 @@ class GraphReasoningEngine:
             asset_types = set(a.get("type") for a in assets)
             statements.append(f"Target '{entity_value}' holds {len(assets)} verified infrastructure asset(s) across types: {', '.join(asset_types)}.")
 
-        overall_assessment = "CONFIRMED" if verified_count > unverified_count else "CANDIDATE_UNVERIFIABLE"
+        # Empty target handling
+        if not rels and not assets:
+            return {
+                "entity": entity_value,
+                "overall_assessment": "NO_RELATIONSHIPS_FOUND",
+                "verified_relationships": 0,
+                "unverified_relationships": 0,
+                "total_assets": 0,
+                "reasoning_statements": [
+                    f"No direct relationships, connections, or assets recorded for target '{entity_value}' in intelligence graph.",
+                    "Ensure recon modules ('discover', 'dns', 'whois', 'social') are executed to establish initial baseline."
+                ],
+            }
+
+        overall_assessment = "CONFIRMED" if verified_count >= unverified_count and verified_count > 0 else "CANDIDATE_UNVERIFIABLE"
 
         return {
             "entity": entity_value,
