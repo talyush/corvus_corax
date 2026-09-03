@@ -84,3 +84,61 @@ class AssetBoundEvent(TypedEvent):
             "asset_value": asset_value,
         }
         super().__init__("AssetBound", payload, metadata)
+
+
+# --- v1.1 INFERENCE ENGINE EVENTS ---
+
+class HypothesisGeneratedEvent(TypedEvent):
+    def __init__(self, hypothesis_id, claim, hypothesis_type, prior, metadata=None):
+        payload = {
+            "hypothesis_id": hypothesis_id,
+            "claim": claim,
+            "type": hypothesis_type,
+            "prior": prior,
+        }
+        super().__init__("HypothesisGenerated", payload, metadata)
+
+
+class HypothesisConfirmedEvent(TypedEvent):
+    def __init__(self, hypothesis_id, claim, posterior, metadata=None):
+        payload = {
+            "hypothesis_id": hypothesis_id,
+            "claim": claim,
+            "posterior": posterior,
+        }
+        super().__init__("HypothesisConfirmed", payload, metadata)
+
+
+class HypothesisRefutedEvent(TypedEvent):
+    def __init__(self, hypothesis_id, claim, posterior, metadata=None):
+        payload = {
+            "hypothesis_id": hypothesis_id,
+            "claim": claim,
+            "posterior": posterior,
+        }
+        super().__init__("HypothesisRefuted", payload, metadata)
+
+
+class BridgeHypothesisGeneratedEvent(TypedEvent):
+    def __init__(self, src_entity, dst_entity, bridge_type, prior, intermediate_node=None, metadata=None):
+        payload = {
+            "src": src_entity,
+            "dst": dst_entity,
+            "bridge_type": bridge_type,
+            "prior": prior,
+            "intermediate": intermediate_node,
+        }
+        super().__init__("BridgeHypothesisGenerated", payload, metadata)
+
+
+class BayesianUpdateAppliedEvent(TypedEvent):
+    def __init__(self, hypothesis_id, evidence_id, prior_before, posterior_after, delta, metadata=None):
+        payload = {
+            "hypothesis_id": hypothesis_id,
+            "evidence_id": evidence_id,
+            "prior_before": prior_before,
+            "posterior_after": posterior_after,
+            "delta": delta,
+        }
+        super().__init__("BayesianUpdateApplied", payload, metadata)
+

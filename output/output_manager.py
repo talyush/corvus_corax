@@ -46,7 +46,7 @@ class OutputManager:
         C_DIM = "\033[2m"
         C_RESET = "\033[0m"
 
-        # UI-only modules that manage their own output — no status header
+        # UI-only modules that manage their own output - no status header
         SILENT_HEADER_MODULES = {"help", "version"}
 
         for r in self.results:
@@ -55,7 +55,7 @@ class OutputManager:
             target = r.get("target", "N/A")
             timestamp = r.get("timestamp", "")
 
-            # Module header — suppressed for clean UI modules
+            # Module header - suppressed for clean UI modules
             if module not in SILENT_HEADER_MODULES:
                 if status == "SUCCESS":
                     lines.append(f"{C_BOLD}{C_GREEN}[+] {module.upper()} SUCCESS{C_RESET}")
@@ -154,9 +154,9 @@ class OutputManager:
                     elif days_rem < 30:
                         expiry_label = f"{C_YELLOW}{C_BOLD}EXPIRING SOON ({days_rem}d){C_RESET}"
                     else:
-                        expiry_label = f"{C_GREEN}Valid — {days_rem} days remaining{C_RESET}"
+                        expiry_label = f"{C_GREEN}Valid - {days_rem} days remaining{C_RESET}"
 
-                    wildcard_label = f"{C_YELLOW}YES — {', '.join(wildcards)}{C_RESET}" if is_wildcard else "No"
+                    wildcard_label = f"{C_YELLOW}YES - {', '.join(wildcards)}{C_RESET}" if is_wildcard else "No"
 
                     lines.append(f"  {C_CYAN}{C_BOLD}Certificate Intelligence for {data.get('host')}:{data.get('port', 443)}{C_RESET}")
                     lines.append(f"    {C_BOLD}Subject CN    :{C_RESET} {data.get('subject_cn') or 'N/A'}")
@@ -516,13 +516,13 @@ class OutputManager:
                     operator_info = data.get("operator_prefix") or {}
                     person_candidate = data.get("person_candidate")
 
-                    lines.append(f"  {C_CYAN}{C_BOLD}Phone Intelligence — {phone}:{C_RESET}")
+                    lines.append(f"  {C_CYAN}{C_BOLD}Phone Intelligence - {phone}:{C_RESET}")
                     lines.append(f"    {C_BOLD}E.164         :{C_RESET} {phone}")
                     lines.append(f"    {C_BOLD}Country Code  :{C_RESET} {country_code or 'Unknown'}")
                     lines.append(f"    {C_BOLD}Local Number  :{C_RESET} {local_number}")
                     lines.append(f"    {C_BOLD}Number Type   :{C_RESET} {number_type}")
 
-                    # Operatör prefix (candidate — kesin değil)
+                    # Operatör prefix (candidate - kesin değil)
                     possible_op = operator_info.get("possible_operator")
                     prefix = operator_info.get("prefix_detected")
                     basis = operator_info.get("basis")
@@ -531,13 +531,13 @@ class OutputManager:
                         lines.append(f"    {C_BOLD}Operator      :{C_RESET} {possible_op}")
                         lines.append(f"      {C_BOLD}Prefix Detected:{C_RESET} {prefix}")
                         lines.append(f"      {C_BOLD}Basis          :{C_RESET} {basis}")
-                        lines.append(f"      {C_BOLD}Confidence     :{C_RESET} {op_conf} {C_YELLOW}(candidate — MNP may apply){C_RESET}")
+                        lines.append(f"      {C_BOLD}Confidence     :{C_RESET} {op_conf} {C_YELLOW}(candidate - MNP may apply){C_RESET}")
                     else:
                         lines.append(f"    {C_BOLD}Operator      :{C_RESET} {C_YELLOW}Unknown prefix (no match){C_RESET}")
 
                     # Kişi adayı (candidate_link)
                     if person_candidate:
-                        lines.append(f"    {C_BOLD}Person Candidate:{C_RESET} {person_candidate} {C_YELLOW}(candidate — unverified ownership){C_RESET}")
+                        lines.append(f"    {C_BOLD}Person Candidate:{C_RESET} {person_candidate} {C_YELLOW}(candidate - unverified ownership){C_RESET}")
 
                     # Temporal event note
                     lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
@@ -547,7 +547,7 @@ class OutputManager:
                         lines.append(f"      {C_YELLOW}* Operator '{possible_op}' is a PREFIX-BASED estimate (basis: {basis}).{C_RESET}")
                         lines.append(f"        Number portability (MNP) may mean actual operator differs.{C_RESET}")
                     if person_candidate:
-                        lines.append(f"      {C_YELLOW}* Phone linked to {person_candidate} as CANDIDATE — requires verification.{C_RESET}")
+                        lines.append(f"      {C_YELLOW}* Phone linked to {person_candidate} as CANDIDATE - requires verification.{C_RESET}")
 
                 elif module == "social":
                     username = data.get("username")
@@ -557,12 +557,12 @@ class OutputManager:
                     person_candidate = data.get("person_candidate")
                     verified_profiles = data.get("verified_profiles", [])
 
-                    lines.append(f"  {C_CYAN}{C_BOLD}Social Media Intelligence — {username}:{C_RESET}")
+                    lines.append(f"  {C_CYAN}{C_BOLD}Social Media Intelligence - {username}:{C_RESET}")
                     lines.append(f"    {C_BOLD}Platforms Checked :{C_RESET} {platforms_checked}")
 
                     if platforms_found:
                         lines.append(f"    {C_BOLD}Platforms Found   :{C_RESET} {', '.join(platforms_found)}")
-                        lines.append(f"    {C_BOLD}Correlation Conf  :{C_RESET} {confidence:.2f} {C_YELLOW}(possible match — not confirmed){C_RESET}")
+                        lines.append(f"    {C_BOLD}Correlation Conf  :{C_RESET} {confidence:.2f} {C_YELLOW}(possible match - not confirmed){C_RESET}")
                     else:
                         lines.append(f"    {C_BOLD}Platforms Found   :{C_RESET} {C_YELLOW}None (offline or blocked){C_RESET}")
 
@@ -576,17 +576,17 @@ class OutputManager:
 
                     # Kişi adayı
                     if person_candidate:
-                        lines.append(f"    {C_BOLD}Person Candidate :{C_RESET} {person_candidate} {C_YELLOW}(possible — username may belong to different person){C_RESET}")
+                        lines.append(f"    {C_BOLD}Person Candidate :{C_RESET} {person_candidate} {C_YELLOW}(possible - username may belong to different person){C_RESET}")
 
                     # Analyst Assessment
                     lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
                     if len(platforms_found) >= 2:
                         lines.append(f"      {C_YELLOW}* Same username on {len(platforms_found)} platforms suggests POSSIBLE same person.{C_RESET}")
-                        lines.append(f"        Not confirmed — different people may use the same handle.{C_RESET}")
+                        lines.append(f"        Not confirmed - different people may use the same handle.{C_RESET}")
                     elif len(platforms_found) == 1:
-                        lines.append(f"      {C_CYAN}* Username found on 1 platform only — low correlation confidence.{C_RESET}")
+                        lines.append(f"      {C_CYAN}* Username found on 1 platform only - low correlation confidence.{C_RESET}")
                     else:
-                        lines.append(f"      {C_YELLOW}* No verified profiles found — username may not exist or platform blocks bots.{C_RESET}")
+                        lines.append(f"      {C_YELLOW}* No verified profiles found - username may not exist or platform blocks bots.{C_RESET}")
 
                 elif module == "org":
                     org_name = data.get("organization")
@@ -595,7 +595,7 @@ class OutputManager:
                     parent = data.get("parent")
                     infra = data.get("infra_correlations", [])
 
-                    lines.append(f"  {C_CYAN}{C_BOLD}Organization Intelligence — {org_name}:{C_RESET}")
+                    lines.append(f"  {C_CYAN}{C_BOLD}Organization Intelligence - {org_name}:{C_RESET}")
                     if domain:
                         lines.append(f"    {C_BOLD}Domain (candidate):{C_RESET} {domain} {C_YELLOW}(conf: 0.6){C_RESET}")
                     if person:
@@ -611,9 +611,9 @@ class OutputManager:
 
                     lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
                     if domain:
-                        lines.append(f"      {C_YELLOW}* Domain ownership is CANDIDATE — verify via WHOIS/ASN records.{C_RESET}")
+                        lines.append(f"      {C_YELLOW}* Domain ownership is CANDIDATE - verify via WHOIS/ASN records.{C_RESET}")
                     if person:
-                        lines.append(f"      {C_YELLOW}* Employment is CANDIDATE — requires verification.{C_RESET}")
+                        lines.append(f"      {C_YELLOW}* Employment is CANDIDATE - requires verification.{C_RESET}")
 
                 elif module == "wallet":
                     address = data.get("address")
@@ -622,16 +622,16 @@ class OutputManager:
                     balance = data.get("balance_btc")
                     person_candidate = data.get("person_candidate")
 
-                    lines.append(f"  {C_CYAN}{C_BOLD}Wallet Intelligence — {address[:16]}...:{C_RESET}")
+                    lines.append(f"  {C_CYAN}{C_BOLD}Wallet Intelligence - {address[:16]}...:{C_RESET}")
                     lines.append(f"    {C_BOLD}Chain     :{C_RESET} {chain.upper()}")
                     lines.append(f"    {C_BOLD}Explorer  :{C_RESET} {explorer}")
                     if balance is not None:
                         lines.append(f"    {C_BOLD}Balance   :{C_RESET} {C_GREEN}{balance} BTC{C_RESET}")
                     if person_candidate:
-                        lines.append(f"    {C_BOLD}Person    :{C_RESET} {person_candidate} {C_YELLOW}(candidate — wallets may be shared){C_RESET}")
+                        lines.append(f"    {C_BOLD}Person    :{C_RESET} {person_candidate} {C_YELLOW}(candidate - wallets may be shared){C_RESET}")
 
                     lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
-                    lines.append(f"      {C_YELLOW}* Wallet ownership is CANDIDATE — wallets can be shared or multi-sig.{C_RESET}")
+                    lines.append(f"      {C_YELLOW}* Wallet ownership is CANDIDATE - wallets can be shared or multi-sig.{C_RESET}")
 
                 elif module == "academic":
                     person = data.get("person")
@@ -639,7 +639,7 @@ class OutputManager:
                     publications = data.get("publications", [])
                     university = data.get("university")
 
-                    lines.append(f"  {C_CYAN}{C_BOLD}Academic Intelligence — {person}:{C_RESET}")
+                    lines.append(f"  {C_CYAN}{C_BOLD}Academic Intelligence - {person}:{C_RESET}")
                     if author_info:
                         lines.append(f"    {C_BOLD}Name      :{C_RESET} {author_info.get('name')}")
                         lines.append(f"    {C_BOLD}ORCID     :{C_RESET} {author_info.get('orcid') or 'N/A'}")
@@ -649,7 +649,7 @@ class OutputManager:
                         if affs:
                             lines.append(f"    {C_BOLD}Affiliation:{C_RESET} {', '.join(affs[:3])}")
                     if university:
-                        lines.append(f"    {C_BOLD}University :{C_RESET} {university} {C_YELLOW}(candidate — from email domain){C_RESET}")
+                        lines.append(f"    {C_BOLD}University :{C_RESET} {university} {C_YELLOW}(candidate - from email domain){C_RESET}")
                     if publications:
                         lines.append(f"    {C_BOLD}Publications ({len(publications)}):{C_RESET}")
                         for pub in publications[:5]:
@@ -661,7 +661,7 @@ class OutputManager:
 
                     lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
                     if university:
-                        lines.append(f"      {C_YELLOW}* Academic affiliation is CANDIDATE — verify via ORCID/OpenAlex.{C_RESET}")
+                        lines.append(f"      {C_YELLOW}* Academic affiliation is CANDIDATE - verify via ORCID/OpenAlex.{C_RESET}")
 
                 elif module == "breach":
                     email = data.get("email")
@@ -675,7 +675,7 @@ class OutputManager:
                     elif risk == "High": risk_color = C_RED
                     elif risk == "Medium": risk_color = C_YELLOW
 
-                    lines.append(f"  {C_CYAN}{C_BOLD}Data Breach Intelligence — {email}:{C_RESET}")
+                    lines.append(f"  {C_CYAN}{C_BOLD}Data Breach Intelligence - {email}:{C_RESET}")
                     lines.append(f"    {C_BOLD}Breach Sources :{C_RESET} {count}")
                     lines.append(f"    {C_BOLD}Risk Level     :{C_RESET} {risk_color}{risk}{C_RESET}")
                     if sources:
@@ -684,9 +684,9 @@ class OutputManager:
                         lines.append(f"    {C_BOLD}Password Pwned :{C_RESET} {C_RED}Yes ({pwned} breaches){C_RESET} {C_YELLOW}(k-anonymity check){C_RESET}")
 
                     lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
-                    lines.append(f"      {C_YELLOW}* Meta-data only — no raw credentials stored or displayed.{C_RESET}")
+                    lines.append(f"      {C_YELLOW}* Meta-data only - no raw credentials stored or displayed.{C_RESET}")
                     if risk != "Low":
-                        lines.append(f"      {C_RED}* Email exposed in {count} breaches — identity theft risk elevated.{C_RESET}")
+                        lines.append(f"      {C_RED}* Email exposed in {count} breaches - identity theft risk elevated.{C_RESET}")
 
                 elif module == "github":
                     username = data.get("username")
@@ -695,7 +695,7 @@ class OutputManager:
                     emails = data.get("commit_emails", [])
                     secrets = data.get("secret_findings", [])
 
-                    lines.append(f"  {C_CYAN}{C_BOLD}GitHub Intelligence — {username}:{C_RESET}")
+                    lines.append(f"  {C_CYAN}{C_BOLD}GitHub Intelligence - {username}:{C_RESET}")
                     lines.append(f"    {C_BOLD}Name      :{C_RESET} {user_info.get('name') or 'N/A'}")
                     lines.append(f"    {C_BOLD}Company   :{C_RESET} {user_info.get('company') or 'N/A'}")
                     lines.append(f"    {C_BOLD}Location  :{C_RESET} {user_info.get('location') or 'N/A'}")
@@ -716,7 +716,7 @@ class OutputManager:
 
                     lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
                     if secrets:
-                        lines.append(f"      {C_RED}* Potential secret exposure in public repos — investigate.{C_RESET}")
+                        lines.append(f"      {C_RED}* Potential secret exposure in public repos - investigate.{C_RESET}")
                     if emails:
                         lines.append(f"      {C_YELLOW}* Emails from commits are CANDIDATE associations.{C_RESET}")
 
@@ -726,7 +726,7 @@ class OutputManager:
                     records = data.get("historical_records", [])
                     count = data.get("record_count", 0)
 
-                    lines.append(f"  {C_CYAN}{C_BOLD}Wayback Machine Intelligence — {url}:{C_RESET}")
+                    lines.append(f"  {C_CYAN}{C_BOLD}Wayback Machine Intelligence - {url}:{C_RESET}")
                     if snapshot and snapshot.get("available"):
                         lines.append(f"    {C_BOLD}Snapshot   :{C_RESET} {C_GREEN}Available{C_RESET}")
                         lines.append(f"    {C_BOLD}Timestamp  :{C_RESET} {snapshot.get('timestamp')}")
@@ -744,14 +744,14 @@ class OutputManager:
 
                     lines.append(f"\n    {C_YELLOW}{C_BOLD}[Analyst Assessment]{C_RESET}")
                     if snapshot and snapshot.get("available"):
-                        lines.append(f"      {C_CYAN}* Web history preserved — useful for content evolution analysis.{C_RESET}")
+                        lines.append(f"      {C_CYAN}* Web history preserved - useful for content evolution analysis.{C_RESET}")
 
                 elif module == "geoint":
                     export_type = data.get("export_type")
                     filepath = data.get("filepath")
                     message = data.get("message", "")
 
-                    lines.append(f"  {C_MAGENTA}{C_BOLD}GEOINT VISUALIZATION — {export_type.upper()}{C_RESET}")
+                    lines.append(f"  {C_MAGENTA}{C_BOLD}GEOINT VISUALIZATION - {export_type.upper()}{C_RESET}")
                     lines.append(f"  {'='*52}")
                     lines.append(f"  {C_GREEN}{C_BOLD}[+] {message}{C_RESET}")
                     lines.append(f"    {C_BOLD}File Path  :{C_RESET} {filepath}")
@@ -783,7 +783,7 @@ class OutputManager:
                     relations = data.get("total_relations", 0)
 
                     lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}")
-                    lines.append(f"  {C_MAGENTA}{C_BOLD}  AUTONOMOUS INVESTIGATION STRATEGY — Target: '{seed}' ({seed_type.upper()}){C_RESET}")
+                    lines.append(f"  {C_MAGENTA}{C_BOLD}  AUTONOMOUS INVESTIGATION STRATEGY - Target: '{seed}' ({seed_type.upper()}){C_RESET}")
                     lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}\n")
 
                     # Hypotheses
@@ -850,7 +850,7 @@ class OutputManager:
                     if action == "gaps":
                         target = data.get("target", "Target")
                         gaps = data.get("gaps", [])
-                        lines.append(f"  {C_YELLOW}{C_BOLD}WHAT CORVUS DOES NOT KNOW — Target: '{target}'{C_RESET}")
+                        lines.append(f"  {C_YELLOW}{C_BOLD}WHAT CORVUS DOES NOT KNOW - Target: '{target}'{C_RESET}")
                         lines.append(f"  {C_YELLOW}--------------------------------------------------{C_RESET}")
                         for g in gaps:
                             lines.append(f"  {C_RED}! {g}{C_RESET}")
@@ -890,11 +890,74 @@ class OutputManager:
                     action = data.get("action", "summary")
                     target = data.get("target", "Target")
 
-                    if action == "summary":
+                    if action in ("infer", "hypotheses", "competing", "uncertainty", "counterfactual", "why"):
+                        inf = data.get("inference", {})
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}  NEXUS INFERENCE ENGINE (v1.1) - '{target}'{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}\n")
+
+                        lines.append(f"  {C_CYAN}{C_BOLD}[Hypotheses Overview]{C_RESET}")
+                        lines.append(f"    Total Generated : {inf.get('total_hypotheses', 0)}")
+                        lines.append(f"    Confirmed (>=0.85): {C_GREEN}{inf.get('confirmed_count', 0)}{C_RESET}")
+                        lines.append(f"    Active (Unresolved): {C_YELLOW}{inf.get('active_count', 0)}{C_RESET}")
+                        lines.append(f"    Refuted (<=0.15): {C_RED}{inf.get('refuted_count', 0)}{C_RESET}\n")
+
+                        # Confirmed Hypotheses
+                        confirmed = inf.get("confirmed_hypotheses", [])
+                        if confirmed:
+                            lines.append(f"  {C_GREEN}{C_BOLD}[CONFIRMED HYPOTHESES]{C_RESET}")
+                            for h in confirmed:
+                                lines.append(f"  {C_GREEN}+ [{h.get('hypothesis_id')}]{C_RESET} {C_BOLD}{h.get('claim')}{C_RESET}")
+                                lines.append(f"    Prior: {h.get('prior', 0.0):.2f} -> Posterior: {C_GREEN}{h.get('posterior', 0.0):.2f}{C_RESET} | Status: {C_GREEN}CONFIRMED{C_RESET}")
+                                lines.append(f"    Explanation: {h.get('explanation')}")
+                            lines.append("")
+
+                        # Active/Competing Hypotheses
+                        active = inf.get("active_hypotheses", [])
+                        if active:
+                            lines.append(f"  {C_YELLOW}{C_BOLD}[ACTIVE & COMPETING HYPOTHESES]{C_RESET}")
+                            for h in active:
+                                lines.append(f"  {C_YELLOW}* [{h.get('hypothesis_id')}]{C_RESET} {h.get('claim')}")
+                                lines.append(f"    Prior: {h.get('prior', 0.0):.2f} -> Posterior: {C_YELLOW}{h.get('posterior', 0.0):.2f}{C_RESET} | Status: ACTIVE")
+                                for req in h.get("required_to_confirm", [])[:2]:
+                                    lines.append(f"      -> To Confirm: {C_CYAN}{req}{C_RESET}")
+                                for req in h.get("required_to_refute", [])[:1]:
+                                    lines.append(f"      -> To Refute:  {C_RED}{req}{C_RESET}")
+                            lines.append("")
+
+                        # Uncertainty & Knowledge Gaps
+                        gaps = inf.get("knowledge_gaps", [])
+                        if gaps:
+                            lines.append(f"  {C_CYAN}{C_BOLD}[WHAT CORVUS DOES NOT KNOW (Knowledge Gaps)]{C_RESET}")
+                            for g in gaps:
+                                lines.append(f"    - {C_YELLOW}{g}{C_RESET}")
+                            lines.append("")
+
+                    elif action == "bridge":
+                        bridge = data.get("bridge", {})
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}  DYNAMIC BRIDGE EXPLORATION - '{data.get('src')}' <-> '{data.get('dst')}'{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}\n")
+                        lines.append(f"  Summary: {bridge.get('analysis_summary')}\n")
+
+                        candidates = bridge.get("candidates", [])
+                        if candidates:
+                            lines.append(f"  {C_CYAN}{C_BOLD}[Bridge Hypotheses & Potential Pathways]{C_RESET}")
+                            for c in candidates:
+                                b_type = c.get("bridge_type")
+                                inter = f" via '{c.get('intermediate')}'" if c.get("intermediate") else ""
+                                lines.append(f"  {C_YELLOW}* [{b_type}]{C_RESET} Potential Link{inter} (Strength: {c.get('candidate_strength', 0):.2f})")
+                                for hint in c.get("evidence_hints", []):
+                                    lines.append(f"      - {hint}")
+                            lines.append("")
+                        else:
+                            lines.append(f"  {C_GREEN}Direct graph connection already exists. No bridge required.{C_RESET}\n")
+
+                    elif action == "summary":
                         reasoning = data.get("reasoning", {})
                         summary = data.get("summary", {})
                         lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}")
-                        lines.append(f"  {C_MAGENTA}{C_BOLD}  NEXUS INTELLIGENCE REASONING SUMMARY — '{target}'{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}  NEXUS INTELLIGENCE REASONING SUMMARY - '{target}'{C_RESET}")
                         lines.append(f"  {C_MAGENTA}{C_BOLD}============================================================{C_RESET}\n")
 
                         lines.append(f"  {C_CYAN}{C_BOLD}[Synthesized Reasoning & Graph Deduction]{C_RESET}")
@@ -909,7 +972,7 @@ class OutputManager:
 
                     elif action == "timeline":
                         timeline = data.get("timeline", [])
-                        lines.append(f"  {C_CYAN}{C_BOLD}TEMPORAL TIMELINE SEQUENCE — Target: '{target}'{C_RESET}")
+                        lines.append(f"  {C_CYAN}{C_BOLD}TEMPORAL TIMELINE SEQUENCE - Target: '{target}'{C_RESET}")
                         lines.append(f"  {C_CYAN}--------------------------------------------------{C_RESET}")
                         if not timeline:
                             lines.append(f"  {C_DIM}No temporal events recorded for target.{C_RESET}")
@@ -920,7 +983,7 @@ class OutputManager:
 
                     elif action == "paths":
                         paths = data.get("paths", [])
-                        lines.append(f"  {C_CYAN}{C_BOLD}INTELLIGENCE GRAPH PATHS — '{data.get('src')}' -> '{data.get('dst')}'{C_RESET}")
+                        lines.append(f"  {C_CYAN}{C_BOLD}INTELLIGENCE GRAPH PATHS - '{data.get('src')}' -> '{data.get('dst')}'{C_RESET}")
                         lines.append(f"  {C_CYAN}--------------------------------------------------{C_RESET}")
                         if not paths:
                             lines.append(f"  {C_YELLOW}No direct multi-hop graph path found.{C_RESET}")
@@ -932,7 +995,7 @@ class OutputManager:
 
                     elif action == "correlation":
                         corr = data.get("correlation", {})
-                        lines.append(f"  {C_MAGENTA}{C_BOLD}CROSS-ENTITY CORRELATION — '{corr.get('entity1')}' <-> '{corr.get('entity2')}'{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}CROSS-ENTITY CORRELATION - '{corr.get('entity1')}' <-> '{corr.get('entity2')}'{C_RESET}")
                         lines.append(f"  {C_MAGENTA}--------------------------------------------------{C_RESET}")
                         lines.append(f"  Shared Infrastructure Nodes: {corr.get('shared_nodes_count', 0)}")
                         for n in corr.get("shared_nodes", []):
@@ -943,18 +1006,18 @@ class OutputManager:
                     elif "export_type" in data:
                         export_type = data.get("export_type")
                         if export_type == "html":
-                            lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE DOSSIER — HTML EXPORT{C_RESET}")
+                            lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE DOSSIER - HTML EXPORT{C_RESET}")
                             lines.append(f"  {'='*52}")
                             lines.append(f"  {C_GREEN}{C_BOLD}[+] Report generated successfully.{C_RESET}")
                             lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")
                         elif export_type == "neo4j_json":
-                            lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE — NEO4J JSON EXPORT{C_RESET}")
+                            lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE - NEO4J JSON EXPORT{C_RESET}")
                             lines.append(f"  {'='*52}")
                             lines.append(f"  {C_GREEN}{C_BOLD}[+] Graph schema exported successfully.{C_RESET}")
                             lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")
 
                     elif export_type == "graph_json":
-                        lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE — GENERIC GRAPH JSON EXPORT{C_RESET}")
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}NEXUS INTELLIGENCE - GENERIC GRAPH JSON EXPORT{C_RESET}")
                         lines.append(f"  {'='*52}")
                         lines.append(f"  {C_GREEN}{C_BOLD}[+] Graph data exported successfully.{C_RESET}")
                         lines.append(f"    {C_BOLD}File Path      :{C_RESET} {data.get('filepath')}")

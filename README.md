@@ -40,15 +40,31 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.0.0-nexus-intelligence — Graph Service Layer, CQRS Event Bus & Nexus Reasoning**
+**v1.1.0-inference-engine — Bayesian Reasoning, Competing Hypotheses & Dynamic Bridges**
 
-v1.0 introduces **Nexus Intelligence**: Decoupled Graph Service Layer (`Neo4j` with automatic In-Memory fallback), CQRS + Event Sourcing (`EventBus`), Graph Reasoning Engine, Temporal Timelines, Asset Intelligence Modeling, and Intelligence-Level Queries (`nexus query paths`, `nexus query clusters`, `nexus query timeline`).
+v1.1 introduces the **Inference Engine** ("Sherlock"): Real Bayesian Sequential Updating (`P(H|E)`), Pattern Extraction, Hypothesis Lifecycle Management, Dynamic Bridges (Shared Infrastructure, Temporal, Type-based), Shannon Entropy Uncertainty Quantification, Negative Evidence Reasoning, and Counterfactual Explanations ("What would confirm/refute this?").
 
 ---
 
 ## Changelog
 
-### v1.0.0-nexus-intelligence — Nexus Reasoning & Graph Architecture
+### v1.1.0-inference-engine — Bayesian Inference & Hypothesis Reasoning
+
+**Inference Engine (`core/inference/`):**
+- **`bayesian.py`** — Gerçek Bayesian sequential inanç güncelleme motoru (`HypothesisBelief`, `BayesianUpdater`), type-informed prior tablosu ve Bayes izi (trail).
+- **`evidence_weight.py`** — NATO Admiralty, çapraz teyit çarpanı, temporal decay ve conflict cezası içeren gerçek kanıt ağırlıklandırma modeli (`EvidenceWeighter`).
+- **`pattern.py`** — OSINT örüntü çıkarma motoru (`PatternExtractor`: Ownership, Infrastructure Cluster, Identity Anchor, Temporal Burst, Multi-source).
+- **`hypothesis.py`** — Hipotez veri modeli (`Hypothesis`), hipotez üretici (`HypothesisGenerator`) ve durum geçiş makinesi (`HypothesisLifecycle`: Generated -> Active -> Confirmed/Refuted/Archived).
+- **`dynamic_bridge.py`** — Graf bileşenleri arasındaki gizli bağlantıları keşfeden dinamik köprü motoru (`DynamicBridgeEngine`: Shared Infrastructure, Temporal, Type-Based).
+- **`uncertainty.py`** — Shannon Entropisi ile belirsizlik ölçümü (`UncertaintyEngine`), kritik belirsizlik tespiti ve "What Corvus Does Not Know" analizi.
+- **`counterfactual.py`** — Karşıolgusal akıl yürütme motoru (`CounterfactualEngine`: "Bunu doğrulamak/çürütmek için ne gerekir?", alternatif açıklamalar ve önerilen keşif eylemleri).
+- **`temporal_reasoner.py`** — Zamansal çıkarım motoru (`TemporalReasoningEngine`: Temporal burst tespiti, zaman çizelgesi örtüşmesi, kronolojik nedensellik zinciri).
+- **`negative_evidence.py`** — Yokluk ve negatif kanıt çıkarım motoru (`NegativeEvidenceEngine`: Beklenen ama bulunamayan kanıtların Bayesian inancı düşürmesi).
+- **`orchestrator.py`** — Tüm çıkarım bileşenlerini tek bir pipeline'da birleştiren merkezi orkestratör (`InferenceOrchestrator`).
+
+---
+
+### v1.0.0-nexus-intelligence — Graph Service Layer, CQRS Event Bus & Nexus Reasoning
 
 **CQRS & Event Sourcing (`core/events/`):**
 - **`types.py`** & **`bus.py`** — Typed Event System (`EntityDiscovered`, `RelationshipCreated`, `EvidenceCorroborated`, `ConflictDetected`, `AssetBound`) and Observer pattern `EventBus`.
