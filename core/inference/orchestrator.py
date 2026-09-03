@@ -46,9 +46,21 @@ class InferenceOrchestrator:
 
     def run_inference(self, entity_value: str, evidence_list: List[Any],
                       relationships: List[Dict[str, Any]] = None,
-                      modules_run: List[str] = None) -> Dict[str, Any]:
+                      modules_run: List[str] = None,
+                      max_depth: int = 3,
+                      confidence_target: float = 0.85) -> Dict[str, Any]:
         """
-        Bir hedef varlık için tam çıkarım pipeline'ını baştan sona çalıştırır.
+        Bir hedef varlık için tam çıkarım pipeline'ını baştan sona çalıştırır:
+        Evidence -> Pattern -> Hypothesis -> Graph/Path Exploration -> Bayesian Update
+        -> Competing Hypotheses -> Uncertainty/Confidence -> Explanation.
+
+        Args:
+            entity_value: Hedef varlık
+            evidence_list: Doğrulanmış kanıtlar
+            relationships: Graf ilişkileri
+            modules_run: Çalıştırılan modüller
+            max_depth: Çıkarım bütçesi / çok sıçramalı (multi-hop) graf derinlik limiti
+            confidence_target: Erken tamamlama / onaylanma hedef güven eşiği (default: 0.85)
         """
         relationships = relationships or []
         modules_run = modules_run or []
@@ -56,12 +68,23 @@ class InferenceOrchestrator:
         # 1. Pattern Extraction
         patterns = self.pattern_extractor.extract_patterns(evidence_list, relationships)
 
-        # 2. Hypothesis Generation (Ana ve Rakip Hipotezler)
+        # 2. Hypothesis Generation & Competing Hypotheses
         hypotheses = self.generator.generate_competing_hypotheses(
             entity=entity_value,
             relationships=relationships,
             patterns=patterns
         )
+
+        # 3. Multi-Hop Graph & Path Exploration (Inference Budget & Depth Control)
+        graph_paths = []
+        for rel in relationships:
+            dst = rel.get("dst", {})
+            dst_val = dst.get("value", "") if isinstance(dst, dict) else str(dst)
+            if dst_val and dst_val != entity_value:
+                # Bütçe kontrollü çok sıçramalı yol keşfi
+                discovered_paths = self.graph_service.query_paths(entity_value, dst_val, max_depth=max_depth)
+                if discovered_paths:
+                    graph_paths.extend(discovered_paths)
 
         # Eğer hiç pattern bulunamadıysa varlık bazlı default hipotez oluşturmayı dene
         if not hypotheses and relationships:
@@ -169,4 +192,9 @@ class InferenceOrchestrator:
             "temporal_order": temporal_order,
             "dynamic_bridges": bridges,
             "absent_evidence": absent_records,
+            "graph_paths": graph_paths,
+            "inference_budget": {
+                "max_depth": max_depth,
+                "confidence_target": confidence_target,
+            },
         }
