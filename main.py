@@ -161,7 +161,9 @@ def main():
                 continue
 
             if command not in modules:
-                print(f"  Unknown command: '{command}'. Type 'help' to see available commands.")
+                # v1.1.1 Cognitive Interface Fallback: Route natural language to chat module
+                result = run_module("chat", parts)
+                print_output(result)
                 continue
 
             result = run_module(command, args)

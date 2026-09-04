@@ -886,6 +886,17 @@ class OutputManager:
                     lines.append(f"  {C_CYAN}{C_BOLD}{data.get('name') or 'Corvus Corax'} {data.get('version') or 'v0.5'}{C_RESET}")
                     lines.append(f"  Motto: {data.get('motto') or ''}")
 
+                elif module == "chat":
+                    user_msg = data.get("user_message", "")
+                    response = data.get("response", "")
+                    provider = data.get("provider", "Cognitive Core")
+                    suggested = data.get("suggested_command")
+
+                    lines.append(f"  {C_MAGENTA}{C_BOLD}[The Machine // {provider}]{C_RESET}")
+                    lines.append(f"  {C_GREEN}{C_BOLD}{response}{C_RESET}")
+                    if suggested:
+                        lines.append(f"\n  {C_CYAN}{C_BOLD}[Suggested Action]{C_RESET} {C_YELLOW}{suggested}{C_RESET}")
+
                 elif module == "nexus":
                     action = data.get("action", "summary")
                     target = data.get("target", "Target")

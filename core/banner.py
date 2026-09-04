@@ -88,8 +88,8 @@ def show_banner(animate=True):
 @@@@@@@@/@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%@@@@@@@@@))!][@@@@@<[@@@@@@@\@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@/@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@/@@@@@@@@@@@@@@@@@@\@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    v1.1.0-inference-engine  |  See The Unseen
-    >> Evidence -> Pattern -> Hypothesis -> Bayesian Inference <<
+    v1.1.1-cognitive-interface  |  See The Unseen
+    >> The Machine // Cognitive Dialogue & Agent Interface <<
 """
 
     print(Fore.CYAN + title_art + Style.RESET_ALL + Fore.MAGENTA + silhouette + Style.RESET_ALL)

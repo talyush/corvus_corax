@@ -40,13 +40,26 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.1.0-inference-engine — Bayesian Reasoning, Competing Hypotheses & Dynamic Bridges**
+**v1.1.1-cognitive-interface — Cognitive Interface, The Machine Persona & Multi-Turn Conversational Agent**
 
-v1.1 introduces the **Inference Engine** ("Sherlock"): Real Bayesian Sequential Updating (`P(H|E)`), Pattern Extraction, Hypothesis Lifecycle Management, Dynamic Bridges (Shared Infrastructure, Temporal, Type-based), Shannon Entropy Uncertainty Quantification, Negative Evidence Reasoning, and Counterfactual Explanations ("What would confirm/refute this?").
+v1.1.1 introduces the **Cognitive Interface & Agent Layer (Phase 1)** ("The Machine"): Natural language dialogue understanding, multi-turn conversational memory, robust intent and entity extraction for noisy/complex queries, plug-and-play local/cloud LLM providers (Ollama, OpenAI, Embedded Semantic Engine), and automatic natural language command routing.
 
 ---
 
 ## Changelog
+
+### v1.1.1-cognitive-interface — Cognitive Interface & Conversational Agent (Phase 1)
+
+**Cognitive Layer (`core/cognitive/`):**
+- **`persona.py`** — The Machine persona archetype ("Hello, friend.", analytical, hyper-observant).
+- **`memory.py`** — Multi-turn conversational memory, reference resolution ("o hedefin", "its domain") and context graph integration.
+- **`intent.py`** — Robust natural language intent & entity extraction (`GREETING`, `INVESTIGATE`, `INFER`, `BRIDGE`, `SUMMARY`, `TIMELINE`, `CHITCHAT`).
+- **`providers/local_engine.py`** — Embedded Cognitive Engine (Offline, dynamic semantic synthesis with zero external dependencies).
+- **`providers/api_providers.py`** — Plug-and-play LLM providers for Ollama (DeepSeek, Llama3) and OpenAI.
+- **`dialogue.py`** — Central Cognitive Dialogue Engine coordinating memory, intent parsing, graph state, and provider generation.
+- **`modules/chat.py` & `main.py`** — `chat` module and smart natural language fallback routing in CLI.
+
+---
 
 ### v1.1.0-inference-engine — Bayesian Inference & Hypothesis Reasoning
 
