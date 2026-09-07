@@ -1,5 +1,13 @@
 """Corvus Corax v1.1.1 - Cognitive Interface & Machine Persona Verification Suite.
 """
+import sys
+import os
+
+# Ensure root is in sys.path
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
+
 from main import run_module, print_output, context
 from core.cognitive.dialogue import CognitiveDialogueEngine
 from core.cognitive.memory import ConversationMemory

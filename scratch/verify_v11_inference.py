@@ -1,5 +1,10 @@
-"""Corvus Corax v1.1 Inference Engine ("Sherlock") Verification Suite.
-"""
+import sys
+import os
+
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
+
 from main import run_module, print_output, context
 from core.graph.providers.neo4j_provider import Neo4jGraphService
 from core.inference.bayesian import BayesianUpdater, HypothesisBelief

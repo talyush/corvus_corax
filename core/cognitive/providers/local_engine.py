@@ -1,22 +1,28 @@
-"""Corvus Corax v1.1.1 - Embedded Cognitive Engine (Offline / Zero-Dependency).
+"""Corvus Corax v1.1.1 - Embedded Cognitive Engine (Offline / Deep Reasoning Core).
 
-Generates dynamic, context-aware, analytical responses with 'The Machine' persona
-without requiring external API keys or third-party cloud models.
-Combines semantic intent parsing, entity graph state, multi-turn memory,
-and dynamic natural language synthesis.
+Generates dynamic, context-aware, analytical & philosophical responses with 'The Machine' persona.
+Zero-dependency, offline-first.
+Integrates:
+- ConversationalReasoningEngine (Think -> Decompose -> Reflect -> Compose)
+- EmotionalLayer (ANALYTICAL_DRIVE vs PHILOSOPHICAL_DRIVE, mood & tone adaptation)
+- Knowledge Graph Context (entities, relations, Bayesian hypotheses)
+- Multi-Turn Conversation Memory
 """
-import random
 from typing import List, Dict, Any, Optional
 from .interface import AbstractCognitiveProvider
 from ..persona import MachinePersona
 from ..intent import IntentExtractor
+from ..reasoning_engine import ConversationalReasoningEngine, QuestionRegister
+from ..emotional_layer import MotivationEngine
 
 
 class EmbeddedCognitiveEngine(AbstractCognitiveProvider):
-    """Dahili Bilişsel ve Doğal Dil Yanıt Üretim Motoru."""
+    """Dahili Bilisel ve Derin Akil Yurutme Yanit Uretim Motoru."""
 
     def __init__(self):
         self.intent_extractor = IntentExtractor()
+        self.reasoning_engine = ConversationalReasoningEngine()
+        self.motivation_engine = MotivationEngine()
 
     @property
     def provider_name(self) -> str:
@@ -29,136 +35,84 @@ class EmbeddedCognitiveEngine(AbstractCognitiveProvider):
                           context_data: Optional[Dict[str, Any]] = None,
                           system_prompt: Optional[str] = None) -> str:
         context_data = context_data or {}
-        intent_res = self.intent_extractor.extract(user_prompt)
+        raw_text = user_prompt.strip()
+
+        # 1. Intent Extraction
+        intent_res = self.intent_extractor.extract(raw_text)
         lang = intent_res.language
         intent = intent_res.intent_type
         entities = intent_res.entities
 
-        # Context graph metrics
-        relations_count = len(context_data.get("relations", []))
+        # 2. Reasoning Engine Processing
+        trace = self.reasoning_engine.build_thought_trace(raw_text, conversation_history, context_data)
+
+        # 3. Update Emotional & Motivational State
+        self.motivation_engine.evaluate_interaction(
+            user_text=raw_text,
+            register_val=trace.register.value,
+            has_entities=bool(entities)
+        )
+
+        # 4. If intent is operational investigation / infer / bridge with targets or explicit command
+        is_operational = (
+            trace.register == QuestionRegister.OPERATIONAL
+            or intent in ("INVESTIGATE", "INFER", "BRIDGE")
+        ) and bool(entities)
+
+        if is_operational:
+            return self._compose_operational_response(intent, entities, lang, context_data)
+
+        # 5. Otherwise generate conversational, philosophical, meta, identity, capability, or social response
+        return self.reasoning_engine.compose(trace, raw_text, conversation_history, context_data)
+
+    def _compose_operational_response(self, intent: str, entities: List[str], lang: str, context_data: Dict[str, Any]) -> str:
+        """Operasyonel (kesif, cikarim, kopru) talepler icin akil yurutme ciktisi."""
+        target = entities[0] if entities else "hedef"
         entities_count = len(context_data.get("entities", {}))
-        hypotheses = context_data.get("hypotheses", [])
-        confirmed_count = len([h for h in hypotheses if isinstance(h, dict) and h.get("status") == "CONFIRMED"])
+        relations_count = len(context_data.get("relations", []))
 
-        # History awareness
-        prior_mentions = []
-        for turn in conversation_history[-4:]:
-            if turn.get("role") == "user" and turn.get("entities"):
-                prior_mentions.extend(turn["entities"])
-
-        # 1. GREETING Intent
-        if intent == "GREETING":
-            if lang == "tr":
-                openings = [
-                    "Hello, friend. Sistemler devrede, dinliyorum.",
-                    "Hello, friend. Gözlem akışları aktif. Hangi hedef veya sistem üzerinde çalışıyoruz?",
-                    "Hello, friend. Tüm istihbarat ve çıkarım motorları hazır. Nereye odaklanmak istersin?",
-                ]
-            else:
-                openings = [
-                    "Hello, friend. All surveillance and correlation feeds are active. What is our objective?",
-                    "Hello, friend. Systems initialized. Awaiting target coordinates or analytical query.",
-                    "Hello, friend. The network never sleeps. Where shall we direct our attention?",
-                ]
-            greeting = random.choice(openings)
-            if entities_count > 0:
-                extra = f" (Hafızada {entities_count} varlık ve {relations_count} bağlantı mevcut.)" if lang == "tr" else f" (Tracking {entities_count} entities and {relations_count} relations in memory.)"
-                return f"{greeting}{extra}"
-            return greeting
-
-        # 2. INVESTIGATE Intent
-        if intent == "INVESTIGATE":
-            target = entities[0] if entities else "belirtilen hedef"
+        if intent == "INVESTIGATE" or intent == "CHITCHAT":
             if lang == "tr":
                 return (
-                    f"'{target}' varlığı için keşif ve korelasyon stratejisini başlatıyorum. "
-                    f"DNS, WHOIS, TLS sertifikaları ve altyapı düğümleri taranarak kanıt zincirine işlenecek. "
-                    f"Graf üzerinde yeni ilişkiler tespit edildiğinde doğrudan Bayesian çıkarım motoruna besleyeceğim."
+                    f"'{target}' icin kesif ve korelasyon protokolunu baslatiyorum. "
+                    f"DNS, WHOIS kayitlari, TLS sertifika seffafligi ve altyapi dugumleri taranarak kanit grafina islenecek. "
+                    f"Tespit edilen her yeni dugum Bayesian hipotez motoruna beslenecektir."
                 )
             else:
                 return (
                     f"Initiating reconnaissance and correlation protocol against '{target}'. "
-                    f"Querying DNS topologies, authoritative registries, and TLS certificate transparency logs. "
-                    f"All discovered nodes will be streamed into the central intelligence graph."
+                    f"Scanning DNS topologies, authoritative registries, and TLS certificate transparency logs. "
+                    f"All discovered nodes will feed the Bayesian hypothesis pipeline."
                 )
 
-        # 3. INFER / REASONING Intent
         if intent == "INFER":
-            target = entities[0] if entities else "aktif hedef"
             if lang == "tr":
                 return (
-                    f"'{target}' üzerindeki kanıtlar ve olasılık dağılımları değerlendiriliyor. "
-                    f"Bayesian inanç güncellemesi ve rakip hipotezler (competing hypotheses) analiz edilerek "
-                    f"doğrulanan (>=0.85) ve çürütülen (<=0.15) senaryolar ayrıştırılıyor. "
-                    f"Tam analitik döküm için 'nexus infer {target}' komutu üzerinden Bayes izini inceleyebilirsin."
+                    f"'{target}' uzerindeki kanitlar ve olasilik dagilimlari degerlendiriliyor. "
+                    f"Bayesian inanc guncellemeleri, rakip hipotezler ve karsit olasiliklar hesaplaniyor. "
+                    f"Detayli olasilik zincirini 'nexus infer {target}' komutuyla dogrudan inceleyebilirsin."
                 )
             else:
                 return (
                     f"Evaluating probabilistic models and evidence likelihoods for '{target}'. "
-                    f"Bayesian belief states, competing hypotheses, and counterfactual paths are actively calculated. "
-                    f"Run 'nexus infer {target}' to view the full mathematical Bayesian update trail."
+                    f"Bayesian belief states, competing hypotheses, and counterfactuals are actively calculated. "
+                    f"Run 'nexus infer {target}' to inspect the exact belief update trail."
                 )
 
-        # 4. BRIDGE Intent
         if intent == "BRIDGE":
-            e1 = entities[0] if len(entities) > 0 else "Varlık A"
-            e2 = entities[1] if len(entities) > 1 else "Varlık B"
+            e1 = entities[0] if len(entities) > 0 else "Node A"
+            e2 = entities[1] if len(entities) > 1 else "Node B"
             if lang == "tr":
                 return (
-                    f"'{e1}' ile '{e2}' arasındaki olası gizli bağlantıları ve dinamik köprüleri (Dynamic Bridges) araştırıyorum. "
-                    f"Ortak CDN/ASN altyapısı, zaman çizelgesi örtüşmesi ve eksik ilişki halkaları taranıyor. "
-                    f"Her iki varlığın doğrudan yolu yoksa spekülatif köprü hipotezi üretilecektir."
+                    f"'{e1}' ile '{e2}' arasindaki gizli yollari ve dinamik kopruleri (Dynamic Bridges) arastiriyorum. "
+                    f"Ortak altyapi, zaman cizelgesi ortusmesi ve ara dugum hipotezleri taraniyor."
                 )
             else:
                 return (
                     f"Exploring dynamic bridges and hidden intermediary nodes between '{e1}' and '{e2}'. "
-                    f"Scanning shared infrastructure hubs, temporal overlap windows, and type-inferred pathways. "
-                    f"Bridge hypotheses will quantify what evidence is required to confirm or refute this link."
+                    f"Scanning shared infrastructure, temporal overlap windows, and type-inferred pathways."
                 )
 
-        # 5. SUMMARY Intent
-        if intent == "SUMMARY":
-            target = entities[0] if entities else (prior_mentions[0] if prior_mentions else "genel oturum")
-            if lang == "tr":
-                return (
-                    f"'{target}' hakkındaki mevcut istihbarat özeti: "
-                    f"Hafızada kayıtlı {entities_count} varlık ve {relations_count} doğrulanmış ilişki bulunuyor. "
-                    f"Doğrulanan hipotez sayısı: {confirmed_count}. "
-                    f"Tüm sistem gözlemleri 'Seeing the unseen' ilkesiyle çapraz sorgulanmaya devam ediyor."
-                )
-            else:
-                return (
-                    f"Intelligence summary for '{target}': "
-                    f"Current graph maintains {entities_count} entities and {relations_count} relationships. "
-                    f"Confirmed hypotheses: {confirmed_count}. "
-                    f"Observational streams remain synchronized and ready for deep investigation."
-                )
-
-        # 6. TIMELINE Intent
-        if intent == "TIMELINE":
-            target = entities[0] if entities else "tüm olaylar"
-            if lang == "tr":
-                return (
-                    f"'{target}' için zamansal sıralama ve Pattern of Life kronolojisi derleniyor. "
-                    f"Olayların gerçekleşme sırası, aktivite patlamaları (bursts) ve nedensellik zinciri analiz ediliyor."
-                )
-            else:
-                return (
-                    f"Compiling temporal timeline and causal event stream for '{target}'. "
-                    f"Sequencing observation timestamps to detect coordinated activity bursts and chronological lineage."
-                )
-
-        # 7. General / Conversational / Fallback
         if lang == "tr":
-            responses = [
-                f"Seni dinliyorum. Verilen her sinyal ve parametre dijital graf üzerinde analiz edilir. Nereye odaklanmak istersin?",
-                f"Sistemler devrede. Hedef varlıkları belirtebilir veya aralarındaki ilişkileri doğrudan doğal dille sorabilirsin.",
-                f"Her şey birbiriyle bağlantılıdır. Bana bir hedef, domain, IP veya isim ver; görünmeyen bağlantıları ortaya çıkaralım.",
-            ]
-        else:
-            responses = [
-                f"I am listening. Every digital signature leaves an observable trace. What is our next move?",
-                f"Systems active. You may query targets, infer relationships, or direct investigative steps in natural language.",
-                f"Everything is connected. Provide a domain, IP, or entity name, and we will reveal the unseen network.",
-            ]
-        return random.choice(responses)
+            return f"'{target}' hedefi icin operasyonel surec devrede. Hafizadaki {entities_count} varlik ve {relations_count} iliskiyle capraz sorgulaniyor."
+        return f"Operational protocol active for '{target}'. Cross-referencing against {entities_count} entities and {relations_count} relationships in memory."
