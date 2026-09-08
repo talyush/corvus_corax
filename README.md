@@ -40,24 +40,48 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.1.1-cognitive-interface — Cognitive Interface, The Machine Persona & Multi-Turn Conversational Agent**
+**v1.1.1 — Corvus Mind & Autonomous Agent Layer — The Machine'in Kendi Beyni ve Eylem Lobu**
 
-v1.1.1 introduces the **Cognitive Interface & Agent Layer (Phase 1)** ("The Machine"): Natural language dialogue understanding, multi-turn conversational memory, robust intent and entity extraction for noisy/complex queries, plug-and-play local/cloud LLM providers (Ollama, OpenAI, Embedded Semantic Engine), and automatic natural language command routing.
+v1.1.1, Corvus'a **kendi sembolik beynini** (`core/mind/`) ve **güvenli otonom ajan katmanını** (`core/agent/`) kazandırır. Artık Corvus; şablon seçici bir sohbet botu değil — gerçek hafızası, duygu/iç-durumu, kullanıcı modeli ve plan→araç→gözlem→yansıma döngüsüyle çalışan bir zekâdır. Kendi doğal dil anlama motoru (sembolik NLU) ile "ben kimim", "anlam nedir", "cevapların statik mi dinamik mi" sorularına hafıza ve bağlamdan beslenen **gerçek** cevaplar üretir. LLM (Ollama/OpenAI) yalnızca **opsiyonel destek** olarak kalır; zihin bağımsızdır.
+
+Geliştirme fazları:
+
+```
+Faz A — Corvus Mind çekirdeği   (NLU, hafıza, iç-durum, kullanıcı modeli, sentez)
+Faz B — Kalıcı varlık hafızası  (oturumlar arası isim/tema/ruh hâli — vault/mind.json)
+Faz C — Güvenli otonom Agent    (plan → araç seçimi → onay → aksiyon → gözlem → yansıma)
+```
 
 ---
 
 ## Changelog
 
-### v1.1.1-cognitive-interface — Cognitive Interface & Conversational Agent (Phase 1)
+### v1.1.1 — Corvus Mind & Autonomous Agent Layer
 
-**Cognitive Layer (`core/cognitive/`):**
-- **`persona.py`** — The Machine persona archetype ("Hello, friend.", analytical, hyper-observant).
-- **`memory.py`** — Multi-turn conversational memory, reference resolution ("o hedefin", "its domain") and context graph integration.
-- **`intent.py`** — Robust natural language intent & entity extraction (`GREETING`, `INVESTIGATE`, `INFER`, `BRIDGE`, `SUMMARY`, `TIMELINE`, `CHITCHAT`).
-- **`providers/local_engine.py`** — Embedded Cognitive Engine (Offline, dynamic semantic synthesis with zero external dependencies).
-- **`providers/api_providers.py`** — Plug-and-play LLM providers for Ollama (DeepSeek, Llama3) and OpenAI.
-- **`dialogue.py`** — Central Cognitive Dialogue Engine coordinating memory, intent parsing, graph state, and provider generation.
-- **`modules/chat.py` & `main.py`** — `chat` module and smart natural language fallback routing in CLI.
+**Corvus Mind — Kendi Sembolik Beyni (`core/mind/`):**
+- **`nlu.py`** — Kod tabanlı doğal dil anlama (TR/EN): kayıt sınıflandırma (social, meta_corvus, identity_user/corvus, philosophical, capability, emotional, investigate), duygu tonu (valence/intensity), niyet çıkarımı, kavram kökleri, varlık çıkarımı (domain/ip/email/isim) ve öz-beyan isim yakalama ("benim adım X").
+- **`memory.py`** — Epizodik (turlar) + semantik (olgular) hafıza; iç-monolog (observation log), çürüme (decay) ve konu tabanlı geri çağırma.
+- **`mind_state.py`** — İç durum: merak, dikkat, bağlanım, empati, sakinlik + **analitik↔felsefi çift motor ekseni** (drive_axis). Her girdi ile güncellenir; yanıt tonunu ve iç gözlemi yönlendirir.
+- **`other_mind.py`** — Kullanıcı modeli: dil, ilgi alanları, niyet eğilimi, güven, uzmanlık izlenimi, kendinden bahsetme geçmişi → **"ben kimim" sorusuna gerçek profil cevabı**.
+- **`synthesis.py`** — Yanıt sentezi: şablon seçici DEĞİL. Her yanıt hafıza + iç-durum + kullanıcı modeli + grafik bağlamından kompoze edilir (dinamik yanıt).
+- **`brain.py` & `persistence.py`** — MindBrain akışı: `NLU.parse → UserModel.observe → MindState.update → Memory.remember → Synthesizer` → her turda `vault/mind.json`'a otomatik kayıt. Yeni oturum bir öncekinden devam eder.
+
+**Autonomous Agent Layer (`core/agent/`):**
+- **`tools.py`** — Tool Registry: hedef tipi (domain/ip/person/email/phone/wallet/org) → araç eşlemesi, ağ çağrısı (NET) / yerel analiz (LOCAL) kapsamı, derinlik ve kısıtlı araçlar.
+- **`policy.py`** — Güvenlik Politikası (Sandbox): LOCAL araçlar otomatik çalışır; NETWORK araçları kullanıcı onayı ister; `scan`/`netscan` gibi aktif tarama araçları DENIED. Onay geri çağrısı (callback) ve iterasyon limiti (max 4).
+- **`planner.py`** — Niyet+hedef → `InvestigationPlan` (hangi araçlar, hangi sırayla, neden — şeffaf rationale).
+- **`executor.py`** — Modül çalıştırma + **Observation** (gözlem) üretimi: yeni varlıklar, notlar, durum.
+- **`agent.py`** — Ana döngü: `intent → plan → onay → aksiyon → gözlem → yansıma (reflection) → pivot lead` — observation→action→observation.
+- **`modules/agent.py`** — CLI: `agent <hedef> [--auto|--ask]`. Doğal dil "X araştır" artık ajan akışını tetikler (`core/cognitive/dialogue.py`'de `agent <hedef>` önerisi).
+
+**Cognitive & Conversation Entegrasyonu:**
+- **`core/cognitive/providers/local_engine.py`** — Artık `MindBrain` üzerinde çalışır ("Embedded Cognitive Engine (Corvus Mind Neural Core)"). Eski şablon kompozer devre dışı.
+- **Dönüşüm ispatı (verify scriptleri):** `scratch/verify_v12_mind.py`, `verify_v12_mind_persist.py`, `verify_v12_agent.py`.
+
+**Faz ispatı — örnekler:**
+- "Benim adım ahmet" → oturum kapanıp yeni process açılsa bile: *"Adın ahmet. Profiline bakayım: Türkçe konuşuyorsun; ilgini şu kavramlara yöneltiyorsun..."* (Faz B kalıcılık)
+- "Cevapların statik mi dinamik mi" → *"her seferinde hafızama (N tur), iç-gözlemlerime ve M varlık bağlamına bakıp cümle kurarım"* (N/M gerçek veriden)
+- "example.com araştır" → Agent: `whois → dns → tech → cert → metadata → footprint` planı üretir, NET araçlar onay ister, gözlemler toplanır.
 
 ---
 
