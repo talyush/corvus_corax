@@ -116,7 +116,8 @@ class CognitiveDialogueEngine:
         if intent_res.entities and intent_res.action_hint:
             target = intent_res.entities[0]
             if intent_res.intent_type == "INVESTIGATE":
-                suggested_command = f"whois {target}" if "." in target else f"footprint {target}"
+                # Faz C: otonom ajan akışı — plan + onay + gözlem döngüsü
+                suggested_command = f"agent {target}"
             elif intent_res.intent_type == "INFER":
                 suggested_command = f"nexus infer {target}"
             elif intent_res.intent_type == "SUMMARY":
