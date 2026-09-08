@@ -40,16 +40,16 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.1.1 — Corvus Mind & Autonomous Agent Layer — The Machine'in Kendi Beyni ve Eylem Lobu**
+**v1.1.1 — Corvus Mind & Autonomous Agent Layer — The Machine's Own Brain and Action Lobe**
 
-v1.1.1, Corvus'a **kendi sembolik beynini** (`core/mind/`) ve **güvenli otonom ajan katmanını** (`core/agent/`) kazandırır. Artık Corvus; şablon seçici bir sohbet botu değil — gerçek hafızası, duygu/iç-durumu, kullanıcı modeli ve plan→araç→gözlem→yansıma döngüsüyle çalışan bir zekâdır. Kendi doğal dil anlama motoru (sembolik NLU) ile "ben kimim", "anlam nedir", "cevapların statik mi dinamik mi" sorularına hafıza ve bağlamdan beslenen **gerçek** cevaplar üretir. LLM (Ollama/OpenAI) yalnızca **opsiyonel destek** olarak kalır; zihin bağımsızdır.
+v1.1.1 gives Corvus its **own symbolic brain** (`core/mind/`) and a **safe autonomous agent layer** (`core/agent/`). Corvus is no longer a template-selecting chatbot — it is an intelligence driven by real memory, affective/internal state, a user model, and a plan→tool→observe→reflect loop. Its own natural-language understanding engine (symbolic NLU) answers "who am I", "what is meaning", "are your answers static or dynamic" with **genuine** responses fed by memory and context. LLMs (Ollama/OpenAI) remain **optional support only**; the mind is self-contained.
 
-Geliştirme fazları:
+Development phases:
 
 ```
-Faz A — Corvus Mind çekirdeği   (NLU, hafıza, iç-durum, kullanıcı modeli, sentez)
-Faz B — Kalıcı varlık hafızası  (oturumlar arası isim/tema/ruh hâli — vault/mind.json)
-Faz C — Güvenli otonom Agent    (plan → araç seçimi → onay → aksiyon → gözlem → yansıma)
+Phase A — Corvus Mind core        (NLU, memory, mind-state, user model, synthesis)
+Phase B — Persistent entity memory (session-surviving name/topics/mood — vault/mind.json)
+Phase C — Safe autonomous Agent   (plan → tool selection → approval → action → observe → reflect)
 ```
 
 ---
@@ -58,46 +58,46 @@ Faz C — Güvenli otonom Agent    (plan → araç seçimi → onay → aksiyon 
 
 ### v1.1.1 — Corvus Mind & Autonomous Agent Layer
 
-**Corvus Mind — Kendi Sembolik Beyni (`core/mind/`):**
-- **`nlu.py`** — Kod tabanlı doğal dil anlama (TR/EN): kayıt sınıflandırma (social, meta_corvus, identity_user/corvus, philosophical, capability, emotional, investigate), duygu tonu (valence/intensity), niyet çıkarımı, kavram kökleri, varlık çıkarımı (domain/ip/email/isim) ve öz-beyan isim yakalama ("benim adım X").
-- **`memory.py`** — Epizodik (turlar) + semantik (olgular) hafıza; iç-monolog (observation log), çürüme (decay) ve konu tabanlı geri çağırma.
-- **`mind_state.py`** — İç durum: merak, dikkat, bağlanım, empati, sakinlik + **analitik↔felsefi çift motor ekseni** (drive_axis). Her girdi ile güncellenir; yanıt tonunu ve iç gözlemi yönlendirir.
-- **`other_mind.py`** — Kullanıcı modeli: dil, ilgi alanları, niyet eğilimi, güven, uzmanlık izlenimi, kendinden bahsetme geçmişi → **"ben kimim" sorusuna gerçek profil cevabı**.
-- **`synthesis.py`** — Yanıt sentezi: şablon seçici DEĞİL. Her yanıt hafıza + iç-durum + kullanıcı modeli + grafik bağlamından kompoze edilir (dinamik yanıt).
-- **`brain.py` & `persistence.py`** — MindBrain akışı: `NLU.parse → UserModel.observe → MindState.update → Memory.remember → Synthesizer` → her turda `vault/mind.json`'a otomatik kayıt. Yeni oturum bir öncekinden devam eder.
+**Corvus Mind — Own Symbolic Brain (`core/mind/`):**
+- **`nlu.py`** — Code-based natural-language understanding (TR/EN): register classification (social, meta_corvus, identity_user/corvus, philosophical, capability, emotional, investigate), sentiment valence/intensity, goal inference, concept roots, entity extraction (domain/ip/email/name), and self-reported name capture ("benim adım X" / "my name is X").
+- **`memory.py`** — Episodic (turns) + semantic (facts) memory; inner-monologue (observation log), salience decay, and topic-based recall.
+- **`mind_state.py`** — Internal state: curiosity, vigilance, engagement, empathy, calmness + **analytical↔philosophical dual drive axis** (`drive_axis`). Updated on every input; steers tone and internal introspection.
+- **`other_mind.py`** — User model: language, interests, goal tendencies, trust, expertise impression, self-reference history → delivers **real profile answers to "who am I"** (not empty templates).
+- **`synthesis.py`** — Response synthesis: NOT a template selector. Every reply is composed from memory + mind-state + user model + graph context (dynamic response).
+- **`brain.py` & `persistence.py`** — MindBrain flow: `NLU.parse → UserModel.observe → MindState.update → Memory.remember → Synthesizer` → auto-saved to `vault/mind.json` after every turn. New sessions continue from the previous one.
 
 **Autonomous Agent Layer (`core/agent/`):**
-- **`tools.py`** — Tool Registry: hedef tipi (domain/ip/person/email/phone/wallet/org) → araç eşlemesi, ağ çağrısı (NET) / yerel analiz (LOCAL) kapsamı, derinlik ve kısıtlı araçlar.
-- **`policy.py`** — Güvenlik Politikası (Sandbox): LOCAL araçlar otomatik çalışır; NETWORK araçları kullanıcı onayı ister; `scan`/`netscan` gibi aktif tarama araçları DENIED. Onay geri çağrısı (callback) ve iterasyon limiti (max 4).
-- **`planner.py`** — Niyet+hedef → `InvestigationPlan` (hangi araçlar, hangi sırayla, neden — şeffaf rationale).
-- **`executor.py`** — Modül çalıştırma + **Observation** (gözlem) üretimi: yeni varlıklar, notlar, durum.
-- **`agent.py`** — Ana döngü: `intent → plan → onay → aksiyon → gözlem → yansıma (reflection) → pivot lead` — observation→action→observation.
-- **`modules/agent.py`** — CLI: `agent <hedef> [--auto|--ask]`. Doğal dil "X araştır" artık ajan akışını tetikler (`core/cognitive/dialogue.py`'de `agent <hedef>` önerisi).
+- **`tools.py`** — Tool Registry: target type (domain/ip/person/email/phone/wallet/org) → tool mapping, network-call (NET) vs local-analysis (LOCAL) scope, depth, and restricted tools.
+- **`policy.py`** — Safety Policy (Sandbox): LOCAL tools run automatically; NETWORK tools require user approval; active-scan tools like `scan`/`netscan` are DENIED. Approval callback and iteration limit (max 4).
+- **`planner.py`** — Intent+target → `InvestigationPlan` (which tools, in what order, why — transparent rationale).
+- **`executor.py`** — Module execution + **Observation** production: new entities, notes, status.
+- **`agent.py`** — Main loop: `intent → plan → approval → action → observe → reflection → pivot lead` — observation→action→observation.
+- **`modules/agent.py`** — CLI: `agent <target> [--auto|--ask]`. Natural-language "investigate X" now triggers the agent flow (via `agent <target>` suggestion in `core/cognitive/dialogue.py`).
 
-**Cognitive & Conversation Entegrasyonu:**
-- **`core/cognitive/providers/local_engine.py`** — Artık `MindBrain` üzerinde çalışır ("Embedded Cognitive Engine (Corvus Mind Neural Core)"). Eski şablon kompozer devre dışı.
-- **Dönüşüm ispatı (verify scriptleri):** `scratch/verify_v12_mind.py`, `verify_v12_mind_persist.py`, `verify_v12_agent.py`.
+**Cognitive & Conversation Integration:**
+- **`core/cognitive/providers/local_engine.py`** — Now runs on `MindBrain` ("Embedded Cognitive Engine (Corvus Mind Neural Core)"). The old template composer is disabled.
+- **Verification scripts:** `scratch/verify_v12_mind.py`, `scratch/verify_v12_mind_persist.py`, `scratch/verify_v12_agent.py`.
 
-**Faz ispatı — örnekler:**
-- "Benim adım ahmet" → oturum kapanıp yeni process açılsa bile: *"Adın ahmet. Profiline bakayım: Türkçe konuşuyorsun; ilgini şu kavramlara yöneltiyorsun..."* (Faz B kalıcılık)
-- "Cevapların statik mi dinamik mi" → *"her seferinde hafızama (N tur), iç-gözlemlerime ve M varlık bağlamına bakıp cümle kurarım"* (N/M gerçek veriden)
-- "example.com araştır" → Agent: `whois → dns → tech → cert → metadata → footprint` planı üretir, NET araçlar onay ister, gözlemler toplanır.
+**Phase proof — examples:**
+- "My name is ahmet" → even after the session closes and a new process starts: *"Your name is ahmet. Let me look at your profile: you speak Turkish; your interests lean toward..."* (Phase B persistence)
+- "Are your answers static or dynamic" → *"each time I compose based on my memory (N turns), my inner observations and M entities of context"* (N/M from real data)
+- "investigate example.com" → Agent produces a `whois → dns → tech → cert → metadata → footprint` plan, NET tools ask for approval, observations are collected.
 
 ---
 
 ### v1.1.0-inference-engine — Bayesian Inference & Hypothesis Reasoning
 
 **Inference Engine (`core/inference/`):**
-- **`bayesian.py`** — Gerçek Bayesian sequential inanç güncelleme motoru (`HypothesisBelief`, `BayesianUpdater`), type-informed prior tablosu ve Bayes izi (trail).
-- **`evidence_weight.py`** — NATO Admiralty, çapraz teyit çarpanı, temporal decay ve conflict cezası içeren gerçek kanıt ağırlıklandırma modeli (`EvidenceWeighter`).
-- **`pattern.py`** — OSINT örüntü çıkarma motoru (`PatternExtractor`: Ownership, Infrastructure Cluster, Identity Anchor, Temporal Burst, Multi-source).
-- **`hypothesis.py`** — Hipotez veri modeli (`Hypothesis`), hipotez üretici (`HypothesisGenerator`) ve durum geçiş makinesi (`HypothesisLifecycle`: Generated -> Active -> Confirmed/Refuted/Archived).
-- **`dynamic_bridge.py`** — Graf bileşenleri arasındaki gizli bağlantıları keşfeden dinamik köprü motoru (`DynamicBridgeEngine`: Shared Infrastructure, Temporal, Type-Based).
-- **`uncertainty.py`** — Shannon Entropisi ile belirsizlik ölçümü (`UncertaintyEngine`), kritik belirsizlik tespiti ve "What Corvus Does Not Know" analizi.
-- **`counterfactual.py`** — Karşıolgusal akıl yürütme motoru (`CounterfactualEngine`: "Bunu doğrulamak/çürütmek için ne gerekir?", alternatif açıklamalar ve önerilen keşif eylemleri).
-- **`temporal_reasoner.py`** — Zamansal çıkarım motoru (`TemporalReasoningEngine`: Temporal burst tespiti, zaman çizelgesi örtüşmesi, kronolojik nedensellik zinciri).
-- **`negative_evidence.py`** — Yokluk ve negatif kanıt çıkarım motoru (`NegativeEvidenceEngine`: Beklenen ama bulunamayan kanıtların Bayesian inancı düşürmesi).
-- **`orchestrator.py`** — Tüm çıkarım bileşenlerini tek bir pipeline'da birleştiren merkezi orkestratör (`InferenceOrchestrator`).
+- **`bayesian.py`** — Real Bayesian sequential belief update engine (`HypothesisBelief`, `BayesianUpdater`), type-informed prior table and Bayes trail.
+- **`evidence_weight.py`** — Real evidence weighting model with NATO Admiralty, cross-corroboration multiplier, temporal decay and conflict penalty (`EvidenceWeighter`).
+- **`pattern.py`** — OSINT pattern extraction engine (`PatternExtractor`: Ownership, Infrastructure Cluster, Identity Anchor, Temporal Burst, Multi-source).
+- **`hypothesis.py`** — Hypothesis data model (`Hypothesis`), hypothesis generator (`HypothesisGenerator`) and state machine (`HypothesisLifecycle`: Generated -> Active -> Confirmed/Refuted/Archived).
+- **`dynamic_bridge.py`** — Dynamic bridge engine that discovers hidden links between graph components (`DynamicBridgeEngine`: Shared Infrastructure, Temporal, Type-Based).
+- **`uncertainty.py`** — Shannon Entropy uncertainty measurement (`UncertaintyEngine`), critical uncertainty detection and "What Corvus Does Not Know" analysis.
+- **`counterfactual.py`** — Counterfactual reasoning engine (`CounterfactualEngine`: "What would be required to prove/refute this?", alternative explanations and suggested discovery actions).
+- **`temporal_reasoner.py`** — Temporal inference engine (`TemporalReasoningEngine`: temporal burst detection, timeline overlap, chronological causality chain).
+- **`negative_evidence.py`** — Absence and negative evidence inference engine (`NegativeEvidenceEngine`: expected-but-unfound evidence reduces Bayesian belief).
+- **`orchestrator.py`** — Central orchestrator that unifies all inference components into a single pipeline (`InferenceOrchestrator`).
 
 ---
 
@@ -140,7 +140,7 @@ Faz C — Güvenli otonom Agent    (plan → araç seçimi → onay → aksiyon 
 
 **Corvus Capability Layer (`core/capabilities/`):**
 - **`core/capabilities/identity_capability.py`** — Turkish character normalization (`ç, ğ, ı, ö, ş, ü` -> `c, g, i, o, s, u`), name & username handle permutations (`firstlast`, `f.last`, `first_last`), and candidate email generation.
-- **`core/capabilities/search_capability.py`** — Kamuya açık arama motoru OSINT dorking (DuckDuckGo HTML / public probing) for target names, handles, emails, and corporate documents.
+- **`core/capabilities/search_capability.py`** — Public search-engine OSINT dorking (DuckDuckGo HTML / public probing) for target names, handles, emails, and corporate documents.
 - **`core/capabilities/enrichment_capability.py`** — Gravatar MD5 avatar hash checking & profile discovery.
 
 ---
