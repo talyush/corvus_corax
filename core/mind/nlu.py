@@ -128,6 +128,7 @@ class ParsedInput:
     entities: list = field(default_factory=list)
     topics: list = field(default_factory=list)      # öne çıkan kavramlar
     is_question: bool = False
+    name_hint: str = ""               # "benim adım X" gibi öz-beyan
 
     def to_dict(self) -> Dict:
         return {
@@ -139,6 +140,7 @@ class ParsedInput:
             "topics": self.topics,
             "entities": self.entities,
             "is_question": self.is_question,
+            "name_hint": self.name_hint,
         }
 
 
@@ -168,6 +170,12 @@ class NLU:
         lang = self._detect_language(raw)
         norm = normalize(raw)
         lower_raw = raw.lower()
+
+        # Öz-beyan isim: "benim adım X" / "ben X" / "my name is X"
+        name_hint = ""
+        m = re.search(r"(?:benim adım|benim adim|adım|adim|my name is|i am called)\s+([A-Za-zÇĞİÖŞÜçğıöşü][\w\-]*)", raw, re.IGNORECASE)
+        if m and len(m.group(1)) <= 24:
+            name_hint = m.group(1)
 
         # Temiz tokenlar (stopword çıkar)
         words = [w for w in norm.split() if w and w not in _STOPWORDS]
@@ -232,6 +240,7 @@ class NLU:
             entities=entities,
             topics=topics,
             is_question=is_question,
+            name_hint=name_hint,
         )
 
     def _classify_register(self, norm: str, words: list) -> str:

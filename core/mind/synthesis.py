@@ -112,11 +112,16 @@ class ResponseSynthesizer:
     def _identity_user(self, p, ctx) -> str:
         tr = self._lang(p) == "tr"
         profile = self.mind.user.profile_statement()
+        name = self.mind.user.name_hint
         if tr:
-            base = "Profiline bakayım: " + "; ".join(profile) + "."
+            base = ("Profiline bakayım: " + "; ".join(profile) + ".")
+            if name:
+                base = f"Adın {name}. " + base
             stance = "Seni anlamaya çalışıyorum — söylediklerin modelimi şekillendiriyor."
         else:
             base = "Let me look at your profile: " + "; ".join(profile) + "."
+            if name:
+                base = f"Your name is {name}. " + base
             stance = "I'm working to understand you — your words shape my model of you."
         return base + " " + stance
 

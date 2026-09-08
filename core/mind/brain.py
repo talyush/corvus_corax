@@ -9,6 +9,7 @@ Akış (her girdide):
 """
 
 from __future__ import annotations
+import os
 from typing import Dict, Optional
 
 from .nlu import NLU
@@ -16,17 +17,27 @@ from .memory import MindMemory
 from .mind_state import MindState
 from .other_mind import UserModel
 from .synthesis import ResponseSynthesizer
+from .persistence import save_brain, load_brain, default_state_path
 
 
 class MindBrain:
     """Corvus'un kod tabanlı zihni — LLM bağımsız."""
 
-    def __init__(self):
+    def __init__(self, persist_path: Optional[str] = None, auto_persist: bool = True):
         self.nlu = NLU()
         self.memory = MindMemory()
         self.state = MindState()
         self.user = UserModel()
         self.synth = ResponseSynthesizer(self)
+        self.persist_path = persist_path or default_state_path()
+        self.auto_persist = auto_persist
+        # Faz B: önceki oturumdan devam et
+        if self.persist_path and os.path.exists(self.persist_path):
+            load_brain(self, self.persist_path)
+
+    def save(self, path: Optional[str] = None) -> str:
+        """Mevcut zihin durumunu diske yazar."""
+        return save_brain(self, path or self.persist_path)
 
     # ------------------------------------------------------------------
     # Dışa açık arayüz (LLM provider'ın kullandığı imza)
@@ -39,6 +50,10 @@ class MindBrain:
 
         # 1. Kullanıcı modeli + iç durum + hafıza güncelle
         self.user.observe(parsed)
+        # Faz B: öz-beyan isim kalıcı olarak saklanır
+        if parsed.name_hint and not self.user.name_hint:
+            self.user.name_hint = parsed.name_hint
+            self.memory.learn_fact("user", f"kullanıcının adı {parsed.name_hint}")
         self.state.update(parsed.register, parsed.valence, parsed.intensity, bool(parsed.entities))
         self.memory.remember_turn("user", user_prompt, register=parsed.register,
                                   topics=parsed.topics, valence=parsed.valence)
@@ -52,6 +67,13 @@ class MindBrain:
                                   topics=parsed.topics)
 
         self.state.observe(f"yanıt verildi [{parsed.register}]")
+
+        # Faz B: her turun ardından hafıza/kullanıcı modelini diske yaz
+        if self.auto_persist and self.persist_path:
+            try:
+                self.save()
+            except Exception:
+                pass  # kayıt hatası konuşmayı bozmasın
         return response
 
     # ------------------------------------------------------------------

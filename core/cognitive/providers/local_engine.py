@@ -14,16 +14,21 @@ Integrates:
 """
 
 from typing import List, Dict, Any, Optional
+import os
 from .interface import AbstractCognitiveProvider
 from core.mind.brain import MindBrain
+from core.mind.persistence import default_state_path
 from ..persona import MachinePersona
 
 
 class EmbeddedCognitiveEngine(AbstractCognitiveProvider):
     """Dahili Bilisel ve Derin Akil Yurutme Yanit Uretim Motoru."""
 
-    def __init__(self):
-        self.mind = MindBrain()
+    def __init__(self, persist_path: Optional[str] = None, auto_persist: bool = True):
+        self.mind = MindBrain(
+            persist_path=persist_path or os.getenv("CORVUS_MIND_STATE") or default_state_path(),
+            auto_persist=auto_persist,
+        )
 
     @property
     def provider_name(self) -> str:
