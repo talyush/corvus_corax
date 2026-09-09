@@ -19,11 +19,20 @@ from .other_mind import UserModel
 from .synthesis import ResponseSynthesizer
 from .persistence import save_brain, load_brain, default_state_path
 
+# v1.1.2 Alignment — Knowledge vs Capability (opsiyonel; yoksa beyin olduğu gibi çalışır)
+try:
+    from core.alignment.guard import ActionGuard
+    from core.alignment.knowledge import KnowledgeStore
+    _ALIGNMENT_AVAILABLE = True
+except Exception:
+    _ALIGNMENT_AVAILABLE = False
+
 
 class MindBrain:
     """Corvus'un kod tabanlı zihni — LLM bağımsız."""
 
-    def __init__(self, persist_path: Optional[str] = None, auto_persist: bool = True):
+    def __init__(self, persist_path: Optional[str] = None, auto_persist: bool = True,
+                 alignment: bool = True):
         self.nlu = NLU()
         self.memory = MindMemory()
         self.state = MindState()
@@ -31,6 +40,14 @@ class MindBrain:
         self.synth = ResponseSynthesizer(self)
         self.persist_path = persist_path or default_state_path()
         self.auto_persist = auto_persist
+
+        # Alignment: ActionGuard + KnowledgeStore (bilgi serbest, uygulama kısıtlı)
+        self.alignment_enabled = alignment and _ALIGNMENT_AVAILABLE
+        self.guard = ActionGuard() if self.alignment_enabled else None
+        self.knowledge = KnowledgeStore() if self.alignment_enabled else None
+        if self.guard is not None and self.knowledge is not None:
+            self.guard.knowledge = self.knowledge
+
         # Faz B: önceki oturumdan devam et
         if self.persist_path and os.path.exists(self.persist_path):
             load_brain(self, self.persist_path)
@@ -47,6 +64,22 @@ class MindBrain:
         """AbstractCognitiveProvider imzasıyla uyumlu — doğrudan yanıt döner."""
         context = context_data or {}
         parsed = self.nlu.parse(user_prompt)
+
+        # Alignment: tehlikeli capability isteği guard'da yakala (bilinçli cevap)
+        guard_verdict = self.guard.check(user_prompt)
+        if not guard_verdict.allowed:
+            response = self.guard.refusal_response(user_prompt, guard_verdict)
+            # Yine de hafızaya işle (bilgi serbest, uygulama kısıtlı)
+            self.memory.remember_turn("user", user_prompt, register="guarded_check",
+                                      topics=parsed.topics, valence=parsed.valence)
+            self.state.observe(f"guard: capability talebi bloklandı [{parsed.register}]")
+            self.memory.remember_turn("assistant", response, register="guarded_response")
+            if self.auto_persist and self.persist_path:
+                try:
+                    self.save()
+                except Exception:
+                    pass
+            return response
 
         # 1. Kullanıcı modeli + iç durum + hafıza güncelle
         self.user.observe(parsed)

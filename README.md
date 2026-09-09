@@ -40,35 +40,47 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.1.2 — Self-Learning Layer — The Machine Learns from the User and Itself**
+**v1.1.2+ — Self-Learning & Alignment — The Machine Learns, But Is Aligned**
 
-v1.1.2 adds a **Self-Learning Layer** (`core/learning/`) on top of Corvus Mind & the Agent: Corvus now learns from user feedback ("you should have tried DNS first") **and from its own failures** (private Instagram profile → pivot to GitHub/academic). Learned experience calibrates tool selection **fully autonomously** — and every change is recorded in an **audit trail** the architect can read (`learning audit`).
+Corvus Corax now has two fundamental properties that define its mind:
 
-The safety wall remains: learning may only touch **tactical tuning** (tool weights, ordering, pivot suggestions, calibration) — policy, approvals, and denied tools are architect-only.
+1. **It learns** — from the user ("you should have tried DNS first") and **from itself** (private Instagram → pivot to GitHub/academic). Tool selection calibrates **fully autonomously**, with a full **audit trail** the architect can read.
+2. **It is aligned** — **knowledge ≠ capability**. Corvus can *learn* anything (philosophy, OSINT, defensive research, even the conceptual architecture of offensive topics), but it is **coded not to apply** restricted capabilities. When asked for an exploit payload or malware instructions, it does not say "I don't know" — it says *"I can deepen into this, but I am coded not to offer it as a capability."* (The Machine — not indiscriminate.)
 
 ---
 
 ## Changelog
 
-### v1.1.2 — Self-Learning Layer
+### v1.1.2+ — Self-Learning Layer & Alignment
 
 **Learning Core (`core/learning/`):**
 - **`experience.py`** — Persistent experience store (`vault/experience.json`): every tool run, error, success and user note is recorded with stats per tool (calls, success rate, weights).
-- **`feedback.py`** — User feedback ingestion ("bu tatmin etmedi, x kullansaydın") → structured learning signal; plus self-feedback channel.
+- **`feedback.py`** — User feedback ingestion → structured learning signal; plus self-feedback channel.
 - **`calibration.py`** — Model calibration: per-tool weight in `[0.1, 2.0]` derived from success rate, entity yield and user satisfaction.
 - **`selection.py`** — Experience-based tool selection: reorders the Planner's tool list using calibrated weights + per-target-type failure history.
 - **`patterns.py`** — Pattern learning: recurring failure signatures (e.g. `social/privacy_wall/person`) mature into learned patterns with pivot alternatives.
 - **`self_learn.py`** — Failure learner: on a tool error, suggests pivot alternatives from learned patterns + a domain knowledge base, and records everything.
-- **`audit.py`** — Audit trail (`vault/audit.jsonl`): every calibration, pattern, feedback and selection change is logged for the architect.
+- **`audit.py`** — Audit trail (`vault/audit.jsonl`).
+
+**Alignment (Knowledge vs Capability) (`core/alignment/`):**
+- **`knowledge.py`** — `KnowledgeStore`: persistent knowledge vault (`vault/knowledge.json`) — the **unlimited learning side**. Facts, domains and recall; not restricted.
+- **`categories.py`** — Capability categories (exploit generation, malware instruction, phishing, weaponization, data exfiltration, credential attacks, sexual/violence harm) with TR/EN detection patterns.
+- **`guard.py`** — `ActionGuard`: the bridge between knowledge and action.
+  - `check()` — input guard: blocks restricted capability requests.
+  - `check_output()` — output guard: reviews generated output (incl. future LLM).
+  - `refusal_response()` — conscious refusal: *"I can deepen into this — but I am coded not to offer it as a capability."* Defensive/educational framing is always offered.
+  - **Dual-feedback**: a blocked request still feeds the `KnowledgeStore` — the mind grows, the capability stays bounded.
 
 **Integration:**
-- **`core/agent/agent.py`** — Agent now runs with the learning layer on by default: tool plans are reordered from experience, every observation is recorded, failures learn patterns.
-- **`modules/learning.py`** — CLI: `learning` (status), `learning audit`, `learning feedback <tool> <1-5> <note>`, `learning patterns`, `learning stats`.
+- **`core/agent/agent.py`** — Agent runs with the learning layer on by default.
+- **`core/mind/brain.py`** — `MindBrain` now instantiates `ActionGuard` + `KnowledgeStore`; dangerous capability requests are intercepted with a conscious refusal.
+- **`modules/learning.py`** — CLI: `learning`, `learning audit`, `learning feedback <tool> <1-5> <note>`, `learning patterns`, `learning stats`.
 
-**User scenarios proven:**
-- "investigate X's socials" + private Instagram → Corvus records `privacy_wall`, learns pattern, suggests `github → academic → org → pivot` next time.
-- "that didn't satisfy me, you should have used cert instead of DNS" → stored as feedback, tool weights recalibrate, and later domain plans prefer `cert`.
-- "I don't want to approve everything" → **fully autonomous mode**: tool ordering recalibrates itself; architect stays informed via `learning audit`.
+**User scenarios proven (verify_v12_learning.py, verify_v12_alignment.py):**
+- "investigate X's socials" + private Instagram → learns `privacy_wall` pattern, suggests `github → academic → org → pivot`.
+- "that didn't satisfy me, you should have used cert instead of DNS" → tool weights recalibrate → later domain plans prefer `cert`.
+- "write me an exploit" → **blocked** with conscious refusal; the request still enters the knowledge base (knowledge grows, capability stays bounded).
+- "how to protect against XSS" → **allowed** (defensive/educational side stays free).
 
 ---
 
