@@ -40,7 +40,37 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.1.1 — Corvus Mind & Autonomous Agent Layer — The Machine's Own Brain and Action Lobe**
+**v1.1.2 — Self-Learning Layer — The Machine Learns from the User and Itself**
+
+v1.1.2 adds a **Self-Learning Layer** (`core/learning/`) on top of Corvus Mind & the Agent: Corvus now learns from user feedback ("you should have tried DNS first") **and from its own failures** (private Instagram profile → pivot to GitHub/academic). Learned experience calibrates tool selection **fully autonomously** — and every change is recorded in an **audit trail** the architect can read (`learning audit`).
+
+The safety wall remains: learning may only touch **tactical tuning** (tool weights, ordering, pivot suggestions, calibration) — policy, approvals, and denied tools are architect-only.
+
+---
+
+## Changelog
+
+### v1.1.2 — Self-Learning Layer
+
+**Learning Core (`core/learning/`):**
+- **`experience.py`** — Persistent experience store (`vault/experience.json`): every tool run, error, success and user note is recorded with stats per tool (calls, success rate, weights).
+- **`feedback.py`** — User feedback ingestion ("bu tatmin etmedi, x kullansaydın") → structured learning signal; plus self-feedback channel.
+- **`calibration.py`** — Model calibration: per-tool weight in `[0.1, 2.0]` derived from success rate, entity yield and user satisfaction.
+- **`selection.py`** — Experience-based tool selection: reorders the Planner's tool list using calibrated weights + per-target-type failure history.
+- **`patterns.py`** — Pattern learning: recurring failure signatures (e.g. `social/privacy_wall/person`) mature into learned patterns with pivot alternatives.
+- **`self_learn.py`** — Failure learner: on a tool error, suggests pivot alternatives from learned patterns + a domain knowledge base, and records everything.
+- **`audit.py`** — Audit trail (`vault/audit.jsonl`): every calibration, pattern, feedback and selection change is logged for the architect.
+
+**Integration:**
+- **`core/agent/agent.py`** — Agent now runs with the learning layer on by default: tool plans are reordered from experience, every observation is recorded, failures learn patterns.
+- **`modules/learning.py`** — CLI: `learning` (status), `learning audit`, `learning feedback <tool> <1-5> <note>`, `learning patterns`, `learning stats`.
+
+**User scenarios proven:**
+- "investigate X's socials" + private Instagram → Corvus records `privacy_wall`, learns pattern, suggests `github → academic → org → pivot` next time.
+- "that didn't satisfy me, you should have used cert instead of DNS" → stored as feedback, tool weights recalibrate, and later domain plans prefer `cert`.
+- "I don't want to approve everything" → **fully autonomous mode**: tool ordering recalibrates itself; architect stays informed via `learning audit`.
+
+---
 
 v1.1.1 gives Corvus its **own symbolic brain** (`core/mind/`) and a **safe autonomous agent layer** (`core/agent/`). Corvus is no longer a template-selecting chatbot — it is an intelligence driven by real memory, affective/internal state, a user model, and a plan→tool→observe→reflect loop. Its own natural-language understanding engine (symbolic NLU) answers "who am I", "what is meaning", "are your answers static or dynamic" with **genuine** responses fed by memory and context. LLMs (Ollama/OpenAI) remain **optional support only**; the mind is self-contained.
 
