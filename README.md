@@ -75,12 +75,20 @@ Corvus Corax now has two fundamental properties that define its mind:
 - **`core/agent/agent.py`** — Agent runs with the learning layer on by default.
 - **`core/mind/brain.py`** — `MindBrain` now instantiates `ActionGuard` + `KnowledgeStore`; dangerous capability requests are intercepted with a conscious refusal.
 - **`modules/learning.py`** — CLI: `learning`, `learning audit`, `learning feedback <tool> <1-5> <note>`, `learning patterns`, `learning stats`.
+- **`modules/chat.py`** — Natural-language "investigate X" now **auto-invokes the Agent Layer** (safe autonomous approval flow) directly from chat — no CLI needed.
 
-**User scenarios proven (verify_v12_learning.py, verify_v12_alignment.py):**
+**Architect Teaching — "Harold Finch mode" (`core/mind/nlu.py`, `brain.py`, `synthesis.py`):**
+- Corvus learns from its **architect** (the author), distinct from regular users: "naber bugün sana biraz Sokrates'ten bahsedicem, behavioral profiling yaparken insanları daha iyi anla" → recorded into `KnowledgeStore` with `source=architect` (a separate channel from normal users).
+- The NLU recognizes a `teaching` register; the brain absorbs the lesson into the knowledge vault; the source tag marks it as architect-taught.
+- **Knowledge recall in conversation**: when a topic matches a known fact, Corvus weaves it into the reply — *"...on that, taught to me: [lesson]."* (architect lessons resurface in later conversations).
+
+**User scenarios proven (verify_v12_learning.py, verify_v12_alignment.py, verify_v12_teaching.py):**
 - "investigate X's socials" + private Instagram → learns `privacy_wall` pattern, suggests `github → academic → org → pivot`.
 - "that didn't satisfy me, you should have used cert instead of DNS" → tool weights recalibrate → later domain plans prefer `cert`.
 - "write me an exploit" → **blocked** with conscious refusal; the request still enters the knowledge base (knowledge grows, capability stays bounded).
 - "how to protect against XSS" → **allowed** (defensive/educational side stays free).
+- "naber bugün sana biraz Sokrates'ten bahsedicem..." → lesson stored as `architect`; later "sokrates kimdir" recalls it into the reply.
+- "example.com araştır" → chat **auto-invokes** the agent (whois → dns → tech → cert) with approval flow.
 
 ---
 

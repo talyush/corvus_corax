@@ -57,6 +57,71 @@ class MindBrain:
         return save_brain(self, path or self.persist_path)
 
     # ------------------------------------------------------------------
+    # Mimar öğretmesi — bilgi dağarcığına kalıcı bilgi işler
+    # ------------------------------------------------------------------
+    def _absorb_teaching(self, raw_text: str, parsed) -> None:
+        """'sana X'ten bahsedeceğim' dersi -> KnowledgeStore'a kaydet.
+
+        Kaynak mimardır (architect) — normal kullanıcıdan ayırt edilir.
+        Konu: cümlede en çok geçen kavram/kapitalize isim.
+        """
+        import re
+
+        # Konu tahmini: ilk öne çıkan kavram (topics) veya büyük harfli isim veya
+        # 'X'ten bahsedicem' yapısındaki X
+        topic = None
+
+        # 1) 'sana biraz X'ten bahsedicem' / 'X öğreteceğim' yapısındaki konu adı
+        m = re.search(
+            r"(?:bahsedicem|bahsedecegim|bahsedeceğim|anlaticam|anlatacağım|anlatacagim|ogretecegim|öğreteceğim|öğreticem|anlataca[mı]*)\s"
+            r"(?:biraz|sana|size|sizlere)?\s*"
+            r"([a-zA-ZİÇĞÖŞÜçğıöşü]{2,})",
+            raw_text, re.IGNORECASE,
+        )
+        # Alternatif: "sana X ten bahsedicem" (X fiilden önce)
+        if not m:
+            m = re.search(
+                r"(?:sana|size|sizlere)\s+(?:biraz)?\s*"
+                r"([a-zA-ZİÇĞÖŞÜçğıöşü]{2,})\s+(?:ten|dan|den|dan|hakkında|ile ilgili)\s+"
+                r"(?:bahsedicem|bahsedecegim|anlaticam|anlatacağım|anlatacagim|ogretecegim|öğreteceğim)",
+                raw_text, re.IGNORECASE,
+            )
+        if m and m.group(1):
+            topic = m.group(1).lower()
+
+        if not topic and parsed.topics:
+            for t in parsed.topics:
+                if len(t) > 2:
+                    topic = t
+                    break
+
+        if not topic:
+            cap = re.findall(r"\b[A-ZİÇĞÖŞÜ][a-zA-ZİÇĞÖŞÜ]{2,}\b", raw_text)
+            ignored = {"Sana", "Benim", "Bu", "Bir", "Bunu", "Sen", "Ben", "Corvus"}
+            names = [c for c in cap if c not in ignored]
+            if names:
+                topic = names[0].lower()
+
+        if not topic:
+            topic = raw_text.strip().lower()[:40]
+
+        # Özet: cümleyi kısalt, 140 karakterde tut
+        summary = raw_text.strip()
+        if len(summary) > 240:
+            summary = summary[:240] + "..."
+
+        self.knowledge.learn(
+            topic=topic,
+            summary=summary,
+            source="architect",          # MİMAR kanalı — normal kullanıcıdan ayrı
+            domain="teaching",
+            confidence=0.8,
+        )
+        self.state.observe(f"mimar dersi alındı: '{topic}'")
+        # Hafıza notu
+        self.memory.learn_fact("architect_lessons", f"{topic}: {summary[:100]}")
+
+    # ------------------------------------------------------------------
     # Dışa açık arayüz (LLM provider'ın kullandığı imza)
     # ------------------------------------------------------------------
     def generate_response(self, user_prompt: str, conversation_history: Optional[list] = None,
@@ -91,6 +156,10 @@ class MindBrain:
         self.memory.remember_turn("user", user_prompt, register=parsed.register,
                                   topics=parsed.topics, valence=parsed.valence)
         self.state.observe(f"girdi: '{user_prompt[:50]}' [{parsed.register}]")
+
+        # MİMAR ÖĞRETMESİ — 'sana X'ten bahsedeceğim...' bilgi dağarcığına işlenir
+        if parsed.register == "teaching" and self.knowledge is not None:
+            self._absorb_teaching(user_prompt, parsed)
 
         # 2. Yanıtı sentezle
         response = self.synth.synthesize(parsed, context)

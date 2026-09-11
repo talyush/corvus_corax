@@ -129,6 +129,7 @@ class ParsedInput:
     topics: list = field(default_factory=list)      # öne çıkan kavramlar
     is_question: bool = False
     name_hint: str = ""               # "benim adım X" gibi öz-beyan
+    is_teaching: bool = False         # mimar öğretme modu ("sana X'ten bahsedeceğim")
 
     def to_dict(self) -> Dict:
         return {
@@ -141,6 +142,7 @@ class ParsedInput:
             "entities": self.entities,
             "is_question": self.is_question,
             "name_hint": self.name_hint,
+            "is_teaching": self.is_teaching,
         }
 
 
@@ -216,7 +218,10 @@ class NLU:
         # Kayıt (register)
         register = self._classify_register(norm, words)
 
-# Genel sohbet ama hedefli varlık içeren sorgu -> araştırmaya yönlendir
+        # Öğretme modu — kayıt 'teaching' olursa is_teaching bayrağı dolu gelir
+        is_teaching = register == "teaching"
+
+        # Genel sohbet ama hedefli varlık içeren sorgu -> araştırmaya yönlendir
         if register == "conversational" and entities:
             register = "investigate"
         # Niyet (goals)
@@ -241,12 +246,28 @@ class NLU:
             topics=topics,
             is_question=is_question,
             name_hint=name_hint,
+            is_teaching=is_teaching,
         )
 
     def _classify_register(self, norm: str, words: list) -> str:
         """Kayıt türünü öncelik sıralı belirler."""
         joined = norm.replace(" ", "_")
         wset = set(words)
+
+        # 0. ÖĞRETME (Mimar dersi) — 'haber vereceğim' / 'bahsedeceğim' / 'öğreteceğim'
+        if any(k in joined for k in (
+            "bahsedecegim", "bahsedecegimden", "bahsedicem", "bahsedicemden",
+            "anlatacagim", "anlatacagimdan", "anlaticam", "anlatim",
+            "ogretecegim", "ogreticem", "ogreneceksin", "ogrenmeni_istiyorum",
+            "sana_soyleyecegim", "sana_bir_sey_ogretecegim", "ogretmek_istiyorum",
+            "ders_vereyim", "bana_ogreteceksin", "ogren", "hafizana_kaydet",
+            "sana_ogretecegim", "sana_ogreticegim", "will_teach", "teach_you",
+            "let_me_tell", "i_will_explain", "lesson", "not_al", "not_et",
+            "bunu_hatirla", "remember_this", "learn_this", "i_ll_teach",
+        )) or any(w in wset for w in ("bahsedicem", "bahsedecegim", "anlatacagim",
+                                      "anlaticam", "ogretecegim", "ogreticem", "ogret",
+                                      "öğreteceğim", "öğreticem", "öğret", "not_al")):
+            return "teaching"
 
         # 1. Meta Corvus — dinamik/statik, yapay/bilinç, nasıl düşünüyorsun
         if any(w in wset for w in ("dinamik", "statik", "yapay", "bilinc", "dusunuyorsun", "dusun",
@@ -312,6 +333,7 @@ class NLU:
             "social": ["bond", "smalltalk"],
             "investigate": ["act", "get_information"],
             "evaluative": ["feedback", "validation"],
+            "teaching": ["teach", "transfer_knowledge"],
         }
         if register in goals_map:
             return goals_map[register]

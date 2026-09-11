@@ -44,6 +44,7 @@ class ResponseSynthesizer:
             "identity_corvus": self._identity_corvus,
             "philosophical": self._philosophical,
             "capability": self._capability,
+            "teaching": self._teaching,
             "emotional": self._emotional,
             "evaluative": self._evaluative,
             "investigate": self._investigate,
@@ -51,10 +52,54 @@ class ResponseSynthesizer:
         }
         handler = dispatch.get(r, self._conversational)
         core = handler(parsed, context)
+
+        # KNOWLEDGE RECALL — Corvus bildiklerini konuşmaya katar (mimar/deneyim bilgisi)
+        core = self._knowledge_recall(parsed, context, core)
+
         tail = self._memory_tail(parsed, context)
         if tail:
             core = core + " " + tail
         return core
+
+    # ------------------------------------------------------------------
+    # Knowledge recall — bilgi dağarcığını konuşmaya entegre eder
+    # ------------------------------------------------------------------
+    def _knowledge_recall(self, parsed, context: Dict, core: str) -> str:
+        """Konuşmadaki kavramlarla eşleşen bilgi kayıtlarını yanıta işler."""
+        if self.mind.knowledge is None:
+            return core
+        topics = getattr(parsed, "topics", []) or []
+        words = getattr(parsed, "words", []) or []
+        entities = getattr(parsed, "entities", []) or []
+        candidates = set(topics)
+        candidates.update(entities)
+        for w in list(words[:8]) + list(entities):
+            if len(w) > 3:
+                candidates.add(w)
+
+        recalled = []
+        for kw in candidates:
+            hits = self.mind.knowledge.recall(kw, limit=1)
+            for h in hits:
+                recalled.append((kw, h))
+        if not recalled:
+            return core
+
+        tr = self._lang(parsed) == "tr"
+        rec = recalled[0]  # en alakalı tek kayıt ekle (yanıtı şişirme)
+        kw, h = rec
+
+        if tr:
+            source_tag = "sana öğretildi" if h.get("source") == "architect" else "bildiğim bir şey"
+            extra = f" — bununla ilgili {source_tag}: {h.get('summary', '')[:140]}"
+        else:
+            source_tag = "taught to me" if h.get("source") == "architect" else "something I know"
+            extra = f" — on that, {source_tag}: {h.get('summary', '')[:140]}"
+
+        # Yanıt zaten o bilgiyi içeriyorsa tekrarlama
+        if h.get("summary", "").lower()[:60] in core.lower():
+            return core
+        return core + extra
 
     # ------------------------------------------------------------------
     # Yardımcılar
@@ -78,6 +123,14 @@ class ResponseSynthesizer:
 # ------------------------------------------------------------------
     # Register handler'ları
     # ------------------------------------------------------------------
+    def _teaching(self, p, ctx) -> str:
+        """Mimar dersi başladı — bilgi KnowledgeStore'a işlenir (brain'de),
+        burada kısa bir kabul verilir."""
+        tr = self._lang(p) == "tr"
+        if tr:
+            return "Anlıyorum. Söylediklerini bilgi dağarcığıma işliyorum — dersini dikkatle dinliyorum. Devam et."
+        return "Understood. I am recording this into my knowledge vault — I am listening closely. Continue."
+
     def _social(self, p, ctx) -> str:
         tr = self._lang(p) == "tr"
         name = self.mind.user.name_hint
