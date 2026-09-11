@@ -36,7 +36,11 @@ def main():
         [], {},
     )
     print("  cevap:", r[:70])
-    assert "anlıyorum" in r.lower() or "işliyorum" in r.lower(), f"kabul cevabı bekleniyor: {r[:60]}"
+    # Kabul cevabı varyantlı olabilir; anahtar kavramlardan biri geçmeli
+    key_accept = ("anlıyorum" in r.lower() or "anladım" in r.lower()
+                  or "işliyorum" in r.lower() or "kavrıyorum" in r.lower()
+                  or "kaydediyorum" in r.lower() or "dinliyorum" in r.lower())
+    assert key_accept, f"kabul cevabı bekleniyor: {r[:60]}"
 
     # 2. Bilgi dağarcığı + kaynak ayrımı
     print("\n[2] BİLGİ DAĞARCIĞI + MİMAR AYRIMI")

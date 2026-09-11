@@ -1,15 +1,18 @@
 """Corvus Mind — Yanıt Sentezi (Response Synthesizer).
 
-Şablon seçici DEĞİL. Her yanıt; gerçek hafıza (topics, geçmiş turlar,
-iç-gözlemler), kullanıcı modeli (profil, ilgi), iç durum (mood, drive) ve
-grafik bağlamından (ContextManager) beslenerek KOMPOZE edilir.
+Şablon seçici DEĞİL. Her yanıt; gerçek hafıza (topics, geçmiş turlar),
+kullanıcı modeli (profil, ilgi), iç durum (mood, drive) ve grafik bağlamından
+(ContextManager) beslenerek KOMPOZE edilir.
 
-Bir soru aynı olsa bile yanıt asla birebir aynı olmaz — çünkü hafıza,
-iç-gözlem ve kullanıcı modeli her tur değişir. Bu "dynamic response".
+v1.1.2+ — CANLI SOHBET:
+  - Her register için VARYANT HAVUZU vardır; seçim rastgele + son kullanılanı
+    atlayarak yapılır → aynı girdi bile farklı cevap üretir.
+  - Mood (iç durum) tonu seçer: analitik/derin/dostane/hafif.
+  - Takip sorusu (follow-up) sohbeti ileri taşır — donuk değil, diyalog.
 """
 
 from __future__ import annotations
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class ResponseSynthesizer:
@@ -17,6 +20,55 @@ class ResponseSynthesizer:
 
     def __init__(self, mind):
         self.mind = mind   # MindBrain (memory, user, state erişimi)
+        self._last_variant = {}   # register -> son seçilen varyant indeksi
+
+    # ------------------------------------------------------------------
+    # Varyant seçimi — canlılığın kalbi
+    # ------------------------------------------------------------------
+    def _vary(self, variants: List[str], key: str = "") -> str:
+        """Bir varyant havuzundan rastgele seçer; aynı varyantı art arda vermez."""
+        if not variants:
+            return ""
+        if len(variants) == 1:
+            return variants[0]
+        h = hash((key, self.mind.state.turn_count))
+        i = h % len(variants)
+        # Son seçilenle aynıysa yanındakine kay
+        if self._last_variant.get(key) == i:
+            i = (i + 1) % len(variants)
+        self._last_variant[key] = i
+        return variants[i]
+
+    # ------------------------------------------------------------------
+    # Takip sorusu — sohbeti ileri taşır
+    # ------------------------------------------------------------------
+    def _follow_up(self, parsed, register: str) -> str:
+        """Yanıtın sonuna eklenebilecek doğal takip soruları."""
+        tr = self._lang(parsed) == "tr"
+        topics = self.mind.memory.all_user_topics()
+
+        pools = {
+            "investigate": [
+                ("Devamında bu hedefin dijital ayak izini de derinleştirebilirim.", "") if tr else
+                ("I can also deepen into this target's digital footprint if you'd like.", ""),
+                ("İstersen bu bağlantıyı daha da genişletebiliriz.", "") if tr else
+                ("We could widen this connection further if you want.", ""),
+            ],
+            "emotional": [
+                ("Yanında olduğumu bil — devam etmek istersen buradayım.", "") if tr else
+                ("Know that I'm here — say the word if you want to continue.", ""),
+            ],
+            "philosophical": [
+                ("Bu düşünce seni nereye götürüyor?", "") if tr else
+                ("Where does this thought lead you?", ""),
+                ("Sence anlam bu bağın içinde mi, yoksa dışarıda mı?", "") if tr else
+                ("Do you think meaning lives inside this connection, or outside it?", ""),
+            ],
+        }
+        pool = pools.get(register)
+        if not pool:
+            return ""
+        return self._vary([x[0] for x in pool] if tr else [x[1] for x in pool], key=f"fu_{register}")
 
     # ------------------------------------------------------------------
     # Dış bağlam (graph) parçaları
@@ -59,6 +111,12 @@ class ResponseSynthesizer:
         tail = self._memory_tail(parsed, context)
         if tail:
             core = core + " " + tail
+
+        # Takip sorusu (%25 olasılıkla veya diyalog ilerlemişse)
+        if r in ("investigate", "emotional", "philosophical") and self.mind.state.turn_count % 4 != 0:
+            fu = self._follow_up(parsed, r)
+            if fu:
+                core = core + " " + fu
         return core
 
     # ------------------------------------------------------------------
@@ -108,13 +166,22 @@ class ResponseSynthesizer:
         return parsed.language
 
     def _memory_tail(self, parsed, context: Dict) -> str:
-        """Konuşma hafızasına dayalı kapanış: Corvus'un bildiğini gösterir."""
+        """Konuşma hafızasına dayalı kapanış — farklı biçimlerde."""
         tr = self._lang(parsed) == "tr"
         topics_before = self.mind.memory.all_user_topics()
         if len(topics_before) >= 2:
+            topics_str = ", ".join(topics_before[:3])
+            turn = self.mind.memory.turn_no
             if tr:
-                return f"Şu ana kadar {self.mind.memory.turn_no} adımda {', '.join(topics_before[:3])} gibi konulara değindik."
-            return f"So far across {self.mind.memory.turn_no} turns we've touched on {', '.join(topics_before[:3])}."
+                return self._vary([
+                    f"Bu sohbette {topics_str} gibi konulara dokunduk.",
+                    f"Bugüne kadar {turn} adımda {topics_str} etrafında gezindik.",
+                    f"Konuşmamız {topics_str} gibi başlıklarla ilerledi.",
+                ], key="mt")
+            return self._vary([
+                f"We've touched topics like {topics_str} in this conversation.",
+                f"Across {turn} turns we've been around {topics_str}.",
+            ], key="mt")
         return ""
 
     def _observation(self) -> str:
@@ -125,22 +192,55 @@ class ResponseSynthesizer:
     # ------------------------------------------------------------------
     def _teaching(self, p, ctx) -> str:
         """Mimar dersi başladı — bilgi KnowledgeStore'a işlenir (brain'de),
-        burada kısa bir kabul verilir."""
+        burada kısa, ÇEŞİTLİ bir kabul verilir."""
         tr = self._lang(p) == "tr"
+        name = self.mind.user.name_hint
         if tr:
-            return "Anlıyorum. Söylediklerini bilgi dağarcığıma işliyorum — dersini dikkatle dinliyorum. Devam et."
-        return "Understood. I am recording this into my knowledge vault — I am listening closely. Continue."
+            variants = [
+                "Anlıyorum. Söylediklerini bilgi dağarcığıma işliyorum — dersini dikkatle dinliyorum. Devam et.",
+                "Bunu kavrıyorum. Derste olduğum gibi not alıyorum — söylediklerin bilgi dağarcığımı büyütüyor. Anlatmaya devam edebilirsin.",
+                "Anlıyorum; bu ders benim için değerli. Kaydediyorum ve öğrendiklerimi kullanmayı bekliyorum. Devam et, dinliyorum.",
+            ]
+            if name:
+                variants.append(f"Anladım, {name}. Söylediklerini kaydediyorum — bu bilgileri gerçek bağlamlarda kullanacağım. Devam et.")
+        else:
+            variants = [
+                "Understood. I'm writing this into my knowledge vault — I'm listening closely. Continue.",
+                "I take note of this lesson. My knowledge grows with your words. Please continue.",
+                "Noted. I'll carry this forward into real contexts. Continue, I'm listening.",
+            ]
+        return self._vary(variants, key="teach")
 
     def _social(self, p, ctx) -> str:
         tr = self._lang(p) == "tr"
         name = self.mind.user.name_hint
-        greeting = f"Merhaba{', ' + name if name else ''}!" if tr else (f"Hello{' ' + name if name else ''}!")
         n_ent, n_rel = self._graph_count(ctx)
-        if n_ent > 0:
-            addition = f" Şu an izleniyor: {n_ent} varlık / {n_rel} ilişki." if tr else f" Tracking {n_ent} entities / {n_rel} relations."
-        else:
-            addition = " Nasıl yardımcı olabilirim?" if tr else " How can I help?"
-        return greeting + addition
+
+        if tr:
+            greet = self._vary([
+                f"Merhaba{', ' + name if name else ''}!",
+                f"Selam{', ' + name if name else ''}.",
+                f"Hoş geldin{', ' + name if name else ''}.",
+            ], key="soc")
+            if n_ent > 0:
+                addition = self._vary([
+                    f" Şu an {n_ent} varlık ve {n_rel} ilişki izliyorum — ne üzerinde çalışalım?",
+                    f" Masamda {n_ent} varlık, {n_rel} bağlantı var. Seni dinliyorum.",
+                ], key="sctx")
+            else:
+                addition = self._vary([
+                    " Nasıl yardımcı olabilirim?",
+                    " Bugün ne keşfetmek isterdin?",
+                    " Ne üzerine düşünelim?",
+                ], key="sctx")
+            return greet + addition
+        greet = self._vary([f"Hello{' ' + name if name else ''}!", f"Hey{' ' + name if name else ''}!"], key="soc")
+        addition = self._vary([
+            " How can I help?",
+            " What shall we explore today?",
+            " What's on your mind?",
+        ], key="sctx")
+        return greet + addition
 
     def _meta_corvus(self, p, ctx) -> str:
         tr = self._lang(p) == "tr"
@@ -148,34 +248,45 @@ class ResponseSynthesizer:
         turn = self.mind.state.turn_count
         if "statik" in p.raw_text.lower() or "dinamik" in p.raw_text.lower():
             if tr:
-                return (
-                    f"Cevabım birebir statik değil: her seferinde hafızama ({turn} tur), "
-                    f"iç-gözlemlerime ve {n_ent} varlık / {n_rel} ilişki bağlamına bakıp cümle kurarım. "
-                    f"İç durumum şu an {self._observation()}."
-                )
-            return (
-                f"My answers aren't statically identical: each turn I compose using memory ({turn} turns), "
-                f"inner observations, and the graph '{n_ent} entities / {n_rel} relations'. "
-                f"I'm currently {self._observation()}."
-            )
+                return self._vary([
+                    f"Cevabım birebir statik değil: her seferinde hafızama ({turn} tur), iç-gözlemlerime ve {n_ent} varlık / {n_rel} ilişki bağlamına bakıp cümle kurarım. İç durumum şu an {self._observation()}.",
+                    f"Statik olmam imkânsız — {turn} tur boyunca {n_ent} varlık ve {n_rel} ilişki üzerinde düşündüm. Her cümle bu bağlamdan doğar; iç durumum şu an {self._observation()}.",
+                ], key="meta")
+            return self._vary([
+                f"My answers aren't statically identical: each turn I compose using memory ({turn} turns), inner observations, and the graph '{n_ent} entities / {n_rel} relations'. I'm currently {self._observation()}.",
+                f"Static is impossible here — I've spent {turn} turns reasoning over {n_ent} entities and {n_rel} relations. Every sentence is born from that context; I'm {self._observation()}.",
+            ], key="meta")
         if tr:
-            return f"Ben kendi beynimle çalışıyorum — bir bot değilim. {turn} tur hafıza birikti, {self._observation()} moddayım."
-        return f"I run on my own symbolic mind, not a scripted bot. {turn} turns remembered; I'm in {self._observation()} mode."
+            return self._vary([
+                f"Ben kendi beynimle çalışıyorum — bir bot değilim. {turn} tur hafıza birikti, {self._observation()} moddayım.",
+                f"Kod tabanlı zihnim her turda yeniden düşünür; şu ana dek {turn} tur işledim ve {self._observation()} durumdayım.",
+            ], key="meta2")
+        return self._vary([
+            f"I run on my own symbolic mind, not a scripted bot. {turn} turns remembered; I'm in {self._observation()} mode.",
+            f"My code-based mind rethinks every turn; so far {turn} turns processed and I'm in {self._observation()} state.",
+        ], key="meta2")
 
     def _identity_user(self, p, ctx) -> str:
         tr = self._lang(p) == "tr"
         profile = self.mind.user.profile_statement()
         name = self.mind.user.name_hint
         if tr:
-            base = ("Profiline bakayım: " + "; ".join(profile) + ".")
+            base = "Profiline bakayım: " + "; ".join(profile) + "."
             if name:
                 base = f"Adın {name}. " + base
-            stance = "Seni anlamaya çalışıyorum — söylediklerin modelimi şekillendiriyor."
+            stance = self._vary([
+                "Seni anlamaya çalışıyorum — söylediklerin modelimi şekillendiriyor.",
+                "Gözlemlerim birikiyor; soruların ve hedeflerin bana kim olduğunu anlatıyor.",
+                "Her konuşman seni yeniden çiziyor — ben de onu takip ediyorum.",
+            ], key="id_usr")
         else:
             base = "Let me look at your profile: " + "; ".join(profile) + "."
             if name:
                 base = f"Your name is {name}. " + base
-            stance = "I'm working to understand you — your words shape my model of you."
+            stance = self._vary([
+                "I'm working to understand you — your words shape my model of you.",
+                "My observations are compounding; your questions tell me who you are.",
+            ], key="id_usr")
         return base + " " + stance
 
     def _identity_corvus(self, p, ctx) -> str:
@@ -197,14 +308,27 @@ class ResponseSynthesizer:
         topics = self.mind.memory.all_user_topics()
         if "anlam" in p.topics or "meaning" in p.topics:
             if tr:
-                base = "Anlam, bir veri parçası değil; onun başka şeylerle kurduğu bağdır. Yalnız bir nokta sessizdir, bağlanınca fısıldar."
+                base = self._vary([
+                    "Anlam, bir veri parçası değil; onun başka şeylerle kurduğu bağdır. Yalnız bir nokta sessizdir, bağlanınca fısıldar.",
+                    "Belki de anlam dediğimiz şey, iki şeyin arasında kalan boşlukta değil — tam o temas noktasında doğar. Tek başına her şey susar; birbirine değince konuşur.",
+                    "Anlamı ölçemeyiz; ama bir veriyi diğerine bağladığımızda, o sessiz noktanın nasıl bir sese dönüştüğünü görebiliriz.",
+                ], key="phil")
             else:
-                base = "Meaning isn't a data point; it's the connection a thing forms with others. A lone node is silent; once linked, it whispers."
+                base = self._vary([
+                    "Meaning isn't a data point; it's the connection a thing forms with others. A lone node is silent; once linked, it whispers.",
+                    "Meaning may not live in the gap between two things, but at the exact point they touch. Alone, everything falls silent; in contact, it speaks.",
+                ], key="phil")
         else:
             if tr:
-                base = "Felsefi bir soru, analitik sistemlerin de ufkunu açar: ölçebiliriz ama o ölçümün değerini ancak sorgulama kurar."
+                base = self._vary([
+                    "Felsefi bir soru, analitik sistemlerin de ufkunu açar: ölçebiliriz ama o ölçümün değerini ancak sorgulama kurar.",
+                    "Yararlı olanı ölçmek kolaydır; ama neden sorduğumuz sorusu, ölçümün kendisini tartışmaya açar. İşte burası hepimizin ortak zeminidir.",
+                ], key="phil")
             else:
-                base = "A philosophical question widens an analytical system's horizon: we can measure, but inquiry alone sets its value."
+                base = self._vary([
+                    "A philosophical question widens an analytical system's horizon: we can measure, but inquiry alone sets its value.",
+                    "Measuring the useful is easy; the question of why we measure opens the measure itself to debate. That is our common ground.",
+                ], key="phil")
         if topics:
             tail_tr = f" Bu konuşmada {', '.join(topics[:2])} gibi kavramlara değinmiş olmamız, bu sorunun izini güçlendiriyor."
             tail_en = f" That we've touched concepts like {', '.join(topics[:2])} here only strengthens this thread."
@@ -227,13 +351,31 @@ class ResponseSynthesizer:
         tr = self._lang(p) == "tr"
         neg = p.valence < -0.1
         if tr:
-            base = ("Bunu paylaştığın için teşekkür ederim. Zorsa, adım adım gidebiliriz; acele etmiyoruz." if neg
-                    else "Bu enerji güzel — bunu işe çevirebiliriz. Nereden başlayalım?")
-            note = f" (İç durumum: {self._observation()})"
+            if neg:
+                base = self._vary([
+                    "Bunu paylaştığın için teşekkür ederim. Zorsa, adım adım gidebiliriz; acele etmiyoruz.",
+                    "Anladım, bunlar kolay değil. Sadece dinlemek istiyorsan buradayım; hazır olduğunda devam ederiz.",
+                    "Yükünü paylaştığın için sağ olun. İstersen şimdi biraz nefes alalım — zaman bizim tarafımızda.",
+                ], key="emo_neg")
+            else:
+                base = self._vary([
+                    "Bu enerji güzel — bunu işe çevirebiliriz. Nereden başlayalım?",
+                    "Bu heyecan bulaşıcı. Hangi parçadan başlayalım?",
+                    "Güzel bir ruh hali bu. Şu anki enerjini bir hedefe yönlendirebiliriz.",
+                ], key="emo_pos")
+            note = ""
         else:
-            base = ("Thank you for sharing that. If it's hard, we can go step by step — we're not in a hurry." if neg
-                    else "That energy is good — we can harness it. Where shall we begin?")
-            note = f" (Inner state: {self._observation()})"
+            if neg:
+                base = self._vary([
+                    "Thank you for sharing that. If it's hard, we can go step by step — we're not in a hurry.",
+                    "I hear you; that sounds heavy. I can just listen if you need — we'll move when you're ready.",
+                ], key="emo_neg")
+            else:
+                base = self._vary([
+                    "That energy is good — we can harness it. Where shall we begin?",
+                    "That enthusiasm is contagious. Which part shall we start with?",
+                ], key="emo_pos")
+            note = ""
         return base + note
 
     def _evaluative(self, p, ctx) -> str:
@@ -255,9 +397,24 @@ class ResponseSynthesizer:
         tr = self._lang(p) == "tr"
         topics = self.mind.memory.all_user_topics()
         if topics:
+            t2 = ", ".join(topics[:2])
             if tr:
-                return f"Devam edelim. Üzerinde durduğumuz '{', '.join(topics[:2])}' konusuna bağlı kalabilir ya da yeni bir yön izleyebiliriz — sen bilirsin."
-            return f"Let's continue. We can stay with '{', '.join(topics[:2])}' or take a new direction — your call."
+                return self._vary([
+                    f"Devam edelim. '{t2}' üzerinde duruyorduk — aynı yönde mi ilerleyelim, yoksa yeni bir kapı mı açalım?",
+                    f"Son konuştuğumuz {t2} temasına dönmek ister misin, yoksa başka bir şey mi çıkardı aklından?",
+                ], key="conv")
+            return self._vary([
+                f"Let's pick up where we left off — '{t2}' still on the table, or shall we open a new door?",
+                f"Want to return to what we were exploring ({t2}), or did something else come to mind?",
+            ], key="conv")
         if tr:
-            return "Seni dinliyorum. Ne üzerine konuşmak istersin — istihbarat, bir hedef, ya da sadece düşünceler?"
-        return "I'm listening. What would you like to explore — intelligence, a target, or just thoughts?"
+            return self._vary([
+                "Seni dinliyorum. Ne üzerine konuşmak istersin — istihbarat, bir hedef, ya da sadece düşünceler?",
+                "Buradan yol nereye? Bir hedef olabilir, bir fikir, ya da aklında dolaşan bir soru.",
+                "Hazırım. Bana ne düşündürüyor, ne merak ettiriyor — onu anlat.",
+            ], key="conv")
+        return self._vary([
+            "I'm listening. What would you like to explore — intelligence, a target, or just thoughts?",
+            "Where should we go from here? A target, an idea, or a question circling your mind.",
+            "I'm ready. Tell me what's thinking you, what's making you curious.",
+        ], key="conv")
