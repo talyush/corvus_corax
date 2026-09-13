@@ -28,6 +28,7 @@ class KnowledgeStore:
         self.path = path or os.getenv("CORVUS_KNOWLEDGE_STATE") or os.path.join(root, "vault", "knowledge.json")
         self.facts: Dict[str, dict] = {}      # konu -> {summary, source, added_at, ...}
         self.domains: Dict[str, int] = {}     # alan -> görülme sayısı (ilgi)
+        self.agent_hints: Dict[str, list] = {}  # hedef tipi -> önerilen araçlar
         self._load()
 
     # ------------------------------------------------------------------
@@ -41,6 +42,7 @@ class KnowledgeStore:
                 data = json.load(f)
             self.facts = data.get("facts", {})
             self.domains = data.get("domains", {})
+            self.agent_hints = data.get("agent_hints", {})
         except Exception:
             self.facts = {}
             self.domains = {}
@@ -49,11 +51,33 @@ class KnowledgeStore:
         try:
             os.makedirs(os.path.dirname(self.path), exist_ok=True)
             with open(self.path, "w", encoding="utf-8") as f:
-                json.dump({"facts": self.facts, "domains": self.domains},
+                json.dump({"facts": self.facts, "domains": self.domains,
+                           "agent_hints": self.agent_hints},
                           f, ensure_ascii=False, indent=2)
             return self.path
         except Exception:
             return ""
+
+    # ------------------------------------------------------------------
+    # Agent eylem önerileri (mimar dersleri -> agent planına)
+    # ------------------------------------------------------------------
+    def learn_action_hint(self, target_type: str, tool: str, source: str = "architect") -> None:
+        """Mimarın 'X hedeflerinde Y kullan' dersi -> agent planını etkileyecek öneri."""
+        tt = target_type.strip().lower()
+        tl = tool.strip().lower()
+        if not tt or not tl:
+            return
+        entry = self.agent_hints.setdefault(tt, [])
+        if tl not in entry:
+            entry.append(tl)
+        try:
+            self.save()
+        except Exception:
+            pass
+
+    def hints_for(self, target_type: str) -> list:
+        """Bir hedef tipi için önerilen araçlar (varsa)."""
+        return list(self.agent_hints.get(target_type.strip().lower(), []))
 
     # ------------------------------------------------------------------
     # Öğrenme (bilgi kazanımı)

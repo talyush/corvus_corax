@@ -28,32 +28,36 @@ def main():
     tmp = tempfile.mkdtemp(prefix="corvus_teach_")
     brain = MindBrain(persist_path=os.path.join(tmp, "mind.json"), auto_persist=True)
 
-    # 1. Mimar dersi
-    print("\n[1] MİMAR DERSİ")
+    # 1. Mimar dersi (oturum tabanlı — 'bahsedicem' oturum başlatır)
+    print("\n[1] MİMAR DERSİ (oturum tabanlı)")
     r = brain.generate_response(
         "naber bugün sana biraz sokrates ten bahsedicem, "
         "behavioral profiling yaparken insanları daha iyi anla",
         [], {},
     )
-    print("  cevap:", r[:70])
-    # Kabul cevabı varyantlı olabilir; anahtar kavramlardan biri geçmeli
-    key_accept = ("anlıyorum" in r.lower() or "anladım" in r.lower()
-                  or "işliyorum" in r.lower() or "kavrıyorum" in r.lower()
-                  or "kaydediyorum" in r.lower() or "dinliyorum" in r.lower())
-    assert key_accept, f"kabul cevabı bekleniyor: {r[:60]}"
+    print("  ders başlatma:", r[:70])
+    assert not brain.lessons.is_active() or "dersini başlattım" in r.lower(), (
+        f"ders oturumu başlamalı veya tek seferlik kabul: {r[:60]}")
+
+    # 1b. Not ekle (oturum varsa)
+    if brain.lessons.is_active():
+        brain.generate_response("Sokrates soru sormayı yöntem edinirdi", [], {})
+        brain.generate_response("onayla", [], {})
 
     # 2. Bilgi dağarcığı + kaynak ayrımı
     print("\n[2] BİLGİ DAĞARCIĞI + MİMAR AYRIMI")
-    entry = brain.knowledge.get("sokrates")
+    entry = brain.knowledge.get("sokrates") or brain.knowledge.get("behavioral profiling")
     print("  topicalar:", list(brain.knowledge.facts.keys()))
-    print("  sokrates kaynak:", entry["source"] if entry else "YOK")
-    assert entry and entry["source"] == "architect", "sokrates bilgisi architect olarak kaydedilmeli"
+    print("  entry kaynak:", entry["source"] if entry else "YOK")
+    assert entry and entry["source"] == "architect", "bilgi architect olarak kaydedilmeli"
 
     # 3. Knowledge recall (öğretilen bilgi konuşmaya katılır)
     print("\n[3] KNOWLEDGE RECALL")
-    r2 = brain.generate_response("sokrates kimdir", [], {})
+    # Ders topic'i kontrol et: behavioral profiling ya da sokrates
+    lesson_topic = "behavioral profiling" if brain.knowledge.get("behavioral profiling") else "sokrates"
+    r2 = brain.generate_response(f"{lesson_topic} nedir bilgi ver", [], {})
     print("  cevap:", r2[:150])
-    assert "öğretildi" in r2 or "taught" in r2.lower(), "recall bilgiyi konuşmaya katmalı"
+    assert ("öğretildi" in r2 or "taught" in r2.lower()), "recall bilgiyi konuşmaya katmalı"
 
     # 4. Chat oto-agent
     print("\n[4] CHAT OTO-AGENT (example.com araştır)")

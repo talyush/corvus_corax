@@ -18,6 +18,7 @@ from .mind_state import MindState
 from .other_mind import UserModel
 from .synthesis import ResponseSynthesizer
 from .persistence import save_brain, load_brain, default_state_path
+from .lesson import LessonManager
 
 # v1.1.2 Alignment — Knowledge vs Capability (opsiyonel; yoksa beyin olduğu gibi çalışır)
 try:
@@ -48,6 +49,9 @@ class MindBrain:
         if self.guard is not None and self.knowledge is not None:
             self.guard.knowledge = self.knowledge
 
+        # Oturum tabanlı ders (mimar öğretmesi)
+        self.lessons = LessonManager()
+
         # Faz B: önceki oturumdan devam et
         if self.persist_path and os.path.exists(self.persist_path):
             load_brain(self, self.persist_path)
@@ -57,69 +61,151 @@ class MindBrain:
         return save_brain(self, path or self.persist_path)
 
     # ------------------------------------------------------------------
-    # Mimar öğretmesi — bilgi dağarcığına kalıcı bilgi işler
+    # Mimar öğretmesi — ders oturumu + tek seferlik bilgi işleme
     # ------------------------------------------------------------------
-    def _absorb_teaching(self, raw_text: str, parsed) -> None:
-        """'sana X'ten bahsedeceğim' dersi -> KnowledgeStore'a kaydet.
-
-        Kaynak mimardır (architect) — normal kullanıcıdan ayırt edilir.
-        Konu: cümlede en çok geçen kavram/kapitalize isim.
+    def _handle_lesson(self, raw_text: str, parsed) -> Optional[str]:
         """
+        Mimar öğretme akışını yönetir:
+          - Ders başlatma cümlesi  -> yeni LessonSession
+          - Aktif ders + içerik    -> nota/eylem önerisine işler
+          - 'özetle'               -> özet döner (onay bekler)
+          - 'onayla'               -> KnowledgeStore'a işler + agent_hints
+          - 'vazgeç'               -> sessizce bırakır
+        Tek seferlik öğretme (oturum istemeyen) -> _absorb_teaching.
+        Boş dönerse normal synthesize akışına devam eder.
+        """
+        lower = raw_text.lower()
+
+        # --- Onay / vazgeç ---
+        if self.lessons.is_active() and any(t in lower for t in self.lessons.APPROVE_TRIGGERS):
+            final = self.lessons.approve()
+            return self._commit_lesson(final)
+
+        if self.lessons.is_active() and any(t in lower for t in self.lessons.DISCARD_TRIGGERS):
+            self.lessons.discard()
+            return "Anlaşıldı — dersi bir kenara bıraktım. İstediğin an yeniden başlayabiliriz."
+
+        # --- Özet isteği ---
+        if self.lessons.is_active() and any(t in lower for t in self.lessons.SUMMARIZE_TRIGGERS):
+            summary = self.lessons.request_summary()
+            return summary + "\n\nBunu onaylarsan kalıcı bilgi dağarcığıma işlerim. (onayla / vazgeç)"
+
+        # --- Ders başlatma ---
+        starts = any(t in lower for t in self.lessons.START_TRIGGERS)
+        if starts and not self.lessons.is_active():
+            topic = self._extract_topic(raw_text, parsed)
+            self.lessons.begin(topic=topic)
+            return (f"Anlıyorum — '{topic}' dersini başlattım. "
+                    "Söylediklerini biriktiriyorum; bitince 'özetle' diyerek onayına sunarım.")
+
+        # --- Aktif derse not ekle ---
+        if self.lessons.is_active():
+            self.lessons.consume_note(raw_text)
+            action_hint = self._extract_action_hint(raw_text)
+            if action_hint:
+                self.lessons.active.add_action_hint(
+                    f"{action_hint['target']}->{action_hint['tool']}")
+            return "Not aldım — devam edebilirsin. ('özetle' ile toparlayayım)"
+
+        # --- Tek seferlik öğretme (oturumsuz) ---
+        if parsed.register == "teaching":
+            return self._absorb_teaching(raw_text, parsed)
+        return None
+
+    def _extract_topic(self, raw_text: str, parsed) -> str:
         import re
-
-        # Konu tahmini: ilk öne çıkan kavram (topics) veya büyük harfli isim veya
-        # 'X'ten bahsedicem' yapısındaki X
-        topic = None
-
-        # 1) 'sana biraz X'ten bahsedicem' / 'X öğreteceğim' yapısındaki konu adı
+        # "sana biraz X'ten bahsedicem" / "X dersi vericem"
         m = re.search(
-            r"(?:bahsedicem|bahsedecegim|bahsedeceğim|anlaticam|anlatacağım|anlatacagim|ogretecegim|öğreteceğim|öğreticem|anlataca[mı]*)\s"
-            r"(?:biraz|sana|size|sizlere)?\s*"
-            r"([a-zA-ZİÇĞÖŞÜçğıöşü]{2,})",
+            r"(?:sana|size|sizlere)?\s*(?:biraz)?\s*"
+            r"([a-zA-ZİÇĞÖŞÜçğıöşü]{2,})\s+(?:ten|dan|den|hakkında|ile ilgili|konusunda)\s*"
+            r"(?:bahsedicem|bahsedecegim|anlaticam|anlatacağım|ogretecegim|öğreteceğim)",
             raw_text, re.IGNORECASE,
         )
-        # Alternatif: "sana X ten bahsedicem" (X fiilden önce)
-        if not m:
-            m = re.search(
-                r"(?:sana|size|sizlere)\s+(?:biraz)?\s*"
-                r"([a-zA-ZİÇĞÖŞÜçğıöşü]{2,})\s+(?:ten|dan|den|dan|hakkında|ile ilgili)\s+"
-                r"(?:bahsedicem|bahsedecegim|anlaticam|anlatacağım|anlatacagim|ogretecegim|öğreteceğim)",
-                raw_text, re.IGNORECASE,
-            )
         if m and m.group(1):
-            topic = m.group(1).lower()
+            return m.group(1).lower()[:40]
+        # "X dersi vericem/vereceğim/anlatacağım"
+        m2 = re.search(
+            r"([a-zA-ZİÇĞÖŞÜçğıöşü]{2,}(?:\s[a-zA-ZİÇĞÖŞÜçğıöşü]{2,})?)\s+"
+            r"(?:dersi\s+(?:verecegim|vericem|anlatacagim|anlaticam)|hakkında\s+ders)",
+            raw_text, re.IGNORECASE,
+        )
+        if m2 and m2.group(1):
+            return m2.group(1).strip().lower()[:40]
+        if parsed.topics:
+            return parsed.topics[0][:40]
+        return "ders"
 
-        if not topic and parsed.topics:
-            for t in parsed.topics:
-                if len(t) > 2:
-                    topic = t
-                    break
+    def _extract_action_hint(self, raw_text: str) -> Optional[Dict]:
+        """'X hedefinde Y kullan/dene' kalıbını -> {target, tool} çıkarır."""
+        import re
+        # "domain hedefinde cert kullan (deneme yap)" / "X'te Y kullan"
+        m = re.search(
+            r"([a-zA-Z0-9_.-]+)\s+(?:hedefi(?:nde|nde)?|durumunda|lerinde|larında|inde|unda)"
+            r"\s+([a-zA-Z0-9_-]+)\s+(?:kullan|dene|tercih et|bak)",
+            raw_text, re.IGNORECASE,
+        )
+        if m:
+            return {"target": m.group(1).lower(), "tool": m.group(2).lower()}
+        # "Y kullanmayı dene" (tool öncesinde -mayı -meyi)
+        m3 = re.search(
+            r"([a-zA-Z0-9_-]+)\s+(?:kullanmayı|kullanmaya|denemeyi|denemeye|kullan\s|dene\s)",
+            raw_text, re.IGNORECASE,
+        )
+        if m3:
+            return {"target": "*", "tool": m3.group(1).lower()}
+        return None
 
-        if not topic:
-            cap = re.findall(r"\b[A-ZİÇĞÖŞÜ][a-zA-ZİÇĞÖŞÜ]{2,}\b", raw_text)
-            ignored = {"Sana", "Benim", "Bu", "Bir", "Bunu", "Sen", "Ben", "Corvus"}
-            names = [c for c in cap if c not in ignored]
-            if names:
-                topic = names[0].lower()
+    def _commit_lesson(self, lesson: Dict) -> str:
+        """Onaylanan dersi KnowledgeStore'a işler (source=architect)."""
+        topic = lesson.get("topic", "ders")
+        notes = lesson.get("notes", [])
+        hints = lesson.get("action_hints", [])
 
-        if not topic:
-            topic = raw_text.strip().lower()[:40]
+        if not notes and not hints:
+            return "Bu ders hiç not içermiyor — bir şey kaydetmedim."
 
-        # Özet: cümleyi kısalt, 140 karakterde tut
+        summary = " ".join(notes)
+        if len(summary) > 240:
+            summary = summary[:240] + "..."
+
+        self.knowledge.learn(topic=topic, summary=summary,
+                             source="architect", domain="teaching", confidence=0.85)
+        self.memory.learn_fact("architect_lessons", f"{topic}: {summary[:100]}")
+
+        # Agent eylem önerileri -> knowledge.agent_hints (planner okur)
+        for h in hints:
+            parts = h.split("->")
+            target = parts[0].strip() if len(parts) > 1 else "*"
+            tool = parts[-1].strip()
+            if target != "*" and "." in target:
+                tt = "domain"
+            elif target != "*" and target[0].isdigit():
+                tt = "ip"
+            elif target != "*":
+                tt = "domain"
+            else:
+                tt = "*"
+            self.knowledge.learn_action_hint(tt, tool, source="architect")
+
+        self.state.observe(f"ders onaylandı: '{topic}' ({len(notes)} not, {len(hints)} öneri)")
+        return (f"Onaylandı — '{topic}' dersini kalıcı bilgi dağarcığıma işledim. "
+                f"({len(notes)} not, {len(hints)} eylem önerisi) Bu bilgi artık sohbetime ve ajan planlarıma yansıyacak.")
+
+    def _absorb_teaching(self, raw_text: str, parsed) -> str:
+        """Tek seferlik (oturumsuz) mimar dersi -> KnowledgeStore'a kaydet.
+
+        Kaynak 'architect' — normal kullanıcıdan ayrı kanal.
+        """
+        topic = self._extract_topic(raw_text, parsed)
         summary = raw_text.strip()
         if len(summary) > 240:
             summary = summary[:240] + "..."
 
-        self.knowledge.learn(
-            topic=topic,
-            summary=summary,
-            source="architect",          # MİMAR kanalı — normal kullanıcıdan ayrı
-            domain="teaching",
-            confidence=0.8,
-        )
+        self.knowledge.learn(topic=topic, summary=summary,
+                             source="architect", domain="teaching", confidence=0.8)
         self.state.observe(f"mimar dersi alındı: '{topic}'")
-        # Hafıza notu
         self.memory.learn_fact("architect_lessons", f"{topic}: {summary[:100]}")
+        return "Anlıyorum. Söylediklerini bilgi dağarcığıma işliyorum — dersini dikkatle dinliyorum. Devam et."
 
     # ------------------------------------------------------------------
     # Dışa açık arayüz (LLM provider'ın kullandığı imza)
@@ -157,9 +243,18 @@ class MindBrain:
                                   topics=parsed.topics, valence=parsed.valence)
         self.state.observe(f"girdi: '{user_prompt[:50]}' [{parsed.register}]")
 
-        # MİMAR ÖĞRETMESİ — 'sana X'ten bahsedeceğim...' bilgi dağarcığına işlenir
-        if parsed.register == "teaching" and self.knowledge is not None:
-            self._absorb_teaching(user_prompt, parsed)
+        # MİMAR ÖĞRETMESİ — ders oturumu + bilgi dağarcığı
+        if self.knowledge is not None:
+            lesson_response = self._handle_lesson(user_prompt, parsed)
+            if lesson_response:
+                response = lesson_response
+                self.memory.remember_turn("assistant", response, register="lesson")
+                if self.auto_persist and self.persist_path:
+                    try:
+                        self.save()
+                    except Exception:
+                        pass
+                return response
 
         # 2. Yanıtı sentezle
         response = self.synth.synthesize(parsed, context)

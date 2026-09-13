@@ -17,6 +17,7 @@ from .mind_state import MindState
 from .memory import MindMemory, MemoryTurn
 from .other_mind import UserModel
 from .synthesis import ResponseSynthesizer
+from .lesson import LessonManager, LessonSession
 from .persistence import save_brain, load_brain, default_state_path
 
 __all__ = [
@@ -28,6 +29,8 @@ __all__ = [
     "MemoryTurn",
     "UserModel",
     "ResponseSynthesizer",
+    "LessonManager",
+    "LessonSession",
     "save_brain",
     "load_brain",
     "default_state_path",

@@ -77,18 +77,29 @@ Corvus Corax now has two fundamental properties that define its mind:
 - **`modules/learning.py`** — CLI: `learning`, `learning audit`, `learning feedback <tool> <1-5> <note>`, `learning patterns`, `learning stats`.
 - **`modules/chat.py`** — Natural-language "investigate X" now **auto-invokes the Agent Layer** (safe autonomous approval flow) directly from chat — no CLI needed.
 
-**Architect Teaching — "Harold Finch mode" (`core/mind/nlu.py`, `brain.py`, `synthesis.py`):**
+**Architect Teaching — "Harold Finch mode" (`core/mind/nlu.py`, `brain.py`, `synthesis.py`, `lesson.py`):**
 - Corvus learns from its **architect** (the author), distinct from regular users: "naber bugün sana biraz Sokrates'ten bahsedicem, behavioral profiling yaparken insanları daha iyi anla" → recorded into `KnowledgeStore` with `source=architect` (a separate channel from normal users).
 - The NLU recognizes a `teaching` register; the brain absorbs the lesson into the knowledge vault; the source tag marks it as architect-taught.
 - **Knowledge recall in conversation**: when a topic matches a known fact, Corvus weaves it into the reply — *"...on that, taught to me: [lesson]."* (architect lessons resurface in later conversations).
 
-**User scenarios proven (verify_v12_learning.py, verify_v12_alignment.py, verify_v12_teaching.py):**
+**Session-based Lessons (multi-turn "Harold Finch" full course):**
+- `core/mind/lesson.py` — **LessonSession & LessonManager**: the architect can teach over many turns:
+  1. *"sana behavioral profiling dersi vereceğim"* → lesson session begins
+  2. content notes are accumulated → *"Sokrates soru sormayı yöntem edinirdi"*
+  3. action suggestions are captured → *"domain hedefinde cert kullanmayı dene"*
+  4. `özetle` → Corvus summarizes and asks for approval
+  5. `onayla` → the lesson is committed to `KnowledgeStore` (source=architect) + `agent_hints`
+- **Agent knowledge recall in planning**: `core/agent/agent.py` reads `knowledge.hints_for(target_type)` — an architect-taught "domain hedefinde cert kullan" lesson **reorders the next agent plan** (cert moves to the front). Verified: `auto_action executed: ['cert', 'whois', 'dns', 'tech']`.
+
+**User scenarios proven (verify_v12_learning.py, verify_v12_alignment.py, verify_v12_teaching.py, verify_v12_lively.py, verify_v12_lesson_agent.py):**
 - "investigate X's socials" + private Instagram → learns `privacy_wall` pattern, suggests `github → academic → org → pivot`.
 - "that didn't satisfy me, you should have used cert instead of DNS" → tool weights recalibrate → later domain plans prefer `cert`.
 - "write me an exploit" → **blocked** with conscious refusal; the request still enters the knowledge base (knowledge grows, capability stays bounded).
 - "how to protect against XSS" → **allowed** (defensive/educational side stays free).
 - "naber bugün sana biraz Sokrates'ten bahsedicem..." → lesson stored as `architect`; later "sokrates kimdir" recalls it into the reply.
 - "example.com araştır" → chat **auto-invokes** the agent (whois → dns → tech → cert) with approval flow.
+- Multi-turn lesson: "dersi başlat → not ver → aksiyon öner → özetle → onayla" → committed to knowledge; next domain plan starts with `cert`.
+- Lively conversation: the same question ("anlam nedir", "merhaba") yields **different, context-aware replies** each time (variant pools, avoid-repeats, follow-up questions).
 
 ---
 

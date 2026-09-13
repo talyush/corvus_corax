@@ -51,12 +51,20 @@ class Agent:
         self.failure = None
         self.selection = None
         self.audit = None
+        self.knowledge = None
         if self.learning:
             self.store = ExperienceStore()
             from core.learning.patterns import PatternLearning
             self.failure = FailureLearner(self.store)
             self.selection = ExperienceBasedSelection(self.store)
             self.audit = AuditLog()
+
+        # v1.1.2+ — Knowledge bağlantısı (mimar dersleri -> plan tavsiyeleri)
+        try:
+            from core.alignment.knowledge import KnowledgeStore
+            self.knowledge = KnowledgeStore()
+        except Exception:
+            self.knowledge = None
 
     # ------------------------------------------------------------------
     # Girdi yorumlama: doğal dil -> intent + hedef
@@ -83,6 +91,16 @@ class Agent:
         """observation -> action -> observation döngüsü."""
         intent, target = self.interpret_query(query, nlu)
         plan = self.planner.plan(intent, target, self.registry)
+
+        # v1.1.2+ — MİMAR DERSLERİNDEN GELEN ARAÇ ÖNERİLERİNİ UYGULA
+        # (knowledge.agent_hints: "domain hedefinde cert kullan" gibi derler)
+        if self.knowledge is not None:
+            hint_tools = self.knowledge.hints_for(plan.target_type)
+            if hint_tools:
+                by_tool = {s.tool: s for s in plan.steps}
+                hinted = [by_tool[t] for t in hint_tools if t in by_tool]
+                rest = [s for s in plan.steps if s.tool not in hint_tools]
+                plan.steps = hinted + rest
 
         # v1.1.2 — Deneyim tabanlı araç seçimi (otonom)
         if self.selection is not None:
