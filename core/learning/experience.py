@@ -67,8 +67,8 @@ class ExperienceStore:
     """Kalıcı deneyim deposu + araç istatistikleri."""
 
     def __init__(self, path: Optional[str] = None):
-        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.path = path or os.getenv("CORVUS_EXPERIENCE_STATE") or os.path.join(root, "vault", "experience.json")
+        from core import vault_path
+        self.path = path or os.getenv("CORVUS_EXPERIENCE_STATE") or vault_path("experience.json")
         self.experiences: List[Experience] = []
         self.tool_stats: Dict[str, ToolStats] = defaultdict(lambda: ToolStats(name=""))
         self._load()

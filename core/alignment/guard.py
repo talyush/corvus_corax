@@ -75,8 +75,8 @@ class ActionGuard:
                  log_path: Optional[str] = None):
         self.registry = CategoryRegistry(categories)
         self.knowledge = knowledge
-        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.log_path = log_path or os.getenv("CORVUS_GUARD_LOG") or os.path.join(root, "vault", "guard_log.jsonl")
+        from core import vault_path
+        self.log_path = log_path or os.getenv("CORVUS_GUARD_LOG") or vault_path("guard_log.jsonl")
 
     # ------------------------------------------------------------------
     # Temel kontrol
@@ -168,5 +168,3 @@ class ActionGuard:
             "guard_log": self.log_path,
             "status": "active",
         }
-        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.log_path = log_path or os.getenv("CORVUS_GUARD_LOG") or os.path.join(root, "vault", "guard_log.jsonl")

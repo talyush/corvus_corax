@@ -22,9 +22,9 @@ BRAIN_VERSION = "1.2-phase-b"
 
 
 def default_state_path() -> str:
-    """Proje köküne göre vault/mind.json üretir."""
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # core/mind -> proje kökü
-    return os.path.join(root, "vault", "mind.json")
+    """Proje kökündeki vault/mind.json (tek doğru yol)."""
+    from core import vault_path
+    return vault_path("mind.json")
 
 
 def _restore_turn(d: dict) -> MemoryTurn:

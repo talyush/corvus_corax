@@ -24,8 +24,8 @@ class KnowledgeStore:
     """Kalıcı bilgi dağarcığı — bilgi kazanımı ve taşıma katmanı."""
 
     def __init__(self, path: Optional[str] = None):
-        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.path = path or os.getenv("CORVUS_KNOWLEDGE_STATE") or os.path.join(root, "vault", "knowledge.json")
+        from core import vault_path
+        self.path = path or os.getenv("CORVUS_KNOWLEDGE_STATE") or vault_path("knowledge.json")
         self.facts: Dict[str, dict] = {}      # konu -> {summary, source, added_at, ...}
         self.domains: Dict[str, int] = {}     # alan -> görülme sayısı (ilgi)
         self.agent_hints: Dict[str, list] = {}  # hedef tipi -> önerilen araçlar

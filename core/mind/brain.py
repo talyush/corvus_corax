@@ -42,12 +42,19 @@ class MindBrain:
         self.persist_path = persist_path or default_state_path()
         self.auto_persist = auto_persist
 
+        # knowledge/guard gibi kalıcı depoları mind.json ile AYNI DİZİNE koy
+        # (varsayılan: vault/). Testler persist_path'i temp'e verince her şey oraya gider.
+        self.data_dir = os.path.dirname(self.persist_path) or "vault"
+
         # Alignment: ActionGuard + KnowledgeStore (bilgi serbest, uygulama kısıtlı)
         self.alignment_enabled = alignment and _ALIGNMENT_AVAILABLE
-        self.guard = ActionGuard() if self.alignment_enabled else None
-        self.knowledge = KnowledgeStore() if self.alignment_enabled else None
-        if self.guard is not None and self.knowledge is not None:
-            self.guard.knowledge = self.knowledge
+        if self.alignment_enabled:
+            self.knowledge = KnowledgeStore(path=os.path.join(self.data_dir, "knowledge.json"))
+            self.guard = ActionGuard(knowledge=self.knowledge,
+                                     log_path=os.path.join(self.data_dir, "guard_log.jsonl"))
+        else:
+            self.knowledge = None
+            self.guard = None
 
         # Oturum tabanlı ders (mimar öğretmesi)
         self.lessons = LessonManager()

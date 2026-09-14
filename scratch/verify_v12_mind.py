@@ -23,7 +23,10 @@ def main():
     print("CORVUS MIND v1.2 (Faz A) — Doğrulama")
     print("=" * 70)
 
-    brain = MindBrain()
+    # Test hafızayı KÖRletmesin — kalıcı vault yerine geçici dizin kullan
+    import tempfile
+    _tmp = tempfile.mkdtemp(prefix="corvus_mind_test_")
+    brain = MindBrain(persist_path=os.path.join(_tmp, "mind.json"))
     ctx = {"entities": {}, "relations": []}
 
     def ask(q):

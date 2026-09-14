@@ -22,8 +22,8 @@ class AuditLog:
     """Kalıcı denetim kaydı (JSONL eklemeli)."""
 
     def __init__(self, path: Optional[str] = None):
-        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.path = path or os.getenv("CORVUS_AUDIT_PATH") or os.path.join(root, "vault", "audit.jsonl")
+        from core import vault_path
+        self.path = path or os.getenv("CORVUS_AUDIT_PATH") or vault_path("audit.jsonl")
 
     def _append(self, entry: Dict) -> None:
         try:

@@ -9,6 +9,7 @@ observation -> action -> observation döngüsünün orkestratörü:
 """
 
 from __future__ import annotations
+import os
 from typing import Dict, List, Optional, Callable
 
 from .tools import ToolRegistry
@@ -37,7 +38,8 @@ class Agent:
                  approval_mode: Approval = Approval.ASK,
                  ask_callback: Optional[Callable[[str], bool]] = None,
                  dry_run: bool = False,
-                 learning: bool = True):
+                 learning: bool = True,
+                 storage_dir: Optional[str] = None):
         self.modules = module_registry or {}
         self.registry = ToolRegistry(self.modules)
         self.policy = SafetyPolicy(approval_mode=approval_mode, ask_callback=ask_callback)
@@ -45,24 +47,29 @@ class Agent:
         self.executor = ToolExecutor(config=config, logger=logger, context=context, dry_run=dry_run)
         self.iterations = 0
 
-        # v1.1.2 — Self-Learning (varsayılan AÇIK)
-        self.learning = learning and _LEARNING_AVAILABLE
+        # Kalıcı depoların dizini: varsayılan vault/ (storage_dir verilirse oraya)
+        from core import vault_path
+        root_vault = vault_path()
+        self.storage_dir = storage_dir or root_vault
+
+        # v1.1.2 — Self-Learning (varsayılan AÇIK; dry_run öğrenmeyi ATLAR)
+        self.learning = learning and _LEARNING_AVAILABLE and not dry_run
         self.store = None
         self.failure = None
         self.selection = None
         self.audit = None
         self.knowledge = None
         if self.learning:
-            self.store = ExperienceStore()
+            self.store = ExperienceStore(path=os.path.join(self.storage_dir, "experience.json"))
             from core.learning.patterns import PatternLearning
             self.failure = FailureLearner(self.store)
             self.selection = ExperienceBasedSelection(self.store)
-            self.audit = AuditLog()
+            self.audit = AuditLog(path=os.path.join(self.storage_dir, "audit.jsonl"))
 
         # v1.1.2+ — Knowledge bağlantısı (mimar dersleri -> plan tavsiyeleri)
         try:
             from core.alignment.knowledge import KnowledgeStore
-            self.knowledge = KnowledgeStore()
+            self.knowledge = KnowledgeStore(path=os.path.join(self.storage_dir, "knowledge.json"))
         except Exception:
             self.knowledge = None
 
