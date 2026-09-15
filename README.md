@@ -40,12 +40,15 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.1.2+ — Self-Learning & Alignment — The Machine Learns, But Is Aligned**
+**v1.1.2+ — Self-Learning & Alignment & Real LLM Chat — The Machine Lives**
 
-Corvus Corax now has two fundamental properties that define its mind:
+Corvus Corax now has three fundamental properties that define its mind:
 
 1. **It learns** — from the user ("you should have tried DNS first") and **from itself** (private Instagram → pivot to GitHub/academic). Tool selection calibrates **fully autonomously**, with a full **audit trail** the architect can read.
 2. **It is aligned** — **knowledge ≠ capability**. Corvus can *learn* anything (philosophy, OSINT, defensive research, even the conceptual architecture of offensive topics), but it is **coded not to apply** restricted capabilities. When asked for an exploit payload or malware instructions, it does not say "I don't know" — it says *"I can deepen into this, but I am coded not to offer it as a capability."* (The Machine — not indiscriminate.)
+3. **It converses with a real LLM** — a local **Ollama** model (auto-detected: `qwen2.5-coder:7b` and others) powers **real, natural AI conversation** with full conversation history + intelligence-graph context, replacing the plain template feel. The symbolic Mind (NLU/memory/mood) still drives intent, safety and planning; Ollama is the voice.
+
+- **`core/cognitive/providers/api_providers.py`** — `OllamaProvider` now **auto-detects the installed model** from `ollama list` (preference order: qwen2.5-coder, qwen2.5, deepseek-r1, llama3...) and falls back to the **completion endpoint** (`/api/generate`) for non-chat models, so it works out-of-the-box. No `CORVUS_USE_OLLAMA` flag needed — if Ollama is running, Corvus talks with it.
 
 ---
 
