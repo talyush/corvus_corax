@@ -1,18 +1,21 @@
-"""Corvus Corax v1.1.1 - Cognitive Dialogue Engine.
+"""Corvus Corax v1.1.2 - Cognitive Dialogue Engine.
 
 Central orchestrator for the Cognitive Interface & Conversational Agent:
 - Memory management & reference resolution.
 - Intent & entity extraction.
-- Automatic cognitive provider selection (Ollama -> Cloud -> Embedded).
+- Automatic cognitive provider selection via ProviderRouter
+  ("many models, one mind interface" — provider changes, mind never changes).
 - ContextManager graph bidirectional synchronization.
 """
+
 from typing import Dict, Any, Optional
 from .memory import ConversationMemory
 from .intent import IntentExtractor, IntentResult
 from .persona import MachinePersona
 from .providers.local_engine import EmbeddedCognitiveEngine
-from .providers.api_providers import OllamaProvider, OpenAIProvider
-from .providers.interface import AbstractCognitiveProvider
+from .providers.registry import ProviderRegistry
+from .providers.router import ProviderRouter
+from .providers.interface import Capability
 
 
 class CognitiveDialogueEngine:
@@ -22,18 +25,14 @@ class CognitiveDialogueEngine:
         self.context = context_manager
         self.memory = ConversationMemory()
         self.intent_extractor = IntentExtractor()
-        self.embedded_engine = EmbeddedCognitiveEngine()
-        self.ollama_provider = OllamaProvider()
-        self.openai_provider = OpenAIProvider()
-        self.active_provider: AbstractCognitiveProvider = self._select_best_provider()
+        self.registry = ProviderRegistry()
+        self.router = ProviderRouter(registry=self.registry)
+        self.embedded_engine = self.registry.get("embedded_core")
+        self.active_provider = self.registry.by_priority()[0] if self.registry.by_priority() else self.embedded_engine
 
-    def _select_best_provider(self) -> AbstractCognitiveProvider:
-        """Kullanılabilir en yetkin bilişsel sağlayıcıyı seçer."""
-        if self.ollama_provider.is_available():
-            return self.ollama_provider
-        if self.openai_provider.is_available():
-            return self.openai_provider
-        return self.embedded_engine
+    def _select_best_provider(self):
+        """Geriye uyumluluk: artık registry priority'sine göre."""
+        return self.active_provider
 
     def chat(self, user_message: str) -> Dict[str, Any]:
         """
@@ -78,38 +77,34 @@ class CognitiveDialogueEngine:
         if self.context and hasattr(self.context, "data"):
             context_data = self.context.data
 
-        # 5. Generate Response via Active Provider
-        # Re-check provider availability if not embedded
-        if self.active_provider != self.embedded_engine and not self.active_provider.is_available():
-            self.active_provider = self.embedded_engine
+        # 5. Generate Response via Provider Router ("many models, one mind")
+        # Derin/felsefi sorular LLM'e gider (deep capability), basit sohbet sembolik kalır
+        # (hızlı). Router, gerekli capability'e sahip sağlayıcıyı fallback zinciriyle bulur;
+        # hiçbiri yoksa/başarısızsa Corvus Mind (embedded_core) asla değişmez.
+        word_count = len(raw_text.split())
+        deep_questions = any(k in raw_text.lower() for k in (
+            "nedir", "kimdir", "neden", "nasıl", "nasil", "anlam", "felsefe",
+            "düşün", "düşünüyor", "hakkında ne", "arasındaki fark", "yorumla",
+            "what is", "why", "how", "meaning", "philosophi", "think about",
+        ))
+        with_cap = Capability.DEEP if (intent_res.intent_type == "INFER" or
+                                       (deep_questions and word_count >= 5)) else Capability.FAST
 
-        try:
-            response_text = self.active_provider.generate_response(
-                user_prompt=raw_text,
-                conversation_history=self.memory.get_recent_history(),
-                context_data=context_data,
-                system_prompt=MachinePersona.SYSTEM_PROMPT
-            )
-            if response_text.startswith("[") and "Error" in response_text:
-                # Fallback to embedded cognitive engine on API errors
-                self.active_provider = self.embedded_engine
-                response_text = self.embedded_engine.generate_response(
-                    user_prompt=raw_text,
-                    conversation_history=self.memory.get_recent_history(),
-                    context_data=context_data,
-                    system_prompt=MachinePersona.SYSTEM_PROMPT
-                )
-        except Exception:
-            self.active_provider = self.embedded_engine
-            response_text = self.embedded_engine.generate_response(
-                user_prompt=raw_text,
-                conversation_history=self.memory.get_recent_history(),
-                context_data=context_data,
-                system_prompt=MachinePersona.SYSTEM_PROMPT
-            )
+        result = self.router.route(
+            user_prompt=raw_text,
+            conversation_history=self.memory.get_recent_history(),
+            context_data=context_data,
+            system_prompt=MachinePersona.SYSTEM_PROMPT,
+            with_cap=with_cap,
+        )
+        response_text = result.text
+        provenance = result.to_dict()
 
-        # 6. Record Assistant Response in Memory
-        self.memory.add_assistant_message(response_text, metadata={"provider": self.active_provider.provider_name})
+        # 6. Record Assistant Response in Memory (provenance ile)
+        mem_meta = {"provider": provenance.get("provider_name"),
+                    "request_id": provenance.get("request_id"),
+                    "fallback_chain": provenance.get("fallback_chain")}
+        self.memory.add_assistant_message(response_text, metadata=mem_meta)
 
         # 7. Formulate Suggested Action Command
         suggested_command = None
@@ -128,7 +123,8 @@ class CognitiveDialogueEngine:
         return {
             "response": response_text,
             "intent": intent_res.to_dict(),
-            "provider": self.active_provider.provider_name,
+            "provider": (provenance or {}).get("provider_name") or self.active_provider.provider_name,
+            "provenance": provenance,
             "active_target": self.memory.active_target,
             "suggested_command": suggested_command,
         }

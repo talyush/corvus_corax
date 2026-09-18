@@ -7,7 +7,7 @@ import os
 import json
 import urllib.request
 from typing import List, Dict, Any, Optional
-from .interface import AbstractCognitiveProvider
+from .interface import AbstractCognitiveProvider, Capability
 from ..persona import MachinePersona
 
 
@@ -20,6 +20,10 @@ class OllamaProvider(AbstractCognitiveProvider):
       - CORVUS_USE_OLLAMA gerekmez — Ollama çalışıyorsa Otomatik aktifleşir.
     """
 
+    provider_id = "ollama"
+    capabilities = [Capability.GENERAL, Capability.CODE, Capability.DEEP, Capability.LOCAL]
+    priority = 20   # yerel olmasiyla hizli/onceli — ama Cloud daha guclu ise arkaya duser (router karari)
+
     # Tercih sırası — makinede hangi model varsa kullan
     PREFERRED_MODELS = [
         "qwen2.5-coder", "qwen2.5", "qwen2", "deepseek-r1", "llama3",
@@ -29,6 +33,8 @@ class OllamaProvider(AbstractCognitiveProvider):
     def __init__(self, host: str = "http://localhost:11434", model: str = ""):
         self.host = os.getenv("CORVUS_OLLAMA_HOST", host).rstrip("/")
         self.model = os.getenv("CORVUS_OLLAMA_MODEL", model) or self._detect_model()
+        self._avail_cache = None      # (timestamp, bool)
+        self._avail_ttl = 10.0        # saniye — her turda HTTP yapma
 
     def _detect_model(self) -> str:
         """Makinede kurulu uygun modeli bulur (tercih sırasına göre, TAM ADIYLA)."""
@@ -53,7 +59,16 @@ class OllamaProvider(AbstractCognitiveProvider):
         return f"Ollama Local LLM ({self.model})"
 
     def is_available(self) -> bool:
-        # Ollama çalışıyorsa ve model kuruluysa otomatik kullanılır
+        # TTL cache: her chat turunda HTTP isteği atmadan hızlı karar
+        import time
+        now = time.time()
+        if self._avail_cache is not None and now - self._avail_cache[0] < self._avail_ttl:
+            return self._avail_cache[1]
+        ok = self._check_available()
+        self._avail_cache = (now, ok)
+        return ok
+
+    def _check_available(self) -> bool:
         try:
             req = urllib.request.Request(f"{self.host}/api/tags", method="GET")
             with urllib.request.urlopen(req, timeout=1.5) as resp:
@@ -92,7 +107,11 @@ class OllamaProvider(AbstractCognitiveProvider):
             "messages": messages,
             "stream": False,
             "temperature": 0.7,
-            "options": {"num_ctx": 4096},
+            "options": {
+                "num_ctx": 4096,
+                "num_predict": 220,     # sohbet cevabı kısa/akıcı — hız için
+                "keep_alive": "10m",    # modeli bellekte tut (tekrar yükleme yok)
+            },
         }
 
         try:
@@ -103,30 +122,52 @@ class OllamaProvider(AbstractCognitiveProvider):
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=8) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 out = result.get("message", {}).get("content", "").strip()
                 if out:
                     return out
-                # chat formatı boşsa completion'a düş
-                return self._complete(user_prompt, system_prompt)
-        except Exception as e:
-            # chat formatı desteklenmiyor (codar/non-chat modeller) -> completion
+                # chat formatı boşsa completion'a düş (history ile)
+                return self._complete(user_prompt, system_prompt, conversation_history)
+        except Exception:
+            # chat formatı desteklenmiyor / timeout (coder/non-chat) -> completion (8s, history ile)
             try:
-                return self._complete(user_prompt, system_prompt)
+                return self._complete(user_prompt, system_prompt, conversation_history)
             except Exception as e2:
-                return f"[Ollama Error: chat={e} | completion={e2}]"
+                return f"[Ollama Error: completion={e2}]"
 
-    def _complete(self, user_prompt: str, system_prompt: Optional[str]) -> str:
-        """Completion tabanlı fallback (/api/generate) — tüm modeller destekler."""
+    def _complete(self, user_prompt: str, system_prompt: Optional[str],
+                  conversation_history: Optional[List[Dict[str, Any]]] = None) -> str:
+        """Completion tabanlı fallback (/api/generate) — tüm modeller destekler.
+        Konuşma geçmişini prompt'a gömer (çok turlu bağlam korunur)."""
         sys_text = system_prompt or MachinePersona.SYSTEM_PROMPT
-        full_prompt = f"{sys_text}\n\nUser: {user_prompt}\n\nCorvus:"
+
+        # Konuşma geçmişini metne dönüştür (son 6 tur)
+        history_text = ""
+        if conversation_history:
+            lines = []
+            for turn in conversation_history[-6:]:
+                role = "Kullanıcı" if turn.get("role") == "user" else "Corvus"
+                lines.append(f"{role}: {turn.get('content', '')}")
+            if lines:
+                history_text = "\n".join(lines) + "\n"
+
+        full_prompt = (
+            f"{sys_text}\n\n"
+            f"{history_text}"
+            f"Kullanıcı: {user_prompt}\n"
+            f"Corvus:"
+        )
         payload = {
             "model": self.model,
             "prompt": full_prompt,
             "stream": False,
             "temperature": 0.7,
-            "options": {"num_ctx": 4096},
+            "options": {
+                "num_ctx": 2048,        # daha küçük bağlam — hızlı
+                "num_predict": 150,     # kısa cevap — hızlı
+                "keep_alive": "10m",    # modeli bellekte tut
+            },
         }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
@@ -135,13 +176,17 @@ class OllamaProvider(AbstractCognitiveProvider):
             headers={"Content-Type": "application/json"},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             result = json.loads(resp.read().decode("utf-8"))
             return result.get("response", "").strip()
 
 
 class OpenAIProvider(AbstractCognitiveProvider):
     """OpenAI GPT API Sağlayıcısı."""
+
+    provider_id = "openai"
+    capabilities = [Capability.GENERAL, Capability.CREATIVE, Capability.DEEP, Capability.CLOUD]
+    priority = 10    # bulut güçlü -> önce
 
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o"):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -187,3 +232,58 @@ class OpenAIProvider(AbstractCognitiveProvider):
                 return result["choices"][0]["message"]["content"].strip()
         except Exception as e:
             return f"[OpenAI Error: {e}]"
+class AnthropicProvider(AbstractCognitiveProvider):
+    """Anthropic Claude API Sağlayıcısı — bulut, güçlü, hafif."""
+
+    provider_id = "anthropic"
+    capabilities = [Capability.GENERAL, Capability.DEEP, Capability.CREATIVE, Capability.CLOUD]
+    priority = 8     # Claude en güçlü genel — fallback zincirinde önce
+
+    def __init__(self, api_key: Optional[str] = None, model: str = "claude-3-5-sonnet-20240620"):
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        self.model = model
+
+    @property
+    def provider_name(self) -> str:
+        return f"Anthropic Cloud API ({self.model})"
+
+    def is_available(self) -> bool:
+        return bool(self.api_key)
+
+    def generate_response(self, user_prompt: str, conversation_history: List[Dict[str, Any]],
+                          context_data: Optional[Dict[str, Any]] = None,
+                          system_prompt: Optional[str] = None) -> str:
+        if not self.is_available():
+            return "[Anthropic API key missing]"
+
+        # Anthropic /v1/messages API — Claude
+        turns = []
+        for turn in conversation_history[-6:]:
+            role = "user" if turn.get("role") == "user" else "assistant"
+            turns.append({"role": role, "content": turn.get("content", "")})
+        turns.append({"role": "user", "content": user_prompt})
+
+        payload = {
+            "model": self.model,
+            "max_tokens": 1500,
+            "system": system_prompt or MachinePersona.SYSTEM_PROMPT,
+            "messages": turns,
+        }
+
+        try:
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                "https://api.anthropic.com/v1/messages",
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": self.api_key,
+                    "anthropic-version": "2023-06-01",
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                return result["content"][0]["text"].strip()
+        except Exception as e:
+            return f"[Anthropic Error: {e}]"

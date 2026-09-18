@@ -47,8 +47,14 @@ Corvus Corax now has three fundamental properties that define its mind:
 1. **It learns** — from the user ("you should have tried DNS first") and **from itself** (private Instagram → pivot to GitHub/academic). Tool selection calibrates **fully autonomously**, with a full **audit trail** the architect can read.
 2. **It is aligned** — **knowledge ≠ capability**. Corvus can *learn* anything (philosophy, OSINT, defensive research, even the conceptual architecture of offensive topics), but it is **coded not to apply** restricted capabilities. When asked for an exploit payload or malware instructions, it does not say "I don't know" — it says *"I can deepen into this, but I am coded not to offer it as a capability."* (The Machine — not indiscriminate.)
 3. **It converses with a real LLM** — a local **Ollama** model (auto-detected: `qwen2.5-coder:7b` and others) powers **real, natural AI conversation** with full conversation history + intelligence-graph context, replacing the plain template feel. The symbolic Mind (NLU/memory/mood) still drives intent, safety and planning; Ollama is the voice.
+4. **It is provider-agnostic — "many models, one mind interface"** — Corvus's voice can be **any** model. A `ProviderRegistry` holds every installed/configured backend; a `ProviderRouter` picks the **right model for the task** (capability matching: deep/code/fast...), falls back gracefully when one fails (`ollama → openai → anthropic → embedded_core`), and a `HealthManager` tracks `healthy/degraded/offline/recovering` so dead backends are skipped and auto-recovered. Every reply carries **provenance** (`request_id`, provider, model, fallback chain + reason). The mind never changes — only the voice does.
 
-- **`core/cognitive/providers/api_providers.py`** — `OllamaProvider` now **auto-detects the installed model** from `ollama list` (preference order: qwen2.5-coder, qwen2.5, deepseek-r1, llama3...) and falls back to the **completion endpoint** (`/api/generate`) for non-chat models, so it works out-of-the-box. No `CORVUS_USE_OLLAMA` flag needed — if Ollama is running, Corvus talks with it.
+**Provider Layer (`core/cognitive/providers/`):**
+- **`interface.py`** — `AbstractCognitiveProvider` contract: `generate_response`, `is_available`, `health_status()`, `capabilities`, `provider_id`, `model`, `priority` (+ `metadata()` for CLI/natural-language queries).
+- **`health.py`** — `HealthManager`: consecutive-failure thresholds → `degraded`/`offline`, cooldown → `recovering`, success → `healthy`.
+- **`registry.py`** — `ProviderRegistry`: registers `embedded_core` (always), `ollama`, `openai`, `anthropic`; `by_priority()`.
+- **`router.py`** — `ProviderRouter`: capability-matching selection, fallback chain, health-aware skip, `ProviderResult` with full provenance.
+- **`api_providers.py`** — `OllamaProvider` auto-detects installed model (preference order: qwen2.5-coder, qwen2.5, deepseek-r1, llama3...) + completion fallback for non-chat models; `OpenAIProvider`; `AnthropicProvider` (Claude).
 
 ---
 

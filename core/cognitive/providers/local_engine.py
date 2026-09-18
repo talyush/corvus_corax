@@ -15,7 +15,7 @@ Integrates:
 
 from typing import List, Dict, Any, Optional
 import os
-from .interface import AbstractCognitiveProvider
+from .interface import AbstractCognitiveProvider, Capability
 from core.mind.brain import MindBrain
 from core.mind.persistence import default_state_path
 from ..persona import MachinePersona
@@ -23,6 +23,10 @@ from ..persona import MachinePersona
 
 class EmbeddedCognitiveEngine(AbstractCognitiveProvider):
     """Dahili Bilisel ve Derin Akil Yurutme Yanit Uretim Motoru."""
+
+    provider_id = "embedded_core"
+    capabilities = [Capability.GENERAL, Capability.DEEP, Capability.OFFLINE, Capability.LOCAL, Capability.FAST]
+    priority = 100    # en son çare — asla atlanmaz
 
     def __init__(self, persist_path: Optional[str] = None, auto_persist: bool = True):
         self.mind = MindBrain(
