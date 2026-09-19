@@ -106,10 +106,10 @@ class OllamaProvider(AbstractCognitiveProvider):
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "temperature": 0.7,
+            "temperature": 0.8,
             "options": {
                 "num_ctx": 4096,
-                "num_predict": 220,     # sohbet cevabı kısa/akıcı — hız için
+                "num_predict": 300,     # derinlik öncelikli — uzun/katmanlı cevaplar
                 "keep_alive": "10m",    # modeli bellekte tut (tekrar yükleme yok)
             },
         }
@@ -122,7 +122,7 @@ class OllamaProvider(AbstractCognitiveProvider):
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=8) as resp:
+            with urllib.request.urlopen(req, timeout=30) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 out = result.get("message", {}).get("content", "").strip()
                 if out:
@@ -162,11 +162,11 @@ class OllamaProvider(AbstractCognitiveProvider):
             "model": self.model,
             "prompt": full_prompt,
             "stream": False,
-            "temperature": 0.7,
+            "temperature": 0.8,
             "options": {
-                "num_ctx": 2048,        # daha küçük bağlam — hızlı
-                "num_predict": 150,     # kısa cevap — hızlı
-                "keep_alive": "10m",    # modeli bellekte tut
+                "num_ctx": 4096,
+                "num_predict": 300,     # derinlik öncelikli
+                "keep_alive": "10m",
             },
         }
         data = json.dumps(payload).encode("utf-8")
@@ -176,7 +176,7 @@ class OllamaProvider(AbstractCognitiveProvider):
             headers={"Content-Type": "application/json"},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=30) as resp:
             result = json.loads(resp.read().decode("utf-8"))
             return result.get("response", "").strip()
 

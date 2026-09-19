@@ -78,17 +78,11 @@ class CognitiveDialogueEngine:
             context_data = self.context.data
 
         # 5. Generate Response via Provider Router ("many models, one mind")
-        # Derin/felsefi sorular LLM'e gider (deep capability), basit sohbet sembolik kalır
-        # (hızlı). Router, gerekli capability'e sahip sağlayıcıyı fallback zinciriyle bulur;
-        # hiçbiri yoksa/başarısızsa Corvus Mind (embedded_core) asla değişmez.
-        word_count = len(raw_text.split())
-        deep_questions = any(k in raw_text.lower() for k in (
-            "nedir", "kimdir", "neden", "nasıl", "nasil", "anlam", "felsefe",
-            "düşün", "düşünüyor", "hakkında ne", "arasındaki fark", "yorumla",
-            "what is", "why", "how", "meaning", "philosophi", "think about",
-        ))
-        with_cap = Capability.DEEP if (intent_res.intent_type == "INFER" or
-                                       (deep_questions and word_count >= 5)) else Capability.FAST
+        # CORVUS = BEYİN, ses = ALWAYS bir LLM. Sembolik sentez kapanıyor.
+        # Router, priority sırasıyla LLM seslerini dener (anthropic->openai->ollama),
+        # hepsi başarısız olursa Corvus Mind (embedded_core) son güvence olarak devralır.
+        # Süre önemli değil; derinlik/esneklik öncelikli. Sürekli LLM konuşur.
+        with_cap = Capability.GENERAL
 
         result = self.router.route(
             user_prompt=raw_text,
