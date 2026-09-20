@@ -30,9 +30,43 @@ class CognitiveDialogueEngine:
         self.embedded_engine = self.registry.get("embedded_core")
         self.active_provider = self.registry.by_priority()[0] if self.registry.by_priority() else self.embedded_engine
 
-    def _select_best_provider(self):
-        """Geriye uyumluluk: artık registry priority'sine göre."""
-        return self.active_provider
+    def _system_answer(self, raw_text: str) -> str:
+        """Provider/sağlık sorusuna doğal dil cevabı (LLM'siz, anında)."""
+        lower = raw_text.lower()
+        registry_meta = self.registry.metadata()
+        available = [m for m in registry_meta if m["available"]]
+        offline = [m for m in registry_meta if not m["available"]]
+
+        tr = any(c in raw_text for c in "çğıöşü") or any(k in lower for k in ("hangi", "sağlık", "durum"))
+
+        # Hangi modelle konuşuyorum?
+        if any(k in lower for k in ("hangi modelle", "hangi model", "hangi ai", "which model",
+                                     "what model", "modelle konuşuyorum", "sesin ne", "hangi zekayla", "powered by")):
+            if not available:
+                return ("Şu an serbest bir LLM sesim yok; konuşma motorum Corvus Mind "
+                        "(gömülü beyin).") if tr else \
+                    ("I currently have no external voice; my speech engine is Corvus Mind "
+                     "(embedded brain).")
+            voices = ", ".join(f"{m['provider_name']}" for m in available)
+            if tr:
+                return f"Şu an sesim: {voices}. Kimliğim (Corvus Mind) bundan bağımsız — beyin her zaman benim."
+            return f"My current voice: {voices}. My identity (Corvus Mind) is independent of it — the mind is always mine."
+
+        # Sağlık / durum
+        if tr:
+            lines = ["Ses sağlığı durumu:"]
+            for m in registry_meta:
+                mark = "✔" if m["available"] else "✘"
+                lines.append(f"  {mark} {m['provider_name']} — {m['health']}")
+            if offline:
+                offline_names = ", ".join(m["provider_id"] for m in offline)
+                lines.append(f"(kullanılamayanlar: {offline_names} — API key/bağlantı gerekli)")
+            return "\n".join(lines)
+        lines = ["Voice health status:"]
+        for m in registry_meta:
+            mark = "OK" if m["available"] else "X"
+            lines.append(f"  [{mark}] {m['provider_name']} — {m['health']}")
+        return "\n".join(lines)
 
     def chat(self, user_message: str) -> Dict[str, Any]:
         """
@@ -61,6 +95,28 @@ class CognitiveDialogueEngine:
         # 2. Extract Intent and Entities
         intent_res = self.intent_extractor.extract(raw_text, fallback_target=fallback_target)
 
+        # 2b. SISTEM SORGUSU — "hangi modelle konuşuyorum / ai sağlığı nasıl / provider" 
+        # gibi doğal dil soruları doğrudan provider bilgisiyle cevaplanır (LLM gerektirmez).
+        sys_lower = raw_text.lower()
+        ask_provider = any(k in sys_lower for k in (
+            "hangi modelle", "hangi model", "hangi ai", "modelle konuşuyorum",
+            "provider", "sağlayıcı", "sağlı", "saglik", "sagl", "sesin ne", "hangi zekayla",
+            "who are you powered by", "what model", "which model", "durum nasıl",
+            "health", "status",
+        ))
+        if ask_provider and ("?" in raw_text or raw_text.endswith((".", "?")) or True):
+            system_answer = self._system_answer(raw_text)
+            self.memory.add_assistant_message(system_answer, metadata={"category": "system_query"})
+            return {
+                "response": system_answer,
+                "intent": intent_res.to_dict(),
+                "provider": self.active_provider.provider_name,
+                "provenance": {"provider": "system_status", "request_id": "sys",
+                               "fallback_chain": [], "fallback_reason": ""},
+                "active_target": self.memory.active_target,
+                "suggested_command": None,
+            }
+
         # 3. Update Conversation Memory
         self.memory.add_user_message(raw_text, intent=intent_res.intent_type, entities=intent_res.entities)
         if intent_res.entities:
@@ -79,17 +135,27 @@ class CognitiveDialogueEngine:
 
         # 5. Generate Response via Provider Router ("many models, one mind")
         # CORVUS = BEYİN, ses = ALWAYS bir LLM. Sembolik sentez kapanıyor.
-        # Router, priority sırasıyla LLM seslerini dener (anthropic->openai->ollama),
+        # GÖREV BAZLI SEÇİM: araştırıyorum -> güçlü model (deep/code); sohbet -> uygun/general.
+        # Router, task'a uygun capability'yi seçip LLM seslerini priority sırasıyla dener,
         # hepsi başarısız olursa Corvus Mind (embedded_core) son güvence olarak devralır.
-        # Süre önemli değil; derinlik/esneklik öncelikli. Sürekli LLM konuşur.
-        with_cap = Capability.GENERAL
+        intent_to_task = {
+            "INVESTIGATE": "investigate",
+            "INFER": "infer",
+            "BRIDGE": "infer",
+            "TIMELINE": "investigate",
+            "SUMMARY": "deep",
+            "CHITCHAT": "general",
+            "GREETING": "general",
+            "HELP": "general",
+        }
+        task = intent_to_task.get(intent_res.intent_type, "general")
 
         result = self.router.route(
             user_prompt=raw_text,
             conversation_history=self.memory.get_recent_history(),
             context_data=context_data,
             system_prompt=MachinePersona.SYSTEM_PROMPT,
-            with_cap=with_cap,
+            task=task,
         )
         response_text = result.text
         provenance = result.to_dict()
@@ -97,7 +163,8 @@ class CognitiveDialogueEngine:
         # 6. Record Assistant Response in Memory (provenance ile)
         mem_meta = {"provider": provenance.get("provider_name"),
                     "request_id": provenance.get("request_id"),
-                    "fallback_chain": provenance.get("fallback_chain")}
+                    "fallback_chain": provenance.get("fallback_chain"),
+                    "task": task}
         self.memory.add_assistant_message(response_text, metadata=mem_meta)
 
         # 7. Formulate Suggested Action Command

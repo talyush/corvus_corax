@@ -21,6 +21,16 @@ from .interface import AbstractCognitiveProvider, Capability
 from .health import HealthManager
 from .registry import ProviderRegistry
 
+# Görev tipi -> önerilen capability önceliği
+# (kullanıcı: "araştırıyorum -> güçlü model; sohbet -> uygun/hızlı")
+TASK_CAPABILITIES = {
+    "investigate": [Capability.DEEP, Capability.CODE, Capability.GENERAL],
+    "infer":       [Capability.DEEP, Capability.CODE, Capability.GENERAL],
+    "code":        [Capability.CODE, Capability.GENERAL],
+    "deep":        [Capability.DEEP, Capability.GENERAL],
+    "general":     [Capability.GENERAL],
+}
+
 
 class ProviderResult:
     """Bir yanitin uretim kaydi (provenance)."""
@@ -57,12 +67,22 @@ class ProviderRouter:
     # ------------------------------------------------------------------
     def route(self, user_prompt: str, conversation_history: List[Dict],
               context_data: Optional[Dict] = None, system_prompt: Optional[str] = None,
+              task: str = "general",
               with_cap: Optional[Capability] = None,
               preferred: Optional[str] = None) -> ProviderResult:
-        """Provider/fallback zincirinden yanit uretir."""
+        """Provider/fallback zincirinden yanit uretir.
+
+        task: "investigate" | "infer" | "code" | "deep" | "general"
+          -> TASK_CAPABILITIES uzerinden capability onceligi belirlenir.
+          ("arasvuruyorum -> Claus gibi guclu model" mantigi)
+        with_cap: verilirse task'i ezer (hassas kontrol).
+        """
         chain = []
         reasons = []
         last_error = ""
+
+        if with_cap is None:
+            with_cap = self._resolve_task_capability(task)
 
         # 1. Aday sirasi: preferred (verildiyse) -> capability -> priority
         candidates = self._candidates(preferred=preferred, with_cap=with_cap)
@@ -136,6 +156,19 @@ class ProviderRouter:
             fallback_chain=chain,
             fallback_reason=";".join(reasons),
         )
+
+    # ------------------------------------------------------------------
+    # Görev -> capability çözümleme
+    # ------------------------------------------------------------------
+    def _resolve_task_capability(self, task: str) -> Capability:
+        """Görev tipinden en uygun capability'yi seçer (fallback sıralı)."""
+        prefs = TASK_CAPABILITIES.get(task, [Capability.GENERAL])
+        for cap in prefs:
+            # Bu capability'ye sahip kullanılabilir bir LLM var mı?
+            if any(p.has_capability(cap) for p in self.registry.providers.values()
+                   if self.registry.is_usable(p)):
+                return cap
+        return Capability.GENERAL
 
     # ------------------------------------------------------------------
     # Aday secimi
