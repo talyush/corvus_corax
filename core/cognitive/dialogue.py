@@ -117,6 +117,48 @@ class CognitiveDialogueEngine:
                 "suggested_command": None,
             }
 
+        # 2c. HUGINN & MUNINN DUAL-RAVEN SORGULARI (v1.2)
+        # "X hakkında geçmişte ne hatırlıyorsun / neden böyle düşündün / akıl yürütme / ne değişti"
+        is_muninn_query = any(k in sys_lower for k in ("muninn", "hatırlıyorsun", "hatirliyorsun", "geçmişte", "gecmiste", "ne değişti", "ne degisti", "değişim", "degisim", "drift", "tarihçe", "tarihce"))
+        is_huginn_query = any(k in sys_lower for k in ("huginn", "neden böyle düşündün", "neden boyle dusundun", "akıl yürütme", "akil yurutme", "neden bu karar", "açıkla", "acikla", "gerekçe", "gerekce", "why", "explain"))
+        
+        if (is_muninn_query or is_huginn_query) and (intent_res.entities or fallback_target):
+            focal = intent_res.entities[0] if intent_res.entities else fallback_target
+            from core.decision.corvus_mind import CorvusDecisionCore
+            decision_core = CorvusDecisionCore(context_manager=self.context)
+            
+            if is_muninn_query and not is_huginn_query:
+                # Muninn hafıza / değişim raporu
+                if any(k in sys_lower for k in ("ne değişti", "ne degisti", "drift", "değişim", "degisim")):
+                    raven_answer = decision_core.why_conclusion_changed(focal)
+                    suggested = f"muninn changes {focal}"
+                else:
+                    raven_answer = decision_core.muninn.format_history_report(focal)
+                    suggested = f"muninn history {focal}"
+            elif is_huginn_query and not is_muninn_query:
+                # Huginn muhakeme / gerekçelendirme raporu
+                if any(k in sys_lower for k in ("neden", "why", "gerekçe", "gerekce")):
+                    raven_answer = decision_core.huginn.why(focal)
+                    suggested = f"huginn why {focal}"
+                else:
+                    raven_answer = decision_core.huginn.explain(focal)
+                    suggested = f"huginn explain {focal}"
+            else:
+                # İkisi birlikte: Huginn & Muninn sinerjisi
+                raven_answer = decision_core.explain_with_history(focal)
+                suggested = f"huginn synergy {focal}"
+
+            self.memory.add_assistant_message(raven_answer, metadata={"category": "dual_raven_query"})
+            return {
+                "response": raven_answer,
+                "intent": intent_res.to_dict(),
+                "provider": "Corvus Decision Core (Huginn & Muninn)",
+                "provenance": {"provider": "dual_raven_core", "request_id": "raven",
+                               "fallback_chain": [], "fallback_reason": ""},
+                "active_target": focal,
+                "suggested_command": suggested,
+            }
+
         # 3. Update Conversation Memory
         self.memory.add_user_message(raw_text, intent=intent_res.intent_type, entities=intent_res.entities)
         if intent_res.entities:

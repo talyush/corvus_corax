@@ -88,8 +88,8 @@ def show_banner(animate=True):
 @@@@@@@@/@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%@@@@@@@@@))!][@@@@@<[@@@@@@@\@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@/@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@/@@@@@@@@@@@@@@@@@@\@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    v1.1.1-cognitive-interface  |  See The Unseen
-    >> The Machine // Cognitive Dialogue & Agent Interface <<
+    v1.2.0-huginn-muninn  |  Huginn thinks, Muninn remembers, Corvus decides
+    >> Dual-Raven Architecture // Explainable Reasoning & Historical Recall <<
 """
 
     print(Fore.CYAN + title_art + Style.RESET_ALL + Fore.MAGENTA + silhouette + Style.RESET_ALL)

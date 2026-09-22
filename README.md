@@ -40,30 +40,49 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.1.2+ — Self-Learning & Alignment & Real LLM Chat — The Machine Lives**
+**v1.2.0 — Huginn & Muninn: Dual-Raven Architecture — "Huginn thinks, Muninn remembers, Corvus decides"**
 
-Corvus Corax now has three fundamental properties that define its mind:
+Corvus Corax v1.2 introduces the Norse mythological dual-raven architecture to cyber intelligence:
 
-1. **It learns** — from the user ("you should have tried DNS first") and **from itself** (private Instagram → pivot to GitHub/academic). Tool selection calibrates **fully autonomously**, with a full **audit trail** the architect can read.
-2. **It is aligned** — **knowledge ≠ capability**. Corvus can *learn* anything (philosophy, OSINT, defensive research, even the conceptual architecture of offensive topics), but it is **coded not to apply** restricted capabilities. When asked for an exploit payload or malware instructions, it does not say "I don't know" — it says *"I can deepen into this, but I am coded not to offer it as a capability."* (The Machine — not indiscriminate.)
-3. **It converses with a real LLM** — a local **Ollama** model (auto-detected: `qwen2.5-coder:7b` and others) powers **real, natural AI conversation** with full conversation history + intelligence-graph context, replacing the plain template feel. The symbolic Mind (NLU/memory/mood) still drives intent, safety and planning; Ollama is the voice.
-4. **It is provider-agnostic — "many models, one mind interface"** — Corvus's voice can be **any** model, chosen **by task**. A `ProviderRegistry` holds every installed/configured backend; a `ProviderRouter` picks the **right model for the job** (`investigate`/`infer` → deep/code-capable models like Claude; casual chat → general voice), falls back gracefully (`anthropic → openai → ollama → embedded_core`), and a `HealthManager` tracks `healthy/degraded/offline/recovering` so dead backends are auto-skipped and recovered. Every reply carries **provenance** (`request_id`, provider, model, fallback chain + reason). **The mind never changes — only the voice does.**
-5. **It is discoverable — "corvus doctor"** — a `system` module + natural-language queries answer "which model are you? / AI health / provider status" instantly (no LLM needed): `corvus providers`, `corvus doctor`, or in chat *"hangi modelle konuşuyorum?"* / *"ai sağlığı nasıl?"*.
-6. **It blends sources — "hybrid recon"** — real OSINT modules + LLM knowledge are fused: `core/cognitive/hybrid.py`. A targeted query ("Ahmet Yılmaz kimdir araştır") runs the **agent's modules** (social, github, academic, org...) to collect **real evidence**, then feeds that evidence to the **LLM voice** which synthesizes it with its own knowledge. Modules gather the proof, the LLM tells the story — neither alone suffices.
+1. **Muninn Core ("Muninn remembers") (`core/muninn/`)**:
+   - **Entity History & Snapshot Tracking** (`history.py`, `store.py`): Tracks first seen, last seen, observation counts, and temporal attribute drift (what changed over time, e.g. IP/registrar/CDN changes).
+   - **Unified Recall Engine** (`recall.py`): Aggregates historical evidence, knowledge notes, active graph relationships, and snapshots into structured memory reports.
+   - **Commands**: `muninn history <target>`, `muninn changes <target>`, `muninn recall <target>`, `muninn list`.
 
-**Hybrid Recon (`core/cognitive/hybrid.py`, `modules/chat.py`):**
-- `HybridRecon.pursue(query, target)` — agent modules run on the clean target → evidence summarized → LLM routes with that evidence as context → harmonized answer + provenance.
-- `chat._maybe_hybrid` — auto-triggers for targeted queries ("Ad Soyad kimdir araştır" / "domain hakkında araştır"); plain single-name questions ("socrates kimdir") stay in the LLM (no module for them).
-- Proven: "Ahmet Yılmaz" → social (0/12) + academic (Ahmet Uğur Yılmaz, h-index 16) + org → Ollama synthesized a grounded reply.
+2. **Huginn Core ("Huginn thinks") (`core/huginn/`)**:
+   - **Reasoning Trace Model** (`trace.py`): Structured 4-stage epistemic flow: `Observation -> Interpretation -> Hypothesis -> Decision`.
+   - **Analytical Explainer & Provenance** (`explainer.py`, `provenance.py`): Transparent justification answering *"Why was this conclusion reached?"* and *"Why were counter-hypotheses filtered?"* without raw chain-of-thought dumps.
+   - **Commands**: `huginn explain <target>`, `huginn why <target>`, `huginn trace <target>`, `huginn hypotheses <target>`.
 
-**Provider & Task Layer (`core/cognitive/providers/`, `modules/system.py`):**
-- **`interface.py`** — `AbstractCognitiveProvider` contract: `generate_response`, `is_available`, `health_status()`, `capabilities`, `provider_id`, `model`, `priority` (+ `metadata()`).
-- **`health.py`** — `HealthManager`: healthy → degraded → offline → recovering (cooldown → retry).
-- **`registry.py`** — `ProviderRegistry`: embedded_core (always), ollama, openai, anthropic.
-- **`router.py`** — `ProviderRouter`: **task-based routing** (`TASK_CAPABILITIES`), fallback chain, health-aware skip, provenance.
-- **`api_providers.py`** — Ollama (auto-detect + completion fallback), OpenAI, Anthropic (Claude).
-- **`modules/system.py`** — `system` (status), `system providers`, `system provider <id>`, `system doctor`.
-- **Natural language** — chat intercepts "hangi modelle / sağlık / provider / status" questions and answers from the registry instantly.
+3. **Corvus Decision Core & Synergy (`core/decision/`)**:
+   - **Synergy Layer** (`corvus_mind.py`): Fuses Muninn's historical depth with Huginn's Bayesian deductions.
+   - **Temporal Drift Analysis**: Answers *"Why did the conclusion change over time?"* by cross-referencing attribute changes with probabilistic updates.
+   - **Command**: `huginn synergy <target>`.
+
+4. **Natural Language & Voice Integration (`modules/chat.py`, `core/cognitive/dialogue.py`)**:
+   - Chat queries like *"test-corp.com hakkında geçmişte ne hatırlıyorsun"* or *"test-corp.com hakkında neden böyle düşündün"* automatically trigger the respective raven engines.
+   - LLMs (Ollama, Claude, OpenAI) act as the expression layer while Huginn and Muninn remain the grounded source of reasoning and memory.
+
+---
+
+## Changelog
+
+### v1.2.0 — Huginn & Muninn: Dual-Raven Architecture
+
+**Memory & Recall Layer (`core/muninn/`):**
+- **`history.py`** — `EntityHistory`, `EntitySnapshot`, `AttributeChange` (drift detection).
+- **`store.py`** — `MuninnStore`: Persistent storage under `vault/muninn/` (`entities_index.json` & `observations.jsonl`).
+- **`recall.py`** — `MuninnRecallEngine`: Cross-engine memory aggregator.
+- **`modules/muninn.py`** — CLI suite: `muninn history`, `muninn changes`, `muninn recall`, `muninn list`.
+
+**Reasoning & Explainer Layer (`core/huginn/`):**
+- **`trace.py`** — `ReasoningTraceModel`, `ReasoningStep` (`Observation -> Interpretation -> Hypothesis -> Decision`).
+- **`provenance.py`** — `ProvenanceTracker`, `ProvenanceRecord` (source lineage & NATO codes).
+- **`explainer.py`** — `HuginnExplainer` (`explain`, `why`, `trace`, `hypotheses`).
+- **`modules/huginn.py`** — CLI suite: `huginn explain`, `huginn why`, `huginn trace`, `huginn synergy`.
+
+**Synergy & Decision Layer (`core/decision/`):**
+- **`corvus_mind.py`** — `CorvusDecisionCore`: Muninn memory + Huginn reasoning -> Final decision, next actions, and conclusion drift analysis.
 
 ---
 

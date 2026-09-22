@@ -1126,6 +1126,25 @@ class OutputManager:
                                     # Summary mode: just show count
                                     lines.append(f"    Evidence: {evidence_count} items (use --verbose for details)")
 
+                elif module == "muninn":
+                    report = data.get("report")
+                    if report:
+                        lines.append(f"  {C_CYAN}{C_BOLD}{report}{C_RESET}")
+                    elif data.get("action") == "list":
+                        entities = data.get("known_entities", [])
+                        lines.append(f"  {C_CYAN}{C_BOLD}MUNINN KNOWN ENTITIES ({len(entities)} records):{C_RESET}")
+                        for e in entities:
+                            lines.append(f"    - {C_GREEN}{e}{C_RESET}")
+                    else:
+                        lines.append(str(data))
+
+                elif module == "huginn":
+                    report = data.get("report")
+                    if report:
+                        lines.append(f"  {C_MAGENTA}{C_BOLD}{report}{C_RESET}")
+                    else:
+                        lines.append(str(data))
+
                 else:
                     lines.append(f"  {C_BOLD}Result Data:{C_RESET}")
                     lines.append(str(data))
