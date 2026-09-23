@@ -159,6 +159,51 @@ class CognitiveDialogueEngine:
                 "suggested_command": suggested,
             }
 
+        # 2d. HUMAN-CENTERED INTELLIGENCE SORGULARI (v1.3)
+        # "X'in yazım stili / insan profili / aktivite saatleri / aynı kişi olabilir mi"
+        is_human_query = any(k in sys_lower for k in (
+            "insan profili", "yazım stili", "yazim stili", "stilometri", "stylometry",
+            "aktivite saatleri", "ritim", "rhythm", "psikoloji", "persona", "davranış profili",
+            "davranis profili", "aynı kişi mi", "ayni kisi mi", "aynı kişi olabilir mi", "insan analizi"
+        ))
+        if is_human_query and (intent_res.entities or fallback_target):
+            focal = intent_res.entities[0] if intent_res.entities else fallback_target
+            from core.human.engine import HumanIntelligenceEngine
+            human_engine = HumanIntelligenceEngine(context_manager=self.context)
+
+            # Karşılaştırma mı?
+            if len(intent_res.entities) >= 2 and any(k in sys_lower for k in ("aynı", "ayni", "benzer", "karşılaştır", "karsilastir")):
+                e1, e2 = intent_res.entities[0], intent_res.entities[1]
+                p1 = human_engine.generate_human_profile(e1, texts=[e1])
+                p2 = human_engine.generate_human_profile(e2, texts=[e2])
+                comp = human_engine.similarity.compare_profiles(p1, p2)
+                resp_text = (
+                    f"[Corvus Human Intelligence // Benzerlik Değerlendirmesi]\n"
+                    f"Hedefler: '{e1}' <-> '{e2}'\n"
+                    f"Genel Benzerlik Oranı: {comp['overall_similarity_percentage']}\n"
+                    f"Değerlendirme: {comp['epistemic_assessment']}\n\n"
+                    f"Örtüşen Faktörler: {', '.join(comp['corroborating_factors']) or 'Belirgin ortaklık yok'}\n"
+                    f"{comp['identity_claim_disclaimer']}"
+                )
+                suggested = f"human compare {e1} {e2}"
+            else:
+                events = self.context.get_entity_events(focal) if self.context and hasattr(self.context, "get_entity_events") else []
+                timestamps = [e.get("timestamp") for e in events if e.get("timestamp")]
+                profile = human_engine.generate_human_profile(focal, texts=[raw_text], timestamps=timestamps)
+                resp_text = human_engine.format_human_report(profile)
+                suggested = f"human profile {focal}"
+
+            self.memory.add_assistant_message(resp_text, metadata={"category": "human_intelligence_query"})
+            return {
+                "response": resp_text,
+                "intent": intent_res.to_dict(),
+                "provider": "Corvus Human Intelligence Core (v1.3)",
+                "provenance": {"provider": "human_intelligence_core", "request_id": "human",
+                               "fallback_chain": [], "fallback_reason": ""},
+                "active_target": focal,
+                "suggested_command": suggested,
+            }
+
         # 3. Update Conversation Memory
         self.memory.add_user_message(raw_text, intent=intent_res.intent_type, entities=intent_res.entities)
         if intent_res.entities:

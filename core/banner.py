@@ -88,8 +88,8 @@ def show_banner(animate=True):
 @@@@@@@@/@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%@@@@@@@@@))!][@@@@@<[@@@@@@@\@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@/@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@/@@@@@@@@@@@@@@@@@@\@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    v1.2.0-huginn-muninn  |  Huginn thinks, Muninn remembers, Corvus decides
-    >> Dual-Raven Architecture // Explainable Reasoning & Historical Recall <<
+    v1.3.0-intelligence  |  From Infrastructure Intelligence -> Human-Centered Intelligence
+    >> Who is behind the observable digital signals? // Systems NOT alone, Humans <<
 """
 
     print(Fore.CYAN + title_art + Style.RESET_ALL + Fore.MAGENTA + silhouette + Style.RESET_ALL)

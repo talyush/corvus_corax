@@ -40,7 +40,36 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.2.0 — Huginn & Muninn: Dual-Raven Architecture — "Huginn thinks, Muninn remembers, Corvus decides"**
+**v1.3.0 — "Intelligence" — From Infrastructure Intelligence -> Human-Centered Intelligence ("Sistem DEĞİL, İnsan")**
+
+Corvus Corax v1.3 shifts the primary analytical paradigm from passive infrastructure discovery to deep, ethical human-centric profiling:
+> **Core Question:** *"Who is behind the observable digital signals and how do those signals change over time?"*
+> **Core Principle:** Observe patterns, correlate footprints, and read the human behind the screen; but never apply rigid clinical labels or dogmatic conclusions (`Similarity != Identity`, `Anomaly != Threat`).
+
+### The 11 Pillars of Human-Centered Intelligence (`core/human/`):
+1. **Persona Analysis (`persona.py`)**: Technical vocabulary depth, communication tone, and interaction style.
+2. **Behavior Profiling (`behavior.py`)**: Interaction consistency, multi-stream habit indicators, and behavioral summaries.
+3. **Digital Footprint Correlation (`footprint.py`)**: Multi-modal footprint graph (Social + Infra + Timing + Linguistic).
+4. **Similarity Engine (`similarity.py`)**: Multi-dimensional profile comparison with strict **Similarity Score $\neq$ Identity Claim** safeguards.
+5. **Social Fingerprint (`social_fp.py`)**: Cross-platform handle characteristics, naming archetypes (Leet, Separated, Numeric), and platform spread.
+6. **Infrastructure Fingerprint (`infra_fp.py`)**: Operator technical preferences (privacy-centric vs commercial email, ASN habits, security hardening).
+7. **Stylometry Engine (`stylometry.py`)**: Word & sentence length distributions, punctuation frequencies, function words (TR/EN), and vocabulary diversity (TTR & Hapax Legomena).
+8. **Textual Psychology Profiling (`psychology.py`)**: `Observed signals -> Possible interpretation -> Alternative explanations -> Confidence` (non-dogmatic analysis).
+9. **Digital Timing & Activity Rhythm (`timing.py`)**: 24h diurnal rhythm, peak hours, quiet rest windows, and probabilistic timezone estimation.
+10. **Semantic Interest Network (`semantic.py`)**: Topic graph extraction and temporal interest drift analysis.
+11. **Advanced Anomaly & Threat Detection (`anomaly.py`)**: Fuses technical + human anomalies while maintaining **Anomaly Score $\neq$ Threat Probability**.
+
+**CLI Module (`modules/human.py`):**
+- `human profile <target>` — Full human intelligence dossier.
+- `human stylometry <text_or_target>` — Stylometric and linguistic analysis.
+- `human timing <target>` — 24h diurnal rhythm and probable timezone.
+- `human compare <target1> <target2>` — Multi-dimensional similarity comparison.
+- `human semantic <target>` — Topic graph and interest drift.
+- `human anomaly <target>` — Human + technical anomaly evaluation.
+
+---
+
+### v1.2.0 — Huginn & Muninn: Dual-Raven Architecture — "Huginn thinks, Muninn remembers, Corvus decides"
 
 Corvus Corax v1.2 introduces the Norse mythological dual-raven architecture to cyber intelligence:
 

@@ -1145,6 +1145,24 @@ class OutputManager:
                     else:
                         lines.append(str(data))
 
+                elif module == "human":
+                    report = data.get("report")
+                    if report:
+                        lines.append(f"  {C_GREEN}{C_BOLD}{report}{C_RESET}")
+                    elif data.get("action") == "stylometry":
+                        sty = data.get("stylometry", {})
+                        lines.append(f"  {C_GREEN}{C_BOLD}STYLOMETRIC PROFILE — Target: '{data.get('target')}'{C_RESET}")
+                        lines.append(f"    Words: {sty.get('total_words')}, Sentences: {sty.get('total_sentences')}, TTR: {sty.get('vocabulary_diversity', {}).get('ttr')}")
+                        lines.append(f"    Punctuation Rate: {sty.get('punctuation_profile', {}).get('frequency_per_100_words')} / 100 words")
+                    elif data.get("action") == "compare":
+                        comp = data.get("comparison", {})
+                        lines.append(f"  {C_CYAN}{C_BOLD}HUMAN SIMILARITY COMPARISON — '{data.get('target1')}' <-> '{data.get('target2')}'{C_RESET}")
+                        lines.append(f"    Overall Similarity : {C_YELLOW}{comp.get('overall_similarity_percentage')}{C_RESET}")
+                        lines.append(f"    Assessment         : {comp.get('epistemic_assessment')}")
+                        lines.append(f"    {C_DIM}{comp.get('identity_claim_disclaimer')}{C_RESET}")
+                    else:
+                        lines.append(str(data))
+
                 else:
                     lines.append(f"  {C_BOLD}Result Data:{C_RESET}")
                     lines.append(str(data))
