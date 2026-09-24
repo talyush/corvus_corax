@@ -3,3 +3,6 @@ __pycache__/
 *$py.class
 logs/
 vault/
+
+# Sırlar — .env asla commit edilmez (şablonu .env.example'dur)
+.env
