@@ -44,6 +44,20 @@ class ChatModule(BaseModule):
         if hybrid is not None:
             with inv.phase(1):
                 self.status_step(f"Running hybrid recon for '{hybrid['target']}'")
+            # v1.3.4: hybrid sonucunu MEMORY'ye isle — takip sorgulari aktif hedefi bilsin
+            # ("talha sağırı araştır" -> "genel olarak bak" kopuklugu duzeltmesi)
+            try:
+                engine.memory.add_user_message(
+                    user_message, intent="investigate", entities=[hybrid["target"]]
+                )
+                engine.memory.update_focal_target(
+                    hybrid["target"], hybrid.get("target_type") or "person"
+                )
+                engine.memory.add_assistant_message(
+                    hybrid["response"], metadata={"category": "hybrid_recon"}
+                )
+            except Exception:
+                pass
             data = {
                 "user_message": user_message,
                 "response": hybrid["response"],
@@ -99,10 +113,15 @@ class ChatModule(BaseModule):
     def _maybe_hybrid(self, user_message: str):
         """Hedefli arastirma sorusu ise Hybrid Recon calistir.
 
-        Tetikleyiciler: 'kimdir/arastir/incele' + bir ISIM/HEDEF (>=2 kelime).
-        "socrates kimdir" gibi tek-isim bilgi sorusu LLM'de kalir (modul yok),
-        ama "Ahmet Yilmaz kimdir arastir" gibi hedef iceren sorgularda
-        moduller gercel kanit toplar, LLM harmanlar.
+        v1.3.4 — "havali konusuyor ama yapmiyor" duzeltmesi:
+          - Turkce fiiller (araştır/arastir/incele/tara/hakkında...) artik ASCII
+            karsiligiyla BERABER tetikler; "araştırırmısın" gibi cekimli/bitisik
+            yazimlar da yakalanir (eski sadece 'arastir' seti asla eslesmiyordu).
+          - Isim yakalama artik buyuk harf gerektirmez: fiilden ONCEKI kelimeler
+            aday hedeftir ("talha sağırı araştırırmısın" -> "talha sağır").
+          - Turkce ek soyma: "sağırı/sağırın" -> "sağır" (belirtme/iyelik).
+          - Takip mesajlari (genel olarak bak/devam/ilk adımdan başla) onceki
+            aktif hedefe devam eder — LLM'e dusup tekrar "ne yapayim?" demez.
         """
         lower = user_message.lower()
         # v1.3-1: HUMAN-CENTERED INTELLIGENCE sorguları HYBRID OSINT'e takılmamalı —
@@ -119,30 +138,78 @@ class ChatModule(BaseModule):
         )):
             return None
 
-        is_targeted = any(k in lower for k in ("kimdir", "arastir", "incele",
-                                               "hakkinda arastir", "profili", "hakkinda bilgi",
-                                               "bul", "kim bu"))
-        if not is_targeted:
+        # Aktif hedef (onceki turdan) — takip sorgularinda devam icin
+        active_target = None
+        try:
+            active_target = self.get_engine(self.context).memory.active_target
+        except Exception:
+            active_target = None
+
+        # Turkce + ASCII tetikleyiciler birlikte (cekimli/bitisik fiil formlari dahil)
+        is_targeted = any(k in lower for k in (
+            "araştır", "arastir", "incele", "tara", "kimdir", "kim bu", "kim olduğunu",
+            "kim oldugunu", "hakkında", "hakkinda", "hakkında bilgi", "hakkinda bilgi",
+            "bilgi topla", "bilgi ver", "profili", "bul", "öğren", "ogren", "keşfet",
+            "kesfet", "araştırma", "arastirma", "investigate", "search", "recon",
+            "osint", "footprint", "whois", "dns", "find", "check", "scan", "lookup",
+        ))
+
+        # Takip/onay cumleleri: aktif hedef varsa "bak/devam/başla/tamam" -> oyle calisir
+        is_followup = bool(active_target) and any(k in lower for k in (
+            "devam", "bak", "başla", "basla", "tamam", "evet", "olur", "yap",
+            "sadece", "ilk adım", "ilk adim", "maddeden", "kaynaklara", "adım", "adim",
+            "genel", "soru", "sorular", "sen", "umarım", "göster", "goster",
+        ))
+
+        if not (is_targeted or is_followup):
             return None
 
         import re
-        # "Talha Bağcı" gibi Ad+Soyad'ı yakala (kimdir/araştır öncesi)
-        mg = re.search(r"([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]+)+)", user_message)
-        if not mg:
-            mg = re.search(r"(\w+\.\w+)", lower)  # domain/ip hedefleri
-        if not mg or not mg.group(1):
-            return None
+        target = None
 
-        target = mg.group(1).strip()
-        # Cümle içinde "kimdir/araştır" gibi kelimeler hedefe sızmasın
-        for word in ("kimdir", "kim", "araştır", "arastir", "incele", "bul", "hakkında",
-                     "profili", "ve", "arasında"):
-            target = target.replace(" " + word, "").replace(word + " ", "")
-        target = target.strip()
-        if len(target) < 2 or target.lower() in ("corvus corax", "the machine"):
+        # 1) Oncelik: Ad+Soyad (buyuk harf formatli, orijinal haliyle)
+        mg = re.search(r"([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]+)+)", user_message)
+        if mg:
+            target = mg.group(1).strip()
+
+        # 2) Buyuk harf yoksa: fiilden ONCEKI kelimeleri aday yap (kucuk harf toleransi)
+        if not target:
+            verb_m = re.search(
+                r"(araştır|arastir|incele|tara|kimdir|kim bu|kim olduğunu|kim oldugunu|"
+                r"hakkında|hakkinda|bilgi|profili|bul|öğren|ogren|keşfet|kesfet|"
+                r"investigate|search|recon|find|lookup)",
+                lower,
+            )
+            if verb_m:
+                pre = lower[: verb_m.start()].strip()
+                words = [w for w in re.split(r"[\s,.;:!?()\"'-]+", pre) if w]
+                # "x için y araştır" gibi yapilarda sondan onceki isim parcasini tercih et
+                if len(words) >= 2:
+                    target = " ".join(words[-2:])
+                elif words:
+                    target = words[-1]
+                # Turkce ek soyma: son kelimedeki belirtme/iyelik eki (sagiri -> sagir)
+                if target:
+                    parts = target.rsplit(" ", 1)
+                    head, last = (parts[0], parts[1]) if len(parts) == 2 else ("", parts[0])
+                    for suf in ("ları", "leri", "sı", "si", "yı", "yi", "ın", "in",
+                                "un", "ün", "ı", "i", "u", "ü"):
+                        if len(last) > len(suf) + 2 and last.endswith(suf):
+                            last = last[: -len(suf)]
+                            break
+                    target = (head + " " + last).strip() if head else last
+
+        # 3) Hecele bulunamadi ama aktif hedef varsa devam et (takip sorgusu)
+        if not target and active_target:
+            target = active_target
+
+        if not target:
+            target = active_target or None
+
+        # Filtreler: tek kelime bilgi sorusu LLM'de kalir, Corvus'un kendisi hedef degil
+        if not target or len(target) < 2 or target.lower() in ("corvus corax", "the machine"):
             return None
-        # Tek kelimelik bilgi sorusu -> LLM'de kalsin
-        if " " not in target:
+        if " " not in target and not active_target:
             return None
 
         try:
