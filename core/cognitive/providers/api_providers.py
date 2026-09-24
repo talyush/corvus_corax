@@ -40,7 +40,7 @@ class OllamaProvider(AbstractCognitiveProvider):
         """Makinede kurulu uygun modeli bulur (tercih sırasına göre, TAM ADIYLA)."""
         try:
             req = urllib.request.Request(f"{self.host}/api/tags", method="GET")
-            with urllib.request.urlopen(req, timeout=1.5) as resp:
+            with urllib.request.urlopen(req, timeout=3.0) as resp:
                 if resp.status == 200:
                     data = json.loads(resp.read().decode("utf-8"))
                     installed = [m.get("name", "") for m in data.get("models", [])]  # tam ad (qwen2.5-coder:7b)
@@ -71,7 +71,7 @@ class OllamaProvider(AbstractCognitiveProvider):
     def _check_available(self) -> bool:
         try:
             req = urllib.request.Request(f"{self.host}/api/tags", method="GET")
-            with urllib.request.urlopen(req, timeout=1.5) as resp:
+            with urllib.request.urlopen(req, timeout=3.0) as resp:
                 if resp.status == 200:
                     data = json.loads(resp.read().decode("utf-8"))
                     models = [m.get("name", "").split(":")[0] for m in data.get("models", [])]
@@ -122,7 +122,7 @@ class OllamaProvider(AbstractCognitiveProvider):
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=180) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 out = result.get("message", {}).get("content", "").strip()
                 if out:
@@ -176,7 +176,7 @@ class OllamaProvider(AbstractCognitiveProvider):
             headers={"Content-Type": "application/json"},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=180) as resp:
             result = json.loads(resp.read().decode("utf-8"))
             return result.get("response", "").strip()
 
@@ -227,7 +227,7 @@ class OpenAIProvider(AbstractCognitiveProvider):
                 },
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=120) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 return result["choices"][0]["message"]["content"].strip()
         except Exception as e:
@@ -282,7 +282,7 @@ class AnthropicProvider(AbstractCognitiveProvider):
                 },
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=20) as resp:
+            with urllib.request.urlopen(req, timeout=120) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 return result["content"][0]["text"].strip()
         except Exception as e:
