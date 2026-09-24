@@ -28,6 +28,19 @@ class SemanticInterestNetwork:
                 topic_counts[topic] = hits
         return topic_counts
 
+    def muninn_past_texts(self, entity_id: str, limit: int = 20) -> List[str]:
+        """v1.3-6: Muninn'de arşivlenmiş geçmiş snapshot metinlerini (past_texts)
+        geri getirir — Semantic Drift analizi için hazır geçmiş korpusu."""
+        try:
+            from core.muninn.store import MuninnStore
+            store = MuninnStore()
+            eh = store.get_history(entity_id)
+            if eh is not None:
+                return eh.snapshot_texts(limit=limit)
+        except Exception:
+            pass
+        return []
+
     def analyze_interest_drift(self, past_texts: List[str], current_texts: List[str]) -> Dict[str, Any]:
         """Geçmiş dönem ile şimdiki dönem arasındaki ilgi alanı değişimini (drift) analiz eder."""
         past_topics = self.extract_topics(past_texts)

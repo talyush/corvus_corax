@@ -105,6 +105,20 @@ class ChatModule(BaseModule):
         moduller gercel kanit toplar, LLM harmanlar.
         """
         lower = user_message.lower()
+        # v1.3-1: HUMAN-CENTERED INTELLIGENCE sorguları HYBRID OSINT'e takılmamalı —
+        # dialogue.py:163'teki human query setiyle birebir aynı küme (Görev #1 düzeltmesi).
+        # "Alexander Vance için insan profili" gibi sorgular hybrid yerine
+        # human_intelligence akışına gider (regex AD+SOYAD'ı yakalayıp OSINT'e
+        # yönlendirmesin).
+        if any(k in lower for k in (
+            "insan profili", "yazım stili", "yazim stili", "stilometri", "stylometry",
+            "aktivite saatleri", "ritim", "rhythm", "psikoloji", "persona",
+            "davranış profili", "davranis profili", "aynı kişi mi", "ayni kisi mi",
+            "aynı kişi olabilir mi", "insan analizi", "human profile", "human analysis",
+            "human intelligence", "insan istihbarat"
+        )):
+            return None
+
         is_targeted = any(k in lower for k in ("kimdir", "arastir", "incele",
                                                "hakkinda arastir", "profili", "hakkinda bilgi",
                                                "bul", "kim bu"))

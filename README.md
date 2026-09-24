@@ -69,6 +69,48 @@ Corvus Corax v1.3 shifts the primary analytical paradigm from passive infrastruc
 
 ---
 
+### v1.3.0 — Intelligence: From Infrastructure Intelligence → Human-Centered Intelligence ("Sistem DEĞİL, İnsan")
+
+The analytical paradigm shifts from "what infrastructure exists" to **"who is behind the observable signals and how do those signals change over time?"**
+
+**New: Human Intelligence Engine (`core/human/` — 11 pillars):**
+1. **Persona Analysis** (`persona.py`) — technical vocabulary depth, communication tone/register, interaction style.
+2. **Behavior Profiling** (`behavior.py`) — interaction consistency & multi-stream habit indicators.
+3. **Digital Footprint Correlation** (`footprint.py`) — social + infra + timing + linguistic unified profile graph.
+4. **Similarity vs Identity Distinction** (`similarity.py`) — strict *Similarity Score ≠ Identity Claim* epistemic safeguards.
+5. **Social Fingerprint** (`social_fp.py`) — cross-platform handle archetypes (Leet/Separated/Numeric), platform spread.
+6. **Infrastructure Fingerprint** (`infra_fp.py`) — operator technical preferences (email archetype, ASN habits, hardening).
+7. **Stylometry Engine** (`stylometry.py`) — word & sentence length distributions, punctuation, function words (TR/EN), TTR & Hapax Legomena diversity.
+8. **Textual Psychology Profiling** (`psychology.py`) — *Observed signal → Possible interpretation → Alternative explanations → Confidence* (non-dogmatic, anti-clinical-label).
+9. **Digital Timing & Activity Rhythm** (`timing.py`) — 24h diurnal rhythm, peak hours, probable timezone, quiet rest windows.
+10. **Semantic Interest Network** (`semantic.py`) — topic graph extraction + temporal interest drift analysis.
+11. **Advanced Anomaly & Threat Detection** (`anomaly.py`) — fuses technical + human anomalies while enforcing *Anomaly Score ≠ Threat Probability*.
+
+**Dual-Raven Intelligence Architecture:**
+- **Huginn thinks** (`core/huginn/`) — structured reasoning traces, provenance, Bayesian hypotheses.
+- **Muninn remembers** (`core/muninn/`) — persistent entity timelines, snapshots, attribute drift.
+- **Corvus decides** (`core/decision/`) — final call synthesis with memory + reasoning.
+
+**v1.3 CLI:**
+```
+human profile <target>      - Full human intelligence dossier (archives to Muninn, auto drift)
+human stylometry <text>     - Linguistic/stylometric fingerprint
+human timing <target>       - 24h rhythm & probable timezone
+human compare <t1> <t2>     - Similarity evaluation (Similarity != Identity)
+human semantic <target>     - Topic graph & interest drift (uses Muninn past snapshots)
+human anomaly <target>      - Human + technical anomaly vs baseline
+```
+
+**Fixes in v1.3.x:**
+- Hybrid/Human routing conflict resolved — human-intelligence queries no longer captured by OSINT hybrid recon (dialogue handles them).
+- `human profile` now archives to Muninn (persistent + automatic semantic drift detection).
+- Huginn trace now includes human signals (persona/stylometry/timing/semantic) as Observations.
+- `human semantic` & `human anomaly` fully implemented (were stubs).
+- Muninn now persists snapshot payloads → past texts recoverable for Semantic Drift.
+- Semantic Interest Drift now consumes Muninn's historical snapshot texts automatically.
+
+---
+
 ### v1.2.0 — Huginn & Muninn: Dual-Raven Architecture — "Huginn thinks, Muninn remembers, Corvus decides"
 
 Corvus Corax v1.2 introduces the Norse mythological dual-raven architecture to cyber intelligence:

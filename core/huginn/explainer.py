@@ -56,6 +56,45 @@ class HuginnExplainer:
                 confidence=0.6
             )
 
+        # v1.3-3: İNSAN SİNYALLERİ — Muninn'de arşivlenmiş human profil varsa
+        # stylometry/psychology/timing gözlemlerini Observation adımına ekle.
+        try:
+            from core.muninn.store import MuninnStore
+            store = MuninnStore()
+            eh = store.get_history(target)
+            if eh is not None and eh.current_attributes:
+                attrs = eh.current_attributes
+                if attrs.get("persona_technical_depth"):
+                    trace.add_observation(
+                        title=f"Persona Signal: {attrs.get('persona_technical_depth')}",
+                        description=f"Technical depth: {attrs.get('persona_technical_depth')}; tone: {attrs.get('communication_tone', 'unknown')}.",
+                        source_module="human.persona",
+                        confidence=0.7
+                    )
+                if attrs.get("stylometry_ttr"):
+                    trace.add_observation(
+                        title="Stylometric Signal: Vocabulary Diversity",
+                        description=f"TTR {attrs.get('stylometry_ttr')}; mean sentence {attrs.get('stylometry_mean_sentence', '?')} words.",
+                        source_module="human.stylometry",
+                        confidence=0.7
+                    )
+                if attrs.get("probable_timezone"):
+                    trace.add_observation(
+                        title="Timing Signal: Activity Window",
+                        description=f"Probable timezone {attrs.get('probable_timezone')}; peak hours {attrs.get('peak_hours_utc', '?')} UTC.",
+                        source_module="human.timing",
+                        confidence=0.6
+                    )
+                if attrs.get("dominant_topics"):
+                    trace.add_observation(
+                        title="Semantic Signal: Interest Topics",
+                        description=f"Dominant topics: {attrs.get('dominant_topics')}.",
+                        source_module="human.semantic",
+                        confidence=0.6
+                    )
+        except Exception:
+            pass
+
         # 2. Yorumlama (Interpretation)
         if target_relations:
             rel_types = set(r.get("type", "related") for r in target_relations)

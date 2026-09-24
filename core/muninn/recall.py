@@ -22,7 +22,7 @@ class MuninnRecallEngine:
     def recall_entity(self, entity_id: str) -> Dict[str, Any]:
         """Bir varlık hakkında hatırlanan tüm tarihsel ve güncel bilgileri birleştirir."""
         eh = self.store.get_history(entity_id)
-        
+
         # Muninn store kaydı
         history_data = eh.to_dict() if eh else {
             "entity_id": entity_id,
@@ -33,7 +33,11 @@ class MuninnRecallEngine:
             "current_attributes": {},
             "changes": [],
             "snapshots_count": 0,
+            "snapshots": [],
         }
+
+        # v1.3: Semantic Drift için geçmiş snapshot metinleri
+        past_texts = eh.snapshot_texts(limit=20) if eh else []
 
         # KnowledgeStore'dan ilgili dersler ve notlar
         knowledge_matches = []
@@ -57,6 +61,7 @@ class MuninnRecallEngine:
             "attributes": history_data["current_attributes"],
             "changes": history_data["changes"],
             "recent_snapshots_count": history_data["snapshots_count"],
+            "semantic_past_texts": past_texts,
             "knowledge_notes": knowledge_matches,
             "active_relations": active_relations,
         }

@@ -121,6 +121,8 @@ class EntityHistory:
         return detected_changes
 
     def to_dict(self) -> Dict[str, Any]:
+        """Varlık geçmişini tam olarak serileştirir (snapshot payload'ları dahil —
+        böylece Muninn'den geçmiş metinler Semantic Drift için geri okunabilir)."""
         return {
             "entity_id": self.entity_id,
             "entity_type": self.entity_type,
@@ -131,4 +133,22 @@ class EntityHistory:
             "tags": self.tags,
             "changes": [c.to_dict() for c in self.changes],
             "snapshots_count": len(self.snapshots),
+            "snapshots": [s.to_dict() for s in self.snapshots],
         }
+
+    def snapshot_texts(self, limit: int = 20) -> List[str]:
+        """Snapshot'ların metin değerlerini (attributes içindeki text/summary/topic
+        alanları) geri döndürür — Semantic Drift past_texts/current_texts için."""
+        out = []
+        for snap in self.snapshots[-limit:]:
+            attrs = snap.attributes or {}
+            for key, val in attrs.items():
+                if isinstance(val, str) and len(val) > 4:
+                    out.append(val)
+                elif isinstance(val, (list, dict)):
+                    try:
+                        import json
+                        out.append(json.dumps(val, ensure_ascii=False)[:2000])
+                    except Exception:
+                        out.append(str(val)[:2000])
+        return out

@@ -43,6 +43,17 @@ class MuninnStore:
                         timestamp=c.get("timestamp", ""),
                         source_module=c.get("source_module", "")
                     ))
+                # v1.3: snapshot'ları geri yükle (Semantic Drift için geçmiş metinler)
+                for s in data.get("snapshots", []):
+                    eh.snapshots.append(EntitySnapshot(
+                        entity_id=eid,
+                        entity_type=data.get("entity_type", "unknown"),
+                        attributes=s.get("attributes", {}),
+                        relations=s.get("relations", []),
+                        confidence=s.get("confidence", 0.5),
+                        timestamp=s.get("timestamp", ""),
+                        source_module=s.get("source_module", "unknown"),
+                    ))
                 self.histories[eid] = eh
         except Exception:
             pass
