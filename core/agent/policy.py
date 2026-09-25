@@ -40,9 +40,15 @@ class PolicyDecision:
 class SafetyPolicy:
     """Güvenlik karar katmanı."""
 
-    MAX_ITERATIONS = 4          # bir görevde maksimum aksiyon döngüsü
+    # v1.3.5 — Autonomy: budget'lar aktif. Bir görevde:
+    #   - toplam aksiyon üst sınırı (pivot derinleşmesi dahil)
+    #   - ağ çağrısı yapan araç sınırı (insan/yasal kaynak sınırına saygı — kaynak kısıtlılığı)
+    #   - yerel analiz araç sınırı
+    #   - gözlemden doğan OTONOM pivot adımı limiti (sonsuz döngü koruması)
+    MAX_ITERATIONS = 8
     MAX_NETWORK_TOOLS_PER_TASK = 6
-    MAX_LOCAL_TOOLS_PER_TASK = 3
+    MAX_LOCAL_TOOLS_PER_TASK = 4
+    MAX_PIVOTS_PER_TASK = 4
 
     # Kısıtlı araçlar (istisna)
     DENIED_TOOLS = {"netscan", "scan"}   # aktif tarama = yüksek risk -> interaction'sız DENIED

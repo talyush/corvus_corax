@@ -93,5 +93,7 @@ class AgentModule(BaseModule):
                 "observations": report["observations"],
                 "summary": report["summary"],
                 "pivot_leads": report["pivot_leads"],
+                "pivot_path": report.get("pivot_path", []),
+                "evidence": report.get("evidence", {}),
             },
         )

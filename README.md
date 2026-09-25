@@ -69,6 +69,26 @@ Corvus Corax v1.3 shifts the primary analytical paradigm from passive infrastruc
 
 ---
 
+### v1.3.5 — Autonomy: Dynamic Pivot Loop & Resource Budgets
+
+**Agent (Core → Action loop):** The observation→action→observation loop is now *truly dynamic*:
+- **Dynamic pivot queue** (`core/agent/agent.py`) — instead of a one-shot static plan, each successful observation with new entities feeds *follow-up pivot steps* back into the run queue. E.g., `social` finding an email now *automatically* schedules a `breach` look-up on that email — no manual re-targeting needed.
+- **Pivot traceability** — every autonomous pivot is recorded in the report (`pivot_path`) with its rationale, so the machine never acts without a visible trail.
+- **Resource budgets enforced** (`core/agent/policy.py`) — `MAX_NETWORK_TOOLS_PER_TASK`, `MAX_LOCAL_TOOLS_PER_TASK` and new `MAX_PIVOTS_PER_TASK` are now actively counted per task; steps past the budget are transparently `skipped` (not silently dropped). This is the first concrete step toward **cost-aware / kaynak-kısıtlılığı** routing: the agent cannot explode into unlimited network calls.
+- **Loop safety** — duplicate `(tool, target)` pairs are never re-executed (`seen` set); pivot explosion is capped.
+- **Evidence scaffold** (`report["evidence"]`) — entities corroborated by 2+ tools are now aggregated (`corroborated`) as the groundwork for the upcoming Evidence theme (NATO-style confidence).
+
+**Planner classification upgrade** (`core/agent/planner.py`):
+- `@handle` → `username`, `acme inc` / `x holding` → `organization` (was falling back to `person`).
+- Existing `email`/`ip`/`phone`/`domain`/`person` detection preserved.
+
+**Hybrid recon enrichment** (`core/cognitive/hybrid.py`):
+- `_summarize_report` now includes the autonomous pivot chain and cross-validated entities, so the LLM voice can speak to *how* the finding was reached.
+
+**Verification:** `scratch/verify_v135_autonomy.py` (pivot generation, budget enforcement, dedup safety, ASK-mode approval) + all prior v1.2/v1.3/v1.3.4 regression scripts pass.
+
+---
+
 ### v1.3.0 — Intelligence: From Infrastructure Intelligence → Human-Centered Intelligence ("Sistem DEĞİL, İnsan")
 
 The analytical paradigm shifts from "what infrastructure exists" to **"who is behind the observable signals and how do those signals change over time?"**

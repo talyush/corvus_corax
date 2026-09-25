@@ -57,6 +57,14 @@ class Planner:
     IP_RE = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
     EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
     PHONE_RE = re.compile(r"^\+?[\d\s\-()]{7,15}$")
+    USERNAME_RE = re.compile(r"^@[\w.-]{2,}$")
+
+    # v1.3.5 — organizasyon işaretleri (kelime sonu; "acme inc", "x holding" -> organization)
+    ORG_MARKERS = (
+        "ltd", "inc", "corp", "gmbh", "a.ş", "a.s", "holding", "şirket", "sirket",
+        "llc", "sa", "spa", "srl", "bank", "üniversitesi", "universitesi", "dernek",
+        "vakfı", "vakfi", "kulübü", "kulubu", "takımı", "takimi",
+    )
 
     def classify(self, target: str) -> str:
         t = target.strip().lower()
@@ -66,10 +74,14 @@ class Planner:
             return "ip"
         if self.PHONE_RE.match(t):
             return "phone"
-        if "." in t and " " not in t and not t.endswith((".com", ".org", ".net", ".io", ".ai", ".gov", ".edu")):
-            # generic domain-ish
-            if " " not in t:
-                return "domain"
+        if self.USERNAME_RE.match(t):
+            return "username"
+        # v1.3.5 — organizasyon işaretleri domain'den önce denenir ("acme inc" -> organization,
+        # "acme.com" -> domain kalır)
+        if " " in t:
+            words = [w.rstrip(".,;:!?") for w in t.split()]
+            if any(w in self.ORG_MARKERS for w in words):
+                return "organization"
         if "." in t and " " not in t:
             return "domain"
         return "person"

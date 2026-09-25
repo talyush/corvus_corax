@@ -87,7 +87,8 @@ class HybridRecon:
         parts = []
         summary = report.get("summary", {})
         parts.append(f"(çalışan araç: {summary.get('success', 0)}, "
-                     f"hata: {summary.get('errors', 0)}, atlanan: {summary.get('denied', 0)})")
+                     f"hata: {summary.get('errors', 0)}, atlanan: {summary.get('denied', 0)}, "
+                     f"otonom pivot: {summary.get('pivots', 0)})")
 
         for obs in report.get("observations", []):
             if obs.get("status") != "success":
@@ -103,6 +104,22 @@ class HybridRecon:
             if ents:
                 block += f" | yeni varlıklar: {', '.join(ents[:6])}"
             parts.append(block)
+
+        # v1.3.5 — otonom pivot izi: hangi aractan hangi hedefe gecildi
+        pivot_path = report.get("pivot_path", [])
+        if pivot_path:
+            chain = []
+            for pp in pivot_path:
+                for st in pp.get("steps", []):
+                    chain.append(f"{pp.get('from')}->{st.get('tool')}({st.get('target')})")
+            parts.append(f"  [otonom pivot zinciri] {'; '.join(chain[:8])}")
+
+        # v1.3.5 — çapraz doğrulama: 2+ aracin dogruladigi kanit
+        evidence = report.get("evidence", {})
+        corr = evidence.get("corroborated", {}) if evidence else {}
+        if corr:
+            items = "; ".join(f"{k} ({', '.join(v)})" for k, v in list(corr.items())[:6])
+            parts.append(f"  [çapraz doğrulama {len(corr)}] {items}")
 
         if len(parts) <= 1:
             return "(hiçbir modül somut veri döndürmedi — yalnızca kendi bilgini kullan)"
