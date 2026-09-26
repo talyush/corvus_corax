@@ -50,17 +50,20 @@ class InvestigationState:
 ```
 
 **resolution (Target Resolution)** — v1.4'ün kritik yeni katmanı:
+
+> **v1.4 kararları:** (1) İlk faz **rule-based** — embedding/ML/LLM tabanlı identity resolution v1.4 başlangıcına girmez. (2) `support_score` bir kimlik olasılığı DEĞİLDİR; candidate'ların kanıt tabanlı **destek/rank puanıdır**. (3) `AMBIGUOUS` veya `UNRESOLVED` durumunda `primary` **null/None** olur.
+
 ```python
 {
   "candidates": [
-    {"entity": "person:Ahmet Yılmaz",   "evidence_weight": 0.9, "ambiguity": "low"},
-    {"entity": "person:Ahmet Y. Yılmaz", "evidence_weight": 0.4, "ambiguity": "medium"}
+    {"entity": "person:Ahmet Yılmaz",    "support_score": 0.9, "ambiguity": "low"},
+    {"entity": "person:Ahmet Y. Yılmaz",  "support_score": 0.4, "ambiguity": "medium"}
   ],
-  "primary": "person:Ahmet Yılmaz",
+  "primary": "person:Ahmet Yılmaz" | None,   # AMBIGUOUS/UNRESOLVED ise None
   "status": "RESOLVED" | "AMBIGUOUS" | "UNRESOLVED"
 }
 ```
-> Kural: "Ahmet Yılmaz" doğrudan tek entity olarak kabul edilmez; kanıt zinciri candidate'ları ayrıştırır. **Similarity ≠ Identity** — `core/human/similarity.py` felsefesi.
+> Kural: "Ahmet Yılmaz" doğrudan tek entity olarak kabul edilmez; kanıt zinciri candidate'ları ayrıştırır. **Similarity ≠ Identity** — `core/human/similarity.py` felsefesi. `support_score` kimlik iddiası değil, "bu candidate hangi kanıtlarla destekleniyor" skoru.
 
 **steps** — çalıştırılmış adımlar (ya yazma-ekleme, ya da istenmeyen durum yok):
 ```python
@@ -86,47 +89,88 @@ class InvestigationState:
 CREATED → PLANNING → IN_PROGRESS ⇄ (NEEDS_INPUT | AWAITING_EXTERNAL) → IN_PROGRESS
                           │
                           ▼
-                       FINALIZED → ARCHIVED
+                       FINALIZED  →  ARCHIVED (ayrı lifecycle action)
 ```
 
 - **NEEDS_INPUT**: hedef belirsiz (UNRESOLVED), kullanıcıdan netleştirme istenir.
-- **AWAITING_EXTERNAL**: onay/API yanıtı bekleniyor.
+- **AWAITING_EXTERNAL**: onay/API yanıtı bekleniyor — **v1.4 kararı: senkron bekleme/onay** ile; gerçek async altyapı şimdilik kurulmaz.
 - **FINALIZED**: `finalized_report` üretildi; evidence ve kararlar rapora gömüldü.
-- **ARCHIVED**: state, kalıcı belleğin bir parçası haline gelir (Muninn).
+
+**FINALIZED ≠ ARCHIVED (v1.4 kararı):**
+- `FINALIZED`: araştırma bitti, rapor sealed/finalized.
+- `ARCHIVED`: state'in kalıcı geçmişe (Muninn) aktarılmasıdır — FINALIZED sonrası **ayrı lifecycle action** olarak kalır.
+- Arşivleme şimdilik **otomatikleştirilmez**; ayrı bir tetik (kullanıcı komutu / operator kararı) gerektirir.
 
 ## 5. İnvaryantlar
 
-1. State, döngünün **tek yazarı**dır; Agent durumu değiştiremez, yalnızca engine'in kararını uygulayıp sonucu state'e geri verir.
+1. State'in **tek yazarı Investigation Engine'dir**; Agent durumu değiştiremez.
 2. Her `step` ya `success` (evidence üretti) ya da `error/denied/skipped` (gerekçeli) olur — ortada kalan adım yasak.
 3. `FINALIZED` olmadan rapor üretilemez; `finalized_report.evidence_refs` boşsa rapor "kanıtsız" damgası taşır.
-4. `resolution.status == AMBIGUOUS` iken `investigate` sonuçlandırılamaz (önce kullanıcıya sorulur).
+4. `resolution.status == AMBIGUOUS` veya `UNRESOLVED` olduğunda `primary` **None** olmalıdır; `investigate` bu durumdayken sonuçlandırılamaz (önce kullanıcıya sorulur / resolution tamamlanır).
 5. Stop koşullarına ulaşılmadan sessizce sonlanılamaz; her sonlanış `stop_conditions`'a göre gerekçelendirilir.
 
 ## 6. Agent / Engine ayrımı (v1.4'ün kalbi)
 
-| Katman | Sorumluluğu | YASAK |
+### 6.1 State ownership — kesin ayrım
+
+**Investigation State'ın tek yazarı Investigation Engine'dir.**
+
+| Katman | Ne YAPAR | Doğrudan NE YAPAMAZ |
 |---|---|---|
-| **Investigation Engine** | State sahibi, target resolution, gap analizi, hipotez güncelleme, next-step seçimi, stop kararı, rapor finalize | Araç çalıştırmak (kendisi tool'u çağırmaz) |
-| **Agent** | Engine'in karar verdiği adımı SafetyPolicy onayıyla icra etmek | Kendi başına "ne yapacağım" kararı vermek |
+| **Investigation Engine** | State sahibi: target resolution, gap analizi, hipotez güncelleme, next-step seçimi, stop kararı, rapor finalize | Araç çalıştırmak |
+| **Agent** | Engine kararını alır → SafetyPolicy'den geçirir → tool'u çalıştırır → sonucu Engine'e geri verir | `InvestigationState` **herhangi bir mutation** yapmak; kendi başına "ne yapacağım" kararı vermek |
 | **Perception** | Dış dünyadan veri topla + normalize + provenance | State'i değiştirmek |
 
-Akış:
+### 6.2 Akış (kanonik veri yolu)
+
 ```
-UserRequest -> Engine.resolve_target(referent)  # candidates + ambiguity
-   → Engine.plan_hypotheses() → Engine.select_next_step()
-   → Agent.execute(step) → Engine.record_observation(result)
-   → Engine.update_hypotheses() → Engine.check_stop()
-   → Engine.finalize() → rapor
+User
+  → Investigation Engine      (karar/emir üretir)
+  → Agent                     (Engine kararını alır, SafetyPolicy'den geçirir)
+  → ActionGuard               (capability sınırı)
+  → Tool                      (çalıştırır)
+  → ToolResult                (canonical sonuç)
+  → Investigation Engine      (state güncellemesini YALNIZCA engine yapar)
+  → State update
+```
+
+```python
+Engine.resolve_target(referent)      # candidates + ambiguity (rule-based)
+   → Engine.plan_hypotheses()
+   → Engine.select_next_step()       # ToolResult metadata'sına göre («output_kind»)
+   → Agent.execute(decision)         # SafetyPolicy + ActionGuard
+   → Agent döndür: ToolResult
+   → Engine.record_tool_result(r)    # state yazımı — tek nokta
+   → Engine.update_hypotheses()
+   → Engine.check_stop()             # stop_conditions
+   → Engine.finalize()               # rapor sealed
+   → [ayrı aksiyon] Engine.archive() # ARCHIVED (otomatik değil)
 ```
 
 ## 7. Kalıcılık / yaşam döngüsü
 
-- `FINALIZED` → rapor kalıcı (exporter/json).
-- `ARCHIVED` → InvestigationState'i `MuninnStore` snapshot'ına bağla (gelecekte drift takibi için).
-- Konuşma: `ConversationMemory` (RAM) ve `MindMemory` (kalıcı) ayrı kalır — Investigation State bunlardan bağımsızdır, yalnızca rapor aracılığıyla arşivlenir.
+- `FINALIZED` → rapor kalıcı (exporter/json); seals gerçekleşir.
+- `ARCHIVED` → ayrı lifecycle action; `InvestigationState`'i `MuninnStore` snapshot'ına bağlar (gelecekte drift takibi için). **Otomatik değildir.**
+- Konuşma: `ConversationMemory` (RAM) ve `MindMemory` (kalıcı) ayrı kalır — Investigation State bunlardan bağımsızdır, yalnızca rapor/arşiv aracılığıyla bağlanır.
 
-## 8. Açık sorular
+## 8. Kararlar özeti (v1.4)
 
-- [ ] `Resolution` mantığı ilk fazda kural tabanlı mı (identity_capability + planner.classify üstü) yoksa ML/embedding gerektirir mi? (Öneri: kural tabanlı başla.)
-- [ ] Çoklu hedef / çoklu iş emri: bir `InvestigationState` birden çok `InvestigationGoal` taşıyabilir mi, tek hedef mi? (v1.4 başlangıcı: tek hedef, çok hypothesis.)
-- [ ] `AWAITING_EXTERNAL` durumu için async olgunluk gerekli mi, yoksa senkron bekleme yeterli mi?
+**Varsayılan kapsam — rule-based, tek hedef, senkron:**
+- [x] Target Resolution ilk faz **rule-based** (identity_capability + planner.classify üstü) — embedding/ML/LLM tabanlı identity resolution v1.4 başlangıcına girmez.
+- [x] **Tek target + çok hypothesis**; multi-target investigation sonraki kapsam.
+- [x] `AWAITING_EXTERNAL` senkron approval/API wait ile başlar; gerçek async altyapı yapılmaz.
+
+**Resolution şeması:**
+- [x] `support_score` = candidate destek/ranking puanı (identity probability değil); `Similarity != Identity` korunur.
+- [x] `status == AMBIGUOUS/UNRESOLVED` iken `primary = None`.
+
+**Ownership:**
+- [x] State'in tek yazarı Investigation Engine'dir; Agent state mutation yapamaz.
+- [x] Akış: `Engine karar → Agent (SafetyPolicy+ActionGuard) → Tool → ToolResult → Engine → State update`.
+
+**Lifecycle:**
+- [x] `FINALIZED ≠ ARCHIVED`; arşivleme FINALIZED sonrası ayrı aksiyon, otomatik değil.
+
+**Veri erişimi (ask/sql):**
+- [x] SQLite veya yeni veritabanı kurulmaz; `ask(sql)` v1.4 dependency'si değildir.
+- [x] İleride gerekirse Corvus-native bir Query API (ContextManager + Muninn + IntelligenceVault üzerinde abstraction) tasarlanır; storage implementation değiştirilebilir — ama önce abstraction ihtiyacı gerçek kullanım üzerinden doğrulanır.
