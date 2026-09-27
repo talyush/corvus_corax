@@ -85,16 +85,22 @@ class ContextManager:
             provenance["status"] = status
 
         if entity_key not in self.data["entities"]:
+            stored_prov = {
+                "source": provenance.get("source", "user_input"),
+                "status": provenance.get("status", "seed"),
+                "discovered_by": provenance.get("discovered_by"),
+                "timestamp": provenance.get("timestamp", now),
+            }
+            # v1.4 Perception — provenance zenginletmesi korunur
+            # (elde yoksa/sessizse kayıp olmaz; mevcut davranış korunur)
+            for _extra in ("source_url", "fetched_at", "method", "auth", "raw_hash"):
+                if provenance.get(_extra) is not None:
+                    stored_prov[_extra] = provenance[_extra]
             self.data["entities"][entity_key] = {
                 "type": entity_type,
                 "value": value,
                 "properties": props,
-                "provenance": {
-                    "source": provenance.get("source", "user_input"),
-                    "status": provenance.get("status", "seed"),
-                    "discovered_by": provenance.get("discovered_by"),
-                    "timestamp": provenance.get("timestamp", now),
-                },
+                "provenance": stored_prov,
                 "created_at": now,
                 "updated_at": now,
             }
@@ -105,12 +111,19 @@ class ContextManager:
             self.data["entities"][entity_key]["updated_at"] = now
             # Provenance durumunu koru — seed overwrite edilmez
             if "provenance" not in self.data["entities"][entity_key]:
-                self.data["entities"][entity_key]["provenance"] = {
+                stored_prov = {
                     "source": provenance.get("source", "user_input"),
                     "status": provenance.get("status", "seed"),
                     "discovered_by": provenance.get("discovered_by"),
                     "timestamp": now,
                 }
+                for _extra in ("source_url", "fetched_at", "method", "auth", "raw_hash"):
+                    if provenance.get(_extra) is not None:
+                        stored_prov[_extra] = provenance[_extra]
+                self.data["entities"][entity_key]["provenance"] = stored_prov
+            # Provenance zenginletmesi — mevcut kayıt güncellenen ek alanlarla birleşir
+            elif self.data["entities"][entity_key].get("provenance") is None:
+                self.data["entities"][entity_key]["provenance"] = stored_prov
 
         self._sync_entity_to_legacy(entity_type, value)
         return entity_key
