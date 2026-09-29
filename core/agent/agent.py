@@ -178,11 +178,14 @@ class Agent:
                 observations.append(obs)
                 continue
 
-            # --- Aksiyon ---
-            obs = self.executor.run(step.tool, step.target, self.modules)
+            # --- Aksiyon (v1.4: canonical ToolResult) ---
+            tool_result = self.executor.execute(step.tool, step.target, self.modules)
+            obs = tool_result.observation if tool_result.observation else Observation(
+                tool=step.tool, target=step.target, status="skipped",
+                summary=tool_result.error or "sonuç yok")
             observations.append(obs)
             step.applied = True
-            step.observation_ref = obs.summary
+            step.observation_ref = tool_result.observation_ref or obs.summary
             applied_steps.append(step)
             self.iterations += 1
 

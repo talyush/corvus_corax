@@ -15,7 +15,7 @@ sorusunu sorar. observation -> action -> observation döngüsünün kalbi budur.
 from .tools import ToolRegistry, ToolSpec
 from .policy import SafetyPolicy, Approval, ToolScope
 from .planner import Planner, PlanStep, InvestigationPlan
-from .executor import ToolExecutor, Observation
+from .executor import ToolExecutor, Observation, ToolResult
 from .agent import Agent
 
 __all__ = [
@@ -29,5 +29,6 @@ __all__ = [
     "InvestigationPlan",
     "ToolExecutor",
     "Observation",
+    "ToolResult",
     "Agent",
 ]
