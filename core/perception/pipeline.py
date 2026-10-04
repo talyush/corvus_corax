@@ -48,8 +48,16 @@ class PerceptionPipeline:
         try:
             from core.perception.adapters.whois import WhoisAdapter
             from core.perception.adapters.social import SocialAdapter
+            from core.perception.adapters.dns import DnsAdapter
+            from core.perception.adapters.geoip import GeoipAdapter
+            from core.perception.adapters.asn import AsnAdapter
+            from core.perception.adapters.cert import CertAdapter
             self.register(WhoisAdapter(config={}, logger=self.logger, context=self.context))
             self.register(SocialAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(DnsAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(GeoipAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(AsnAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(CertAdapter(config={}, logger=self.logger, context=self.context))
         except Exception as e:  # pragma: no cover — bağımlılık yoksa sessiz
             if self.logger:
                 self.logger.warning(f"Perception builtin adapters not available: {e}")
@@ -184,13 +192,29 @@ class PerceptionPipeline:
         return EligibilityState(False, "validation", f"doğrulanamayan kanıt statüsü: {status}")
 
     def _gate_relation(self, relation: Dict, result: PerceptionResult) -> EligibilityState:
-        """İlişki yazılabilir mi? (evidence + confidence)"""
+        """İlişki yazılabilir mi? (evidence + confidence + uç formatı)
+
+        v1.4.1/Phase5: ilişki uçlarından birinde FORMAT kurallı tip (ip/domain/
+        email) varsa o uç da doğrulanır — aksi hâlde add_relation, geçersiz
+        uç otomatik entity olarak world model'e girer (gate'i baypas eder).
+        """
         src = relation.get("src", {})
         dst = relation.get("dst", {})
         if not src.get("value") or not dst.get("value"):
             return EligibilityState(False, "validation", "ilişki uçlarından biri boş")
         if float(relation.get("confidence", 0.8)) < 0.5:
-            return EligibilityState(False, "evidence", "aday ilişki — confidence < 0.5")
+            return EligibilityState(False, "evidence",
+                                    "aday ilişki — confidence < 0.5")
+        # Format kurallı tipler — geçersiz uç ilişkiyi reddettirir
+        for side in (src, dst):
+            stype = side.get("type", "")
+            sval = str(side.get("value", ""))
+            if stype in ("ip", "domain", "subdomain", "whois_server", "email"):
+                status = self._validate_value(stype, sval, {})
+                if status != "VALIDATED":
+                    return EligibilityState(
+                        False, "validation",
+                        f"ilişki ucu geçersiz ({stype}:{sval} -> {status})")
         return EligibilityState(True, "evidence", "kanıta dayalı ilişki")
 
     def _validate_value(self, ent_type: str, value: str, _entity: Dict) -> str:
