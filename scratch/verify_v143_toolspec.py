@@ -95,6 +95,8 @@ check("whois perception::source", reg.has_capability("whois", "perception::sourc
 check("social perception::source", reg.has_capability("social", "perception::source"))
 check("dns perception::source (batch1)", reg.has_capability("dns", "perception::source"))
 check("cert perception::source (batch1)", reg.has_capability("cert", "perception::source"))
+check("subdomain perception::source (batch2)", reg.has_capability("subdomain", "perception::source"))
+check("tech perception::source (batch2)", reg.has_capability("tech", "perception::source"))
 check("academic perception::source değil", not reg.has_capability("academic", "perception::source"))
 check("bilinmeyen capability False", not reg.has_capability("whois", "bogus"))
 

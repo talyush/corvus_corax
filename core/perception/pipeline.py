@@ -52,12 +52,20 @@ class PerceptionPipeline:
             from core.perception.adapters.geoip import GeoipAdapter
             from core.perception.adapters.asn import AsnAdapter
             from core.perception.adapters.cert import CertAdapter
+            from core.perception.adapters.subdomain import SubdomainAdapter
+            from core.perception.adapters.tech import TechAdapter
+            from core.perception.adapters.metadata import MetadataAdapter
+            from core.perception.adapters.headers import HeadersAdapter
             self.register(WhoisAdapter(config={}, logger=self.logger, context=self.context))
             self.register(SocialAdapter(config={}, logger=self.logger, context=self.context))
             self.register(DnsAdapter(config={}, logger=self.logger, context=self.context))
             self.register(GeoipAdapter(config={}, logger=self.logger, context=self.context))
             self.register(AsnAdapter(config={}, logger=self.logger, context=self.context))
             self.register(CertAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(SubdomainAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(TechAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(MetadataAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(HeadersAdapter(config={}, logger=self.logger, context=self.context))
         except Exception as e:  # pragma: no cover — bağımlılık yoksa sessiz
             if self.logger:
                 self.logger.warning(f"Perception builtin adapters not available: {e}")

@@ -10,6 +10,10 @@ from core.perception.adapters.dns import DnsAdapter
 from core.perception.adapters.geoip import GeoipAdapter
 from core.perception.adapters.asn import AsnAdapter
 from core.perception.adapters.cert import CertAdapter
+from core.perception.adapters.subdomain import SubdomainAdapter
+from core.perception.adapters.tech import TechAdapter
+from core.perception.adapters.metadata import MetadataAdapter
+from core.perception.adapters.headers import HeadersAdapter
 
 __all__ = [
     "WhoisAdapter",
@@ -18,4 +22,8 @@ __all__ = [
     "GeoipAdapter",
     "AsnAdapter",
     "CertAdapter",
+    "SubdomainAdapter",
+    "TechAdapter",
+    "MetadataAdapter",
+    "HeadersAdapter",
 ]
