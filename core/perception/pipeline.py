@@ -56,6 +56,10 @@ class PerceptionPipeline:
             from core.perception.adapters.tech import TechAdapter
             from core.perception.adapters.metadata import MetadataAdapter
             from core.perception.adapters.headers import HeadersAdapter
+            from core.perception.adapters.wayback import WaybackAdapter
+            from core.perception.adapters.github import GithubAdapter
+            from core.perception.adapters.breach import BreachAdapter
+            from core.perception.adapters.email import EmailAdapter
             self.register(WhoisAdapter(config={}, logger=self.logger, context=self.context))
             self.register(SocialAdapter(config={}, logger=self.logger, context=self.context))
             self.register(DnsAdapter(config={}, logger=self.logger, context=self.context))
@@ -66,6 +70,10 @@ class PerceptionPipeline:
             self.register(TechAdapter(config={}, logger=self.logger, context=self.context))
             self.register(MetadataAdapter(config={}, logger=self.logger, context=self.context))
             self.register(HeadersAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(WaybackAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(GithubAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(BreachAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(EmailAdapter(config={}, logger=self.logger, context=self.context))
         except Exception as e:  # pragma: no cover — bağımlılık yoksa sessiz
             if self.logger:
                 self.logger.warning(f"Perception builtin adapters not available: {e}")

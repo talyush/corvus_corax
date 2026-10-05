@@ -81,9 +81,9 @@ class ToolRegistry:
         "cert": ToolSpec("cert", ["domain"], "TLS sertifika şeffaflık logları (CT).", calls_network=True,
                          capabilities=["perception::source"], output_kind="evidence"),
         "wayback": ToolSpec("wayback", ["domain"], "Arşivlenmiş web geçmişi.", calls_network=True,
-                            output_kind="evidence"),
+                            capabilities=["perception::source"], output_kind="evidence"),
         "email": ToolSpec("email", ["domain"], "E-posta altyapısı tespiti.", calls_network=True,
-                          output_kind="evidence"),
+                          capabilities=["perception::source"], output_kind="evidence"),
 
         # ---- IP hedefleri ----
         "geoip": ToolSpec("geoip", ["ip"], "IP konum ve coğrafi bilgi.", calls_network=True,
@@ -99,7 +99,7 @@ class ToolRegistry:
         "social": ToolSpec("social", ["person", "username"], "Sosyal medya profili keşfi.", calls_network=True,
                            capabilities=["perception::source"], output_kind="evidence"),
         "github": ToolSpec("github", ["person", "username"], "GitHub profili ve repo taraması.", calls_network=True,
-                           output_kind="evidence"),
+                           capabilities=["perception::source"], output_kind="evidence"),
         "academic": ToolSpec("academic", ["person"], "Akademik yayın / OpenAlex taraması.", calls_network=True,
                              output_kind="evidence"),
         "org": ToolSpec("org", ["organization", "person"], "Organizasyon/şirket istihbaratı.", calls_network=True,
@@ -107,7 +107,7 @@ class ToolRegistry:
 
         # ---- Email / Phone / Wallet ----
         "breach": ToolSpec("breach", ["email"], "Bilinen veri sızıntıları (meta-data).", calls_network=True,
-                           output_kind="evidence"),
+                           capabilities=["perception::source"], output_kind="evidence"),
         "phone": ToolSpec("phone", ["phone"], "Telefon numarası analizi.", calls_network=True,
                           output_kind="evidence"),
         "wallet": ToolSpec("wallet", ["wallet"], "Kripto cüzdan istihbaratı.", calls_network=True,

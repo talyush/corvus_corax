@@ -14,6 +14,10 @@ from core.perception.adapters.subdomain import SubdomainAdapter
 from core.perception.adapters.tech import TechAdapter
 from core.perception.adapters.metadata import MetadataAdapter
 from core.perception.adapters.headers import HeadersAdapter
+from core.perception.adapters.wayback import WaybackAdapter
+from core.perception.adapters.github import GithubAdapter
+from core.perception.adapters.breach import BreachAdapter
+from core.perception.adapters.email import EmailAdapter
 
 __all__ = [
     "WhoisAdapter",
@@ -26,4 +30,8 @@ __all__ = [
     "TechAdapter",
     "MetadataAdapter",
     "HeadersAdapter",
+    "WaybackAdapter",
+    "GithubAdapter",
+    "BreachAdapter",
+    "EmailAdapter",
 ]
