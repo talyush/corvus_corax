@@ -18,6 +18,10 @@ from core.perception.adapters.wayback import WaybackAdapter
 from core.perception.adapters.github import GithubAdapter
 from core.perception.adapters.breach import BreachAdapter
 from core.perception.adapters.email import EmailAdapter
+from core.perception.adapters.org import OrgAdapter
+from core.perception.adapters.academic import AcademicAdapter
+from core.perception.adapters.phone import PhoneAdapter
+from core.perception.adapters.wallet import WalletAdapter
 
 __all__ = [
     "WhoisAdapter",
@@ -34,4 +38,8 @@ __all__ = [
     "GithubAdapter",
     "BreachAdapter",
     "EmailAdapter",
+    "OrgAdapter",
+    "AcademicAdapter",
+    "PhoneAdapter",
+    "WalletAdapter",
 ]

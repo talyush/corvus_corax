@@ -60,6 +60,10 @@ class PerceptionPipeline:
             from core.perception.adapters.github import GithubAdapter
             from core.perception.adapters.breach import BreachAdapter
             from core.perception.adapters.email import EmailAdapter
+            from core.perception.adapters.org import OrgAdapter
+            from core.perception.adapters.academic import AcademicAdapter
+            from core.perception.adapters.phone import PhoneAdapter
+            from core.perception.adapters.wallet import WalletAdapter
             self.register(WhoisAdapter(config={}, logger=self.logger, context=self.context))
             self.register(SocialAdapter(config={}, logger=self.logger, context=self.context))
             self.register(DnsAdapter(config={}, logger=self.logger, context=self.context))
@@ -74,6 +78,10 @@ class PerceptionPipeline:
             self.register(GithubAdapter(config={}, logger=self.logger, context=self.context))
             self.register(BreachAdapter(config={}, logger=self.logger, context=self.context))
             self.register(EmailAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(OrgAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(AcademicAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(PhoneAdapter(config={}, logger=self.logger, context=self.context))
+            self.register(WalletAdapter(config={}, logger=self.logger, context=self.context))
         except Exception as e:  # pragma: no cover — bağımlılık yoksa sessiz
             if self.logger:
                 self.logger.warning(f"Perception builtin adapters not available: {e}")
@@ -249,8 +257,14 @@ class PerceptionPipeline:
         if ent_type == "email":
             if "@" in value and re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", value):
                 return "VALIDATED"
-        if ent_type in ("social_profile", "person", "organization", "username", "url"):
+        if ent_type in ("social_profile", "person", "organization", "username", "url",
+                        "academic_profile", "publication", "github_profile", "repository",
+                        "web_snapshot", "favicon_hash", "asn", "certificate", "host",
+                        "location", "wallet", "blockchain", "number_type", "operator"):
             if value and not value.endswith(("None", "null")):
+                return "VALIDATED"
+        if ent_type == "phone":
+            if re.match(r"^\+?[0-9]{8,15}$", value):
                 return "VALIDATED"
         return "UNVERIFIABLE"
 # ------------------------------------------------------------------

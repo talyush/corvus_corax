@@ -101,17 +101,17 @@ class ToolRegistry:
         "github": ToolSpec("github", ["person", "username"], "GitHub profili ve repo taraması.", calls_network=True,
                            capabilities=["perception::source"], output_kind="evidence"),
         "academic": ToolSpec("academic", ["person"], "Akademik yayın / OpenAlex taraması.", calls_network=True,
-                             output_kind="evidence"),
+                             capabilities=["perception::source"], output_kind="evidence"),
         "org": ToolSpec("org", ["organization", "person"], "Organizasyon/şirket istihbaratı.", calls_network=True,
-                        output_kind="evidence"),
+                        capabilities=["perception::source"], output_kind="evidence"),
 
         # ---- Email / Phone / Wallet ----
         "breach": ToolSpec("breach", ["email"], "Bilinen veri sızıntıları (meta-data).", calls_network=True,
                            capabilities=["perception::source"], output_kind="evidence"),
         "phone": ToolSpec("phone", ["phone"], "Telefon numarası analizi.", calls_network=True,
-                          output_kind="evidence"),
+                          capabilities=["perception::source"], output_kind="evidence"),
         "wallet": ToolSpec("wallet", ["wallet"], "Kripto cüzdan istihbaratı.", calls_network=True,
-                           output_kind="evidence"),
+                           capabilities=["perception::source"], output_kind="evidence"),
 
         # ---- Yerel analiz (otomatik — onay gerektirmez) ----
         "resolve": ToolSpec("resolve", ["domain", "ip"], "DNS çözümleme / hostname map.", calls_network=False,

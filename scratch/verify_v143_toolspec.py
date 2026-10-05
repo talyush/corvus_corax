@@ -97,7 +97,15 @@ check("dns perception::source (batch1)", reg.has_capability("dns", "perception::
 check("cert perception::source (batch1)", reg.has_capability("cert", "perception::source"))
 check("subdomain perception::source (batch2)", reg.has_capability("subdomain", "perception::source"))
 check("tech perception::source (batch2)", reg.has_capability("tech", "perception::source"))
-check("academic perception::source değil", not reg.has_capability("academic", "perception::source"))
+check("metadata/headers perception::source (batch2)",
+      reg.has_capability("metadata", "perception::source")
+      and reg.has_capability("headers", "perception::source"))
+check("wayback/github/breach/email perception::source (batch3)",
+      all(reg.has_capability(t, "perception::source")
+          for t in ("wayback", "github", "breach", "email")))
+check("org/academic/phone/wallet perception::source (batch4)",
+      all(reg.has_capability(t, "perception::source")
+          for t in ("org", "academic", "phone", "wallet")))
 check("bilinmeyen capability False", not reg.has_capability("whois", "bogus"))
 
 print()
