@@ -25,8 +25,8 @@ class BreachAdapter(ModuleSourceAdapter):
             source_id="breach",
             kind="http",
             auth_level="public",
-            base_url="https://monitor.firefox.com",
-            rate_limit=1.0,
+            base_url="https://api.xposedornot.com",
+            rate_limit=2.0,   # XposedOrNot 2 req/sn limiti
         )
         super().__init__(
             module_cls=BreachIntelModule,
@@ -44,6 +44,10 @@ class BreachAdapter(ModuleSourceAdapter):
         sources = data.get("breach_sources", []) or []
         risk = data.get("risk_level", "Low")
         count = data.get("breach_count", len(sources))
+        breakdown = data.get("source_breakdown", {}) or {}
+        onion = data.get("onion_links", []) or []
+        tor_exit = data.get("tor_exit", {}) or {}
+        pastes = data.get("pastes_summary", {}) or {}
 
         entities = []
         relations = []
@@ -53,7 +57,8 @@ class BreachAdapter(ModuleSourceAdapter):
             "type": "email",
             "value": email,
             "properties": {"breach_count": count,
-                           "risk_level": risk},
+                           "risk_level": risk,
+                           "breach_sources": breakdown},
             "provenance": {"source": "corvus", "status": "discovered"},
         })
 
@@ -65,8 +70,37 @@ class BreachAdapter(ModuleSourceAdapter):
                 "confidence": 0.7,   # kaynak meta-verisi — kesinlik değil
             })
 
+        # v1.4 — .onion / Tor sinyalleri
+        onion_total = (breakdown.get("ahmia_onion") or 0) or len(onion)
+        if onion:
+            entities.append({
+                "type": "onion_service",
+                "value": onion[0],
+                "properties": {"total_mentions": onion_total, "sample": onion[:5]},
+                "provenance": {"source": "corvus", "status": "discovered"},
+            })
+            relations.append({
+                "src": {"type": "email", "value": email},
+                "relation": "mentioned_in_onion_services",
+                "dst": {"type": "onion_service", "value": f"{onion_total} services"},
+                "confidence": 0.4,
+            })
+
+        for ip in (tor_exit.get("matched") or [])[:5]:
+            relations.append({
+                "src": {"type": "ip", "value": ip},
+                "relation": "is_tor_exit_node",
+                "dst": {"type": "tor_network", "value": "dan.me.uk list"},
+                "confidence": 0.9,
+            })
+
+        note_text = f"Email {email} — {count} breach kaynağı, risk: {risk}"
+        if onion:
+            note_text += f", onion: {len(onion)}"
+        if tor_exit.get("matched"):
+            note_text += f", tor-exit: {len(tor_exit['matched'])}"
         notes.append({
-            "text": f"Email {email} — {count} breach kaynağı, risk: {risk}",
+            "text": note_text,
             "severity": "warning" if risk != "Low" else "info",
             "confidence": 0.7,
         })

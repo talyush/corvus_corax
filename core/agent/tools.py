@@ -106,7 +106,7 @@ class ToolRegistry:
                         capabilities=["perception::source"], output_kind="evidence"),
 
         # ---- Email / Phone / Wallet ----
-        "breach": ToolSpec("breach", ["email"], "Bilinen veri sızıntıları (meta-data).", calls_network=True,
+        "breach": ToolSpec("breach", ["email"], "Bilinen veri sızıntıları + .onion/Tor sinyalleri (sadece meta-data; XposedOrNot, Firefox Monitor, Ahmia, dan.me.uk).", calls_network=True,
                            capabilities=["perception::source"], output_kind="evidence"),
         "phone": ToolSpec("phone", ["phone"], "Telefon numarası analizi.", calls_network=True,
                           capabilities=["perception::source"], output_kind="evidence"),
