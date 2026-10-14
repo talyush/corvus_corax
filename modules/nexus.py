@@ -142,6 +142,52 @@ class NexusModule(BaseModule):
             return self.success(target=f"{e1}<->{e2}", data=data)
 
         # Default: Summary
+        if action in ("summary", "analyze", "--verbose"):
+            reasoning = reasoning_engine.synthesize_reasoning_statement(target)
+            summary = graph_service.get_entity_summary(target)
+
+            data = {
+                "action": action,
+                "target": target,
+                "reasoning": reasoning,
+                "summary": summary,
+            }
+            return self.success(target=target, data=data)
+
+        # 7. Export: nexus export html|json|graph [filepath]
+        #    (help/README'de ilan edilen komutlar — mevcut NexusExporter API'si)
+        if action == "export":
+            from core.exporter import NexusExporter
+            fmt = (args[1].lower() if len(args) > 1 else "html")
+            filepath = args[2] if len(args) > 2 else None
+            defaults = {
+                "html": "logs/nexus_report.html",
+                "json": "logs/nexus_neo4j.json",
+                "neo4j": "logs/nexus_neo4j.json",
+                "graph": "logs/nexus_graph.json",
+            }
+            if fmt not in defaults:
+                return self.error(
+                    f"Unknown nexus export format: {fmt}. Use: html|json|graph [filepath]"
+                )
+            exporter = NexusExporter(self.context)
+            if fmt == "html":
+                out = exporter.export_html(filepath or defaults["html"])
+                export_type = "html"
+            elif fmt == "graph":
+                out = exporter.export_graph_json(filepath or defaults["graph"])
+                export_type = "graph_json"
+            else:
+                out = exporter.export_neo4j_json(filepath or defaults[fmt])
+                export_type = "neo4j_json"
+            data = {
+                "action": "export",
+                "export_type": export_type,
+                "filepath": out,
+            }
+            return self.success(target=target, data=data)
+
+        # Default: Summary
         reasoning = reasoning_engine.synthesize_reasoning_statement(target)
         summary = graph_service.get_entity_summary(target)
 
