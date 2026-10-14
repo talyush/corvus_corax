@@ -40,11 +40,29 @@ It is designed to collect, normalize, and correlate reconnaissance data in a sca
 
 ## Current Version
 
-**v1.3.0 — "Intelligence" — From Infrastructure Intelligence -> Human-Centered Intelligence ("Sistem DEĞİL, İnsan")**
+**v1.4.0 — "Perception" — Unified Perception: Infrastructure + Human Intelligence, one pipeline ("Her sinyal normalize, gated & correlate edilir")**
 
-Corvus Corax v1.3 shifts the primary analytical paradigm from passive infrastructure discovery to deep, ethical human-centric profiling:
+Corvus Corax v1.4 unifies every intelligence source behind a single **Perception Pipeline** and a **stateful Investigation Engine** — infrastructure signals, human signals, and metadata all flow through the same contract:
 > **Core Question:** *"Who is behind the observable digital signals and how do those signals change over time?"*
-> **Core Principle:** Observe patterns, correlate footprints, and read the human behind the screen; but never apply rigid clinical labels or dogmatic conclusions (`Similarity != Identity`, `Anomaly != Threat`).
+> **Core Principle:** Every source is a `SourceAdapter` → `normalize` → `eligibility-gated` world-model write. Nothing touches the graph unless it is proven, validated, and provenance-stamped. (`Similarity != Identity`, `Anomaly != Threat` — still law.)
+
+### The Perception Contract (`core/perception/`)
+1. **SourceAdapter** (`adapter.py`) — Every source (whois, dns, subdomain, tech, metadata, headers, asn, cert, geoip, email, breach, wayback, github, org, academic, phone, wallet, social) wraps as a `ModuleSourceAdapter`: `fetch → normalize → perceive`.
+2. **SourceDeclaration / PerceptionResult** (`model.py`) — Declared source identity + `stamp_provenance` (raw_hash = SHA-256 of raw payload, source_url, fetched_at).
+3. **Eligibility Gate** — Only `VALIDATED`/provenance-stamped evidence reaches `ContextManager`; seed/UNVERIFIABLE writes are rejected. Context writes become controlled and auditable.
+4. **18 Adapters, 38 modules, 29 ToolSpecs** — every source declares itself, normalized relations carry confidence, ToolSpec exposes capability metadata.
+
+### The Tool Contract (`core/agent/tools.py`, `executor.py`)
+5. **ToolSpec migration** — `input_schema` (new tools require it, legacy 29 tolerate `{}`), `output_kind` (evidence/data/report_fragment), `capabilities` (e.g. `perception::source`), `validate_input` + `has_capability` + `output_kind_for`.
+6. **Canonical ToolResult** — single external contract from `executor.execute()`; `Observation` linked via `observation_ref`; legacy `run()` kept as deprecated wrapper.
+
+### The Investigation Engine (`core/investigation/engine.py`)
+7. **Stateful Engine** — `InvestigationState` (TargetResolution, hypotheses, gaps, decisions, stop_conditions, pivot_path) owns the investigation; the Agent became the execution arm (`Agent.execute` → SafetyPolicy → ActionGuard → Tool → ToolResult).
+8. **Rule-based target resolution** — `support_score != identity`, `primary=None` if AMBIGUOUS, engine is the sole writer, `FINALIZED != ARCHIVED`.
+
+### Breach Intelligence Expansion (v1.4 sources)
+9. **XposedOrNot** (check-email + breach-analytics) — public, keyless breach metadata; **Firefox Monitor** — keyless scan; **Ahmia** — `.onion` mentions (token-stream search); **dan.me.uk** — Tor exit node matching against context IPs.
+10. `source_breakdown` (per-source counts), `onion_links`, `pastes_summary`, `tor_exit` — adapter normalizes into `onion_service`, `mentioned_in_onion_services`, `is_tor_exit_node`. Use `--no-onion` to skip the Ahmia search. Meta-data only — never raw records.
 
 ### The 11 Pillars of Human-Centered Intelligence (`core/human/`):
 1. **Persona Analysis (`persona.py`)**: Technical vocabulary depth, communication tone, and interaction style.
@@ -66,6 +84,37 @@ Corvus Corax v1.3 shifts the primary analytical paradigm from passive infrastruc
 - `human compare <target1> <target2>` — Multi-dimensional similarity comparison.
 - `human semantic <target>` — Topic graph and interest drift.
 - `human anomaly <target>` — Human + technical anomaly evaluation.
+
+---
+### v1.4.0 — Perception & Investigation Engine ("Tek Sözleşme, Her Sinyal")
+
+The biggest architectural shift since the beginning: **every intelligence source now flows through one contract**. Infrastructure signals, human signals and raw metadata all become `SourceAdapter` → `normalize` → eligibility-gated world-model writes — and the investigation itself gained a real, stateful engine that owns the loop. The Agent is no longer the owner of an investigation; it is now the execution arm that carries out the Engine's decisions.
+
+> **Core Question:** *"Who is behind the observable digital signals and how do those signals change over time?"* — now asked uniformly, source-agnostic.
+
+**Phase 1 — Perception Pipeline (`core/perception/`):**
+- **`adapter.py`** — `SourceAdapter` contract (fetch → normalize → perceive) + `ModuleSourceAdapter` wrapper: existing modules are **wrapped, not rewritten** (v1.4 kararı: toplu refactor yok — izole wrapper ile pürüzsüz migration). `_NoWriteContext` keeps module-internal context writes from leaking to the real world model.
+- **`model.py`** — `SourceDeclaration`, `PerceptionResult`, `stamp_provenance` (raw_hash = SHA-256 of raw payload, source_url, fetched_at). `ContextManager` provenance enriched so raw hashes survive.
+- **ELIGIBILITY GATE** — only `VALIDATED` (status + provenance-backed) writes reach the world model; `seed`/`UNVERIFIABLE` data is rejected. The pipeline, not the module, writes to context. `verify_v14_perception` (22/22 PASS).
+
+**Phase 2 — ToolResult canonical refactor (`core/agent/executor.py`):**
+- `executor.execute() → ToolResult` is now the **single external contract**; `Observation` links via `observation_ref`; evidence stays on existing `core/evidence/model.Evidence` objects (no new model). The old `run()` is kept only as a deprecated compatibility wrapper. Agent loop uses `execute()`. `verify_v142_toolresult` (26/26 PASS).
+
+**Phase 3 — ToolSpec migration (`core/agent/tools.py`):**
+- `input_schema` — new tools must declare one (legacy 29 tolerate `{}`), `register()` validates schemas. `output_kind` — evidence/data/report_fragment capability metadata for the Investigation Engine. `capabilities` — `whois`/`social`/... → `perception::source`. Helpers: `validate_input`, `has_capability`, `output_kind_for`. `verify_v143_toolspec` (26/26 PASS).
+
+**Phase 4 — Investigation Engine (`core/investigation/`):**
+- **`state.py`** — `InvestigationState`: TargetResolution (rule-based, `support_score != identity`, `primary=None` if AMBIGUOUS), hypotheses, gaps, decisions, stop_conditions, pivot_path.
+- **`engine.py`** — `InvestigationEngine`: resolve_target → plan (+knowledge/selection) → loop (queue/seen/budget/reflect/stop) → delegates action to `Agent.execute` → finalize report. The Engine is the **sole writer** of investigation state; v1.3.5 autonomy and the report schema are preserved. `verify_v144_investigation` (18/18 PASS).
+
+**Phase 5 — Perception migration (all sources wrapped, Batch 1→6):**
+- **Batch 1** (`dns`/`geoip`/`asn`/`cert`): normalize → domain/ip/asn/certificate/host/location entities + `resolves_to`/`has_mx`/`has_ns`/`spf`/`dmarc`/`located_in`/`belongs_to_asn`/`owned_by`/`in_cidr`/`issued_to`/`cert_issued_by`/`wildcard_covers`. Eligibility tightened: invalid ip can no longer be written via `add_relation`. 6 adapters in pipeline. `verify_v145` (28/28 PASS).
+- **Batch 2** (`subdomain`/`tech`/`metadata`/`headers`): `has_subdomain`, `uses_server`/`runtime`/`technology`, `protected_by`, `has_security_contact`/`staff_email`/`favicon_hash`, missing-security-header warnings. 10 adapters. `verify_v146` (22/22 PASS).
+- **Batch 3** (`wayback`/`github`/`breach`/`email`): `has_web_history` + `web_history_correlation`, `github_profile_candidate` + `github_email_correlation` + `repository`, `appeared_in_breaches` (meta-data only), `uses_email_provider` + `email_pattern` + role/personal email candidates. 14 adapters. `verify_v147` (24/24 PASS).
+- **Batch 4** (`org`/`academic`/`phone`/`wallet`): `org_owns_domain` (0.6) + `employs_candidate` (0.4) + `owns_subsidiary` (0.5); `academic_profile`/`has_academic_profile` + `academic_affiliated_with` (0.7) + `authored_publication` (0.6); `has_number_type` (0.9) + `possible_operator` (0.4, MNP) + `phone_candidate_for` (0.4); `on_chain` (1.0) + `wallet_candidate_for` (0.4). Eligibility whitelist extended (phone E.164, wallet, publication, academic_profile...). 18 adapters in pipeline, `perception::source` on 18 tools, ToolSpec 32/32. `verify_v148` (29/29 PASS).
+- **Batch 6 — Breach intelligence expansion** (`modules/breach_intel.py`): new public sources — **XposedOrNot** (check-email + breach-analytics, keyless), **Ahmia** (`.onion` mentions via token-stream search), **dan.me.uk** (Tor exit node matching against context IPs), alongside Firefox Monitor. New fields: `source_breakdown`, `onion_links`, `pastes_summary`, `tor_exit`. Adapter normalizes into `onion_service` + `mentioned_in_onion_services` (0.4) + `is_tor_exit_node` (0.9). `--no-onion` flag skips the Ahmia search. Meta-data only — never raw records. `verify_v1410` (26/26 PASS).
+
+**Net result:** 18 perception source adapters → normalized → eligibility-gated writes; 38 modules; 29 ToolSpecs; one canonical `ToolResult`; one stateful `InvestigationEngine`; every signal provenance-stamped before it touches the graph.
 
 ---
 
@@ -392,17 +441,20 @@ Phase C — Safe autonomous Agent   (plan → tool selection → approval → ac
 
 ```
 ================================================================================
-  CORVUS CORAX v0.9 — INTELLIGENCE COLLECTION EXPANSION  |  Modular Recon Framework
+  CORVUS CORAX v1.4 — PERCEPTION & INVESTIGATION ENGINE  |  Unified Intel Flow
 ================================================================================
   Command               | Arguments                    | Description
 --------------------------------------------------------------------------------
   help                  |                              | Show commands
   version               |                              | Show tool version
   context               | [--admiralty]                | Show collected context (use --admiralty for intelligence details)
-  context               | [--events] [--entities]      | Show temporal event stream / entity registry (v0.9)
-  context               | save|load [file]             | Persist / restore intelligence state (v0.9)
+  context               | [--events] [--entities]      | Show temporal event stream / entity registry
+  context               | save|load [file]             | Persist / restore intelligence state
+  system                | status|providers|doctor      | Platform health, LLM providers, diagnostics
+  agent                 | <target> [--auto|--ask]      | Autonomous agent: plan -> approve -> act -> reflect
+  evidence              | list|findings|gaps|lineage   | Evidence chain, key findings & intelligence gaps
   scan                  | <ip> <mode> ...              | Port scan (normal/slow/banner/subnet)
-  netscan               | <ip/network> [--ports] [--geo] [--map] | Network discovery with port/geo/map (v0.9)
+  netscan               | <ip/network> [--ports] [--geo] [--map] | Network discovery with port/geo/map
   footprint             | <domain>                     | Get IP and hostname info
   geoip                 | <ip>                         | Get geolocation info
   whois                 | <domain|ip>                  | Run WHOIS lookup
@@ -415,19 +467,19 @@ Phase C — Safe autonomous Agent   (plan → tool selection → approval → ac
   cert                  | <host> [port]                | Fetch & analyze TLS certificate intelligence
   headers               | <url_or_host>                | Fetch & analyze HTTP headers, security & cookies
   metadata              | <url_or_host>                | Collect robots.txt, sitemap, favicon hash & security.txt
-  phone                 | <number> [person]            | Phone analysis: format, operator prefix & candidate link (v0.9)
-  social                | <username> [person]          | Username OSINT: multi-platform correlation (v0.9)
-  org                   | <company> [domain] [person]  | Organization intelligence: domain/personnel mapping (v0.9)
-  academic              | <name_or_email>              | Academic intelligence: OpenAlex, ORCID, publications (v0.9)
-  wallet                | <address> [chain] [person]   | Crypto wallet analysis: format, chain, balance (v0.9)
-  breach                | <email> [--sources=X,Y]      | Breach intelligence: Firefox Monitor + k-anonymity (v0.9)
-  github                | <username> [person]          | GitHub intelligence: profile, repos, email correlation (v0.9)
-  wayback               | <url>                        | Wayback Machine: web history & snapshots (v0.9)
-  geoint                | map|graph|timeline|export    | Geographical map / relationship graph visualization (v0.9)
-  resolve               | <name_or_entity>             | Entity resolution: identity clustering (v0.9)
-  pivot                 | <entity> [--depth=N]         | Cross-entity pivoting: BFS graph traversal (v0.9)
-  pol                   | analyze|compare|casefile|timeline | Pattern of Life behavioral analysis (v0.9)
-  vault                 | show|events|confirm|stats    | Intelligence vault: persistent memory (v0.9)
+  phone                 | <number> [person]            | Phone analysis: format, operator prefix & candidate link
+  social                | <username> [person]          | Username OSINT: multi-platform correlation
+  org                   | <company> [domain] [person]  | Organization intelligence: domain/personnel mapping
+  academic              | <name_or_email>              | Academic intelligence: OpenAlex, ORCID, publications
+  wallet                | <address> [chain] [person]   | Crypto wallet analysis: format, chain, balance
+  breach                | <email> [--sources=X,Y] [--no-onion] | Breach intel: Firefox Monitor + XposedOrNot + Ahmia + Tor exit
+  github                | <username> [person]          | GitHub intelligence: profile, repos, email correlation
+  wayback               | <url>                        | Wayback Machine: web history & snapshots
+  geoint                | map|graph|timeline|export    | Geographical map / relationship graph visualization
+  resolve               | <name_or_entity>             | Entity resolution: identity clustering
+  pivot                 | <entity> [--depth=N]         | Cross-entity pivoting: BFS graph traversal
+  pol                   | analyze|compare|casefile|timeline | Pattern of Life behavioral analysis
+  vault                 | show|events|confirm|stats    | Intelligence vault: persistent memory
   nexus                 | [analyze] [--verbose]        | Run Nexus Correlation Engine
   nexus analyze         | [--verbose]                  | Correlate & score all collected data
   nexus export html     | [filepath]                   | Export HTML intelligence dossier
@@ -435,6 +487,9 @@ Phase C — Safe autonomous Agent   (plan → tool selection → approval → ac
   nexus export graph    | [filepath]                   | Export generic graph JSON (AI/ML ready)
 ================================================================================
   Notes:
+    - v1.4: 18 perception source adapters -> normalized -> eligibility-gated writes
+    - breach sources: Firefox Monitor, XposedOrNot, Ahmia (.onion), dan.me.uk (Tor
+      exit). Use --no-onion to skip the Ahmia search. Meta-data only.
     - Nexus commands require prior data collection (scan, footprint, etc.)
     - Use 'nexus analyze --verbose' for detailed Admiralty evidence chains
     - Use 'context --admiralty' for intelligence summary
@@ -446,7 +501,8 @@ Phase C — Safe autonomous Agent   (plan → tool selection → approval → ac
     - Use 'pol analyze <entity>' for behavioral analysis
     - Use 'vault show' for persistent memory stats
     - Default export path: logs/nexus_report.html | logs/nexus_neo4j.json | logs/nexus_graph.json
-    - phone/social/org/wallet module relations are CANDIDATE — not confirmed ownership (v0.9)
+    - phone/social/org/wallet/academic/breach module relations are CANDIDATE —
+      not confirmed ownership (metadata correlation, confidence-weighted)
 ================================================================================
 ```
 
@@ -470,17 +526,18 @@ corvus > headers example.com
 corvus > metadata example.com
 corvus > crawl example.com
 
-# 2. Human-centric intelligence (v0.9)
+# 2. Human-centric intelligence
 corvus > phone +905321234567 ahmet
 corvus > social johndoe
 corvus > org "Acme Corp" acme.com ahmet
 corvus > academic ahmet@itu.edu.tr
 corvus > wallet 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa ahmet
 corvus > breach ahmet@example.com --sources=LinkedIn,Adobe
+corvus > breach ahmet@example.com --no-onion    # .onion aramasını atla (XposedOrNot + Firefox Monitor + Tor exit yine çalışır)
 corvus > github octocat
 corvus > wayback example.com
 
-# 3. Entity resolution & pivoting (v0.9)
+# 3. Entity resolution & pivoting
 corvus > resolve ahmet
 corvus > pivot ahmet --depth=3
 
@@ -494,23 +551,29 @@ corvus > context --entities
 corvus > nexus analyze
 corvus > nexus analyze --verbose
 
-# 6. Visualize (v0.9)
+# 6. Visualize
 corvus > geoint map
 corvus > geoint graph
 corvus > geoint timeline ahmet
 corvus > geoint export
 
-# 7. Pattern of Life analysis (v0.9)
+# 7. Pattern of Life analysis
 corvus > pol analyze ahmet
 corvus > pol compare ahmet 8.8.8.8
 corvus > pol casefile ahmet
 
-# 8. Persist intelligence (v0.9)
+# 8. Persist intelligence
 corvus > context save
 corvus > vault show
 corvus > vault confirm ahmet
 
-# 9. Export results
+# 9. Platform & evidence (v1.4)
+corvus > version
+corvus > system status
+corvus > evidence list
+corvus > evidence findings
+
+# 10. Export results
 corvus > nexus export html
 corvus > nexus export json
 corvus > nexus export graph

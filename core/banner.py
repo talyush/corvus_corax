@@ -88,8 +88,8 @@ def show_banner(animate=True):
 @@@@@@@@/@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%@@@@@@@@@))!][@@@@@<[@@@@@@@\@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@/@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@/@@@@@@@@@@@@@@@@@@\@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    v1.3.0-intelligence  |  From Infrastructure Intelligence -> Human-Centered Intelligence
-    >> Who is behind the observable digital signals? // Systems NOT alone, Humans <<
+    v1.4.0-perception  |  From Infrastructure & Human Intelligence -> Unified Perception
+    >> Who is behind the observable digital signals? // Every signal normalized, gated & correlated <<
 """
 
     print(Fore.CYAN + title_art + Style.RESET_ALL + Fore.MAGENTA + silhouette + Style.RESET_ALL)
