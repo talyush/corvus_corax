@@ -67,8 +67,25 @@ class ChatModule(BaseModule):
                 "module_findings": hybrid["module_findings"],
                 "observations": hybrid["observations"],
                 "provenance": hybrid["provenance"],
-                "suggested_command": None,
+                # v1.4 review: hybrid dalinda da agent onerisi uretilir (non-hybrid
+                # daliyla ayni sozlesme) — LLM bekleme davranisina dokunulmaz.
+                "suggested_command": f"agent {hybrid['target']}",
+                "auto_action": None,
             }
+            if self._ask_approval(f"Hybrid recon completed for '{hybrid['target']}'. Run agent investigation?"):
+                with inv.phase(2):
+                    self.status_step(f"Auto-invoking agent {hybrid['target']}")
+                    try:
+                        from core.agent.agent import Agent
+                        agent = Agent(
+                            module_registry=self._load_modules(),
+                            config=self.config,
+                            logger=self.logger,
+                            context=self.context,
+                        )
+                        data["auto_action"] = agent.investigate(hybrid["target"])
+                    except Exception as e:
+                        data["auto_action"] = {"error": str(e), "summary": {"total_steps": 0}}
             return self.success(target=user_message, data=data)
 
         with inv.phase(2):
@@ -167,6 +184,17 @@ class ChatModule(BaseModule):
         import re
         target = None
 
+        # 1) Oncelik: ham mesajda domain dene (v1.4 review yamasi —
+        # kisi deseni nokta icermedigi icin 'example.com arastir'
+        # yakalanamiyordu; kisi mantigina dokunulmaz).
+        if not target:
+            import re as _re2
+            _dm = _re2.search(
+                r"([a-z0-9](?:[a-z0-9.\-]*[a-z0-9])?\.[a-z]{2,})",
+                user_message, _re2.IGNORECASE,
+            )
+            if _dm:
+                target = _dm.group(1).strip()
         # 1) Oncelik: Ad+Soyad (buyuk harf formatli, orijinal haliyle)
         mg = re.search(r"([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]+)+)", user_message)
         if mg:
@@ -225,6 +253,11 @@ class ChatModule(BaseModule):
             return {"target": target, "response": f"Hibrit arastirma sirasinda sorun: {e}",
                     "provenance": {}, "module_findings": "", "observations": []}
 
+    # v1.4 review notu: dosyanin sonunda erisilemez ikinci bir `data` blogu
+    # vardi (chat_result kapsam disi — data 84-109. satirlarda zaten
+    # dondurulmustu). Kaldirildi; hybrid/_maybe_hybrid ve non-hybrid
+    # dallari yukarida tamamlanir.
+
     def _load_modules(self):
         from core.loader import load_modules
         return load_modules()
@@ -236,15 +269,3 @@ class ChatModule(BaseModule):
             return answer in ("e", "evet", "yes", "y", "1")
         except Exception:
             return False
-
-        data = {
-            "user_message": user_message,
-            "response": chat_result["response"],
-            "intent": chat_result["intent"],
-            "provider": chat_result["provider"],
-            "active_target": chat_result["active_target"],
-            "suggested_command": suggested,
-            "auto_action": auto_action,
-            "provenance": chat_result.get("provenance"),
-        }
-        return self.success(target=user_message, data=data)
